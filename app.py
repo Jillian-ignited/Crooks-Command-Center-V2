@@ -6,7 +6,11 @@ CROOKS & CASTLES COMMAND CENTER — Render-stable + Auto-migrate
 import os, uuid, json, sqlite3, logging, csv
 from pathlib import Path
 from datetime import datetime, timedelta
-from flask import Flask, render_template_string, request, jsonify, send_file
+from flask import send_from_directory
+@app.get("/ui")
+def serve_manus_ui():
+    return send_from_directory("src/static", "index_enhanced_planning.html")
+
 from flask_cors import CORS
 
 try:
