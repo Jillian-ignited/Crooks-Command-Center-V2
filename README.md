@@ -15,6 +15,12 @@ This is the exact front-end experience extracted from the working Crooks & Castl
 3. **Start Command**: `gunicorn app:app`
 4. **Environment**: Python 3.11
 
+### **What's Included**
+- **app.py**: Complete Flask application with all functionality
+- **content_machine.db**: SQLite database with all calendar, asset, and agency data
+- **static/assets/**: All image assets and thumbnails
+- **requirements.txt**: All Python dependencies
+
 ### **Required Folders**
 ```
 ├── src/static/
