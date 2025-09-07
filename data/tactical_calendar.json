@@ -1,0 +1,30 @@
+{
+  "days": [
+    {"date":"2025-09-07","slots":[
+      {"time":"09:00","channel":"IG","title":"Drop Tease: Crown Logo Tee","status":"planned"}
+    ]},
+    {"date":"2025-09-08","slots":[
+      {"time":"00:00","channel":"Instagram Story","title":"NFL Season Kickoff Street Style — No Code 75%","status":"planned"},
+      {"time":"18:00","channel":"Email","title":"Kickoff Edit: Top Picks for Gameday","status":"planned"}
+    ]},
+    {"date":"2025-09-09","slots":[
+      {"time":"00:00","channel":"TikTok","title":"Monday Night Football Prep — No Code 75%","status":"planned"},
+      {"time":"12:00","channel":"IG","title":"Creators’ Fits: Stadium Tunnel Lookbook","status":"planned"}
+    ]},
+    {"date":"2025-09-10","slots":[
+      {"time":"09:00","channel":"IG Reel","title":"Warehouse BTS: Embroidery Pass","status":"planned"},
+      {"time":"18:00","channel":"Email","title":"Mid-Week Heat: 48-Hour Offer","status":"planned"}
+    ]},
+    {"date":"2025-09-11","slots":[
+      {"time":"12:00","channel":"TikTok","title":"Street Interview: Who Runs the Castle?","status":"planned"}
+    ]},
+    {"date":"2025-09-12","slots":[
+      {"time":"09:00","channel":"IG","title":"Fit Check Friday: Crown + Denim","status":"planned"},
+      {"time":"19:00","channel":"IG Story","title":"Community Repost Roundup","status":"planned"}
+    ]},
+    {"date":"2025-09-13","slots":[
+      {"time":"10:00","channel":"Email","title":"Weekend Offer: 15% Off Select","status":"planned"},
+      {"time":"14:00","channel":"TikTok","title":"Street Ball Session: Crown Courtside","status":"planned"}
+    ]}
+  ]
+}
