@@ -1232,7 +1232,7 @@ def index():
                         html += `
                             <div class="asset-card">
                                 <div class="asset-thumbnail">
-                                    <img src="/api/thumbnail/${asset.id}" alt="${asset.original_name}" onerror="this.style.display='none'">
+                                    <img src="${asset.thumbnail_url || '/api/thumbnail/' + asset.id}" alt="${asset.original_name}" onerror="this.style.display='none'">
                                 </div>
                                 <div class="asset-info">
                                     <div class="asset-name">${asset.original_name}</div>
@@ -1768,6 +1768,9 @@ def get_assets():
         
         assets = []
         for row in cursor.fetchall():
+            # Generate thumbnail URL for the frontend
+            thumbnail_url = f"/uploads/{row['name']}" if row['name'] else None
+            
             assets.append({
                 'id': row['id'],
                 'original_name': row['name'],
@@ -1777,7 +1780,9 @@ def get_assets():
                 'cultural_relevance': row['cultural_relevance'],
                 'created_date': row['upload_date'],
                 'category': row['category'],
-                'usage_count': row['usage_count']
+                'usage_count': row['usage_count'],
+                'thumbnail_url': thumbnail_url,
+                'file_path': row.get('file_path', thumbnail_url)
             })
         
         conn.close()
@@ -1945,18 +1950,25 @@ def get_thumbnail(asset_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT file_path, format FROM assets WHERE id = ?', (asset_id,))
+        cursor.execute('SELECT file_path, format, name FROM assets WHERE id = ?', (asset_id,))
         asset = cursor.fetchone()
         
         if not asset:
             return jsonify({'success': False, 'message': 'Asset not found'}), 404
         
-        file_path = asset['file_path']
+        # Try file_path first, then fall back to uploads folder
+        file_path = asset.get('file_path')
+        if not file_path or not Path(file_path).exists():
+            # Try in uploads folder
+            file_path = UPLOAD_FOLDER / asset['name']
+            if not file_path.exists():
+                # Try in assets folder
+                file_path = ASSETS_FOLDER / asset['name']
         
-        if asset['format'].startswith('image/') or asset['format'] in ['png', 'jpg', 'jpeg', 'gif']:
+        if Path(file_path).exists() and (asset['format'].startswith('image/') or asset['format'] in ['png', 'jpg', 'jpeg', 'gif']):
             return send_file(file_path)
         else:
-            # For videos, return a placeholder or generate thumbnail
+            # For videos or missing files, return a placeholder or error
             return jsonify({'success': False, 'message': 'Thumbnail not available'}), 404
         
     except Exception as e:
