@@ -1771,6 +1771,12 @@ def get_assets():
             # Generate thumbnail URL for the frontend
             thumbnail_url = f"/uploads/{row['name']}" if row['name'] else None
             
+            # Handle file_path safely for SQLite Row
+            try:
+                file_path = row['file_path'] if 'file_path' in row.keys() else thumbnail_url
+            except:
+                file_path = thumbnail_url
+            
             assets.append({
                 'id': row['id'],
                 'original_name': row['name'],
@@ -1782,7 +1788,7 @@ def get_assets():
                 'category': row['category'],
                 'usage_count': row['usage_count'],
                 'thumbnail_url': thumbnail_url,
-                'file_path': row.get('file_path', thumbnail_url)
+                'file_path': file_path
             })
         
         conn.close()
@@ -1957,7 +1963,11 @@ def get_thumbnail(asset_id):
             return jsonify({'success': False, 'message': 'Asset not found'}), 404
         
         # Try file_path first, then fall back to uploads folder
-        file_path = asset.get('file_path')
+        try:
+            file_path = asset['file_path'] if 'file_path' in asset.keys() else None
+        except:
+            file_path = None
+            
         if not file_path or not Path(file_path).exists():
             # Try in uploads folder
             file_path = UPLOAD_FOLDER / asset['name']
