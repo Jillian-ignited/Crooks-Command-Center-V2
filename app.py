@@ -1,80 +1,100 @@
 #!/usr/bin/env python3
 """
-Crooks & Castles Command Center — CLEAN API + UI WRAPPER
-- Keeps simple demo APIs (/api/calendar/7day, /api/assets, /api/deliverables)
-- Adds a shell front-end at '/' that calls those APIs
-- Adds /ui route to serve Manus HTML if present at src/static/index_enhanced_planning.html
+Crooks & Castles Command Center — Stable UI + API
+- "/" : shell UI that calls your APIs
+- "/ui" : serves Manus HTML at src/static/index_enhanced_planning.html (exact path)
+- APIs: /api/calendar/7day, /api/assets, /api/deliverables
+- Optional seed: if src/data/seed_calendar.json or seed_assets.json exists, they override demo data
 """
 
-import datetime
+import os, json, datetime
 from flask import Flask, jsonify, send_from_directory, render_template_string
 from flask_cors import CORS
 
-# If you have your Manus HTML and assets, put them under src/static/
-app = Flask(__name__, static_folder="src/static", static_url_path="/static")
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(APP_ROOT, "src", "static")
+DATA_DIR = os.path.join(APP_ROOT, "src", "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
 CORS(app)
 
-# ---------- HEALTH ----------
-@app.get("/healthz")
-def health():
-    return jsonify({"status": "ok", "message": "🏰 Crooks Command Center is alive"})
+# ---------- helpers ----------
+def load_seed_json(name, default):
+    path = os.path.join(DATA_DIR, name)
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except Exception:
+            return default
+    return default
 
-# ---------- DEMO APIs (keep your real ones if you have them) ----------
-@app.get("/api/calendar/7day")
-def calendar_7day():
-    today = datetime.date.today()
-    data = []
-    for i in range(7):
-        day = today + datetime.timedelta(days=i)
-        data.append({
-            "date": str(day),
-            "day_name": day.strftime("%A"),
-            "formatted_date": day.strftime("%b %d"),
-            "posts": [{
+# ---------- seed data (overridden if seed files exist) ----------
+_today = datetime.date.today()
+_default_calendar = [
+    {
+        "date": str(_today + datetime.timedelta(days=i)),
+        "day_name": (_today + datetime.timedelta(days=i)).strftime("%A"),
+        "formatted_date": (_today + datetime.timedelta(days=i)).strftime("%b %d"),
+        "posts": [
+            {
                 "title": f"Demo Post {i+1}",
                 "platform": "Instagram",
                 "time_slot": "12:00 CT",
                 "code_name": "Code 05: Crooks Wear Crowns",
                 "badge_score": 95,
                 "hashtags": "#crooksandcastles #street #culture",
-                "content": f"Sample content for {day.strftime('%A')}"
-            }]
-        })
-    return jsonify({"success": True, "view_type": "7day", "calendar_data": data})
+                "content": f"Sample content for {(_today + datetime.timedelta(days=i)).strftime('%A')}"
+            }
+        ]
+    } for i in range(7)
+]
+DEFAULT_ASSETS = [
+    {"id":"demo-1","original_name":"demo_asset.png","file_type":"image/png","badge_score":95,"assigned_code":5,"created_date":str(_today)},
+    {"id":"demo-2","original_name":"demo_video.mp4","file_type":"video/mp4","badge_score":85,"assigned_code":11,"created_date":str(_today)}
+]
+DEFAULT_DELIVERABLES = {
+    "current_phase":{"name":"Foundation & Awareness","period":"Sep–Oct 2025","budget":"$4,000/month"},
+    "current_progress":{
+        "social_posts":{"current":6,"target":12,"progress":50,"outstanding":6,"status":"on_track"},
+        "ad_creatives":{"current":2,"target":4,"progress":50,"outstanding":2,"status":"on_track"},
+        "email_campaigns":{"current":1,"target":2,"progress":50,"outstanding":1,"status":"on_track"}
+    },
+    "overall_progress":50.0
+}
+
+# Optional: drop JSON files into src/data/ to override demos
+SEED_CAL = load_seed_json("seed_calendar.json", _default_calendar)
+SEED_ASSETS = load_seed_json("seed_assets.json", DEFAULT_ASSETS)
+SEED_DELV = load_seed_json("seed_deliverables.json", DEFAULT_DELIVERABLES)
+
+# ---------- health ----------
+@app.get("/healthz")
+def health():
+    return jsonify({"status":"ok","message":"🏰 Crooks Command Center is alive"})
+
+# ---------- APIs ----------
+@app.get("/api/calendar/7day")
+def api_calendar_7day():
+    return jsonify({"success": True, "view_type": "7day", "calendar_data": SEED_CAL})
 
 @app.get("/api/assets")
-def assets():
-    return jsonify({
-        "success": True,
-        "assets": [
-            {"id": "1", "original_name": "demo_asset.png", "file_type": "image/png", "badge_score": 95, "assigned_code": 5, "created_date": str(datetime.date.today())},
-            {"id": "2", "original_name": "demo_video.mp4", "file_type": "video/mp4", "badge_score": 85, "assigned_code": 11, "created_date": str(datetime.date.today())}
-        ]
-    })
+def api_assets():
+    return jsonify({"success": True, "assets": SEED_ASSETS})
 
 @app.get("/api/deliverables")
-def deliverables():
-    return jsonify({
-        "success": True,
-        "current_phase": {"name": "Foundation & Awareness", "period": "Sep–Oct 2025", "budget": "$4,000/month"},
-        "current_progress": {
-            "social_posts": {"current": 6, "target": 12, "progress": 50, "outstanding": 6, "status": "on_track"},
-            "ad_creatives": {"current": 2, "target": 4, "progress": 50, "outstanding": 2, "status": "on_track"},
-            "email_campaigns": {"current": 1, "target": 2, "progress": 50, "outstanding": 1, "status": "on_track"},
-        },
-        "overall_progress": 50.0
-    })
+def api_deliverables():
+    return jsonify({"success": True, **SEED_DELV})
 
-# ---------- UI: Manus HTML (if present) ----------
+# ---------- UI: Manus (must exist at src/static/index_enhanced_planning.html) ----------
 @app.get("/ui")
 def serve_manus_ui():
-    # If you committed src/static/index_enhanced_planning.html, this will serve it
-    return send_from_directory("src/static", "index_enhanced_planning.html")
+    return send_from_directory(STATIC_DIR, "index_enhanced_planning.html")
 
-# ---------- UI: Shell Front-End ----------
+# ---------- UI: Shell ----------
 @app.get("/")
 def index():
-    # Minimal self-contained UI that calls your APIs
     return render_template_string("""
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -92,14 +112,13 @@ h1{font-size:20px;margin:0 0 12px}
 .tabbar{display:flex;gap:8px;margin:8px 0 12px}
 .tab{cursor:pointer;padding:8px 12px;border:1px solid #333;border-radius:8px;background:#101010}
 .tab.active{border-color:#22c55e}
-.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; color:#cbd5e1}
-hr{border:0;border-top:1px solid #222;margin:16px 0}
 .small{opacity:.75;font-size:12px}
-</style>
-</head>
+.notice{background:#0b2e17;border:1px solid #14532d;border-radius:8px;padding:10px;margin:10px 0;color:#9ae6b4}
+</style></head>
 <body>
 <div class="wrap">
   <h1>🏰 Crooks & Castles Command Center <span class="badge">Live</span></h1>
+  <div class="notice">Want the full Manus experience? Put <code>src/static/index_enhanced_planning.html</code> in GitHub and open <a class="btn" href="/ui">/ui</a>.</div>
   <div class="card">
     <div class="tabbar">
       <div id="tab-cal" class="tab active" onclick="show('cal')">Calendar</div>
@@ -120,13 +139,10 @@ hr{border:0;border-top:1px solid #222;margin:16px 0}
       <div id="agency" class="grid"></div>
     </div>
     <div id="view-raw" style="display:none">
-      <p class="small">Quick links:</p>
       <a class="btn" href="/healthz">/healthz</a>
       <a class="btn" href="/api/calendar/7day">/api/calendar/7day</a>
       <a class="btn" href="/api/assets">/api/assets</a>
       <a class="btn" href="/api/deliverables">/api/deliverables</a>
-      <hr/>
-      <p class="small mono" id="raw"></p>
     </div>
   </div>
 </div>
@@ -140,8 +156,6 @@ function show(which){
   if(which==="cal") loadCal();
   if(which==="assets") loadAssets();
   if(which==="agency") loadAgency();
-  if(which==="raw") document.getElementById("raw").textContent =
-    "Open the buttons above to view raw JSON in a new tab.";
 }
 async function loadCal(){
   const res = await fetch('/api/calendar/7day'); const j = await res.json();
@@ -150,11 +164,11 @@ async function loadCal(){
     const posts = (day.posts||[]).map(p=>`
       <div class="item">
         <div><strong>${p.title}</strong></div>
-        <div class="small">${p.platform} • ${p.time_slot} • ${p.code_name} • Badge ${p.badge_score}%</div>
+        <div class="small">${p.platform||''} • ${p.time_slot||''} • ${p.code_name||''} • Badge ${p.badge_score||0}%</div>
         <div class="small" style="margin-top:6px">${p.content||''}</div>
         <div class="small" style="color:#22c55e">${p.hashtags||''}</div>
       </div>`).join('');
-    el.insertAdjacentHTML('beforeend', `<div class="item"><div><strong>${day.day_name}</strong> — ${day.formatted_date}</div><hr/>${posts||'<div class="small">No posts</div>'}</div>`);
+    el.insertAdjacentHTML('beforeend', `<div class="item"><div><strong>${day.day_name}</strong> — ${day.formatted_date}</div>${posts||'<div class="small">No posts</div>'}</div>`);
   });
 }
 async function loadAssets(){
@@ -179,19 +193,17 @@ async function loadAgency(){
     <div class="item">
       <div><strong>${(j.current_phase||{}).name||'Phase'}</strong> — ${((j.current_phase||{}).period||'')}</div>
       <div class="small">${(j.current_phase||{}).budget||''}</div>
-      <hr/>
       <div class="small">Social Posts: ${cp.social_posts?.current||0}/${cp.social_posts?.target||0} (${cp.social_posts?.progress||0}%)</div>
       <div class="small">Ad Creatives: ${cp.ad_creatives?.current||0}/${cp.ad_creatives?.target||0} (${cp.ad_creatives?.progress||0}%)</div>
-      <div class="small">Email Campaigns: ${cp.email_campaigns?.current||0}/${cp.email_campaigns?.target||0} (${cp.email_campaigns?.progress||0}%)</div>
-      <hr/>
-      <div><strong>Overall:</strong> ${(j.overall_progress||0)}%</div>
+      <div class="small">Email: ${cp.email_campaigns?.current||0}/${cp.email_campaigns?.target||0} (${cp.email_campaigns?.progress||0}%)</div>
+      <div class="small">Overall: ${(j.overall_progress||0)}%</div>
     </div>`);
 }
-document.addEventListener('DOMContentLoaded', ()=>{ loadCal(); });
+document.addEventListener('DOMContentLoaded', ()=>{ show('cal'); });
 </script>
 </body></html>
     """)
-
+    
 if __name__ == "__main__":
-    # For local testing
+    # local run
     app.run(host="0.0.0.0", port=5000)
