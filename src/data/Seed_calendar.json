@@ -1,0 +1,34 @@
+[
+  {
+    "date": "2025-09-08",
+    "day_name": "Monday",
+    "formatted_date": "Sep 08",
+    "posts": [
+      {
+        "title": "NFL Season Kickoff Street Style",
+        "platform": "Instagram Story",
+        "time_slot": "00:00 CT",
+        "code_name": "Code 29: Story",
+        "badge_score": 95,
+        "hashtags": "#crooksandcastles #street #culture",
+        "content": "Game day drip different when you rep the castle 🏈 NFL season kicks off with street culture swagger."
+      }
+    ]
+  },
+  {
+    "date": "2025-09-09",
+    "day_name": "Tuesday",
+    "formatted_date": "Sep 09",
+    "posts": [
+      {
+        "title": "Monday Night Football Prep",
+        "platform": "TikTok",
+        "time_slot": "00:00 CT",
+        "code_name": "Code 11: Culture",
+        "badge_score": 95,
+        "hashtags": "#crooksandcastles #mnf #primetime",
+        "content": "Monday night lights, castle crown bright ✨ Getting ready for primetime."
+      }
+    ]
+  }
+]
