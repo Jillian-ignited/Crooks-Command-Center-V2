@@ -4,7 +4,17 @@ from dateutil import tz
 from flask import Flask, jsonify, send_file, send_from_directory, redirect, request, abort
 from flask_cors import CORS
 from db import init_db, conn
+import os
+import psycopg2
+from flask import Flask
 
+app = Flask(__name__)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_db_connection():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
 APP_ROOT   = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(APP_ROOT, "src", "static")
 ASSET_DIR  = os.path.join(STATIC_DIR, "assets")
