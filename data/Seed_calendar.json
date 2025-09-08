@@ -1,34 +1,200 @@
-[
-  {
-    "date": "2025-09-08",
-    "day_name": "Monday",
-    "formatted_date": "Sep 08",
-    "posts": [
-      {
-        "title": "NFL Season Kickoff Street Style",
-        "platform": "Instagram Story",
-        "time_slot": "00:00 CT",
-        "code_name": "Code 29: Story",
-        "badge_score": 95,
-        "hashtags": "#crooksandcastles #street #culture",
-        "content": "Game day drip different when you rep the castle 🏈 NFL season kicks off with street culture swagger."
-      }
-    ]
-  },
-  {
-    "date": "2025-09-09",
-    "day_name": "Tuesday",
-    "formatted_date": "Sep 09",
-    "posts": [
-      {
-        "title": "Monday Night Football Prep",
-        "platform": "TikTok",
-        "time_slot": "00:00 CT",
-        "code_name": "Code 11: Culture",
-        "badge_score": 95,
-        "hashtags": "#crooksandcastles #mnf #primetime",
-        "content": "Monday night lights, castle crown bright ✨ Getting ready for primetime."
-      }
-    ]
-  }
-]
+{
+  "7day": [
+    {
+      "date": "2025-09-08",
+      "day_name": "Monday",
+      "formatted_date": "Sep 08",
+      "posts": [
+        {
+          "title": "NFL Season Kickoff Street Style",
+          "platform": "Instagram Story",
+          "time": "6:00 PM",
+          "asset": "real_instagram_story_rebel_rooftop.png",
+          "crooks_code": "Code 29: Story",
+          "content": "Game day drip different when you rep the castle 🏈",
+          "priority": "High"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-09",
+      "day_name": "Tuesday",
+      "formatted_date": "Sep 09",
+      "posts": [
+        {
+          "title": "Monday Night Football Prep",
+          "platform": "TikTok",
+          "time": "7:30 PM",
+          "asset": "TikTok video (15-30s)",
+          "crooks_code": "Code 05: Crooks Wear Crowns",
+          "content": "Getting ready for MNF with street authenticity",
+          "priority": "Medium"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-10",
+      "day_name": "Wednesday",
+      "formatted_date": "Sep 10",
+      "posts": [
+        {
+          "title": "Mid-Week Street Culture",
+          "platform": "Instagram Feed",
+          "time": "12:00 PM",
+          "asset": "real_paid_social_rebel_rooftop.png",
+          "crooks_code": "Code 11: Culture",
+          "content": "Wednesday wisdom from the streets",
+          "priority": "Medium"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-11",
+      "day_name": "Thursday",
+      "formatted_date": "Sep 11",
+      "posts": [
+        {
+          "title": "Throwback Thursday Heritage",
+          "platform": "Instagram Feed",
+          "time": "3:00 PM",
+          "asset": "sept_19_hiphop_anniversary.png",
+          "crooks_code": "Code 19: Heritage",
+          "content": "Honoring our roots and culture",
+          "priority": "High"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-12",
+      "day_name": "Friday",
+      "formatted_date": "Sep 12",
+      "posts": [
+        {
+          "title": "Friday Night Lights",
+          "platform": "TikTok",
+          "time": "8:00 PM",
+          "asset": "friday_night_content.mp4",
+          "crooks_code": "Code 05: Crooks Wear Crowns",
+          "content": "Weekend vibes starting early",
+          "priority": "High"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-13",
+      "day_name": "Saturday",
+      "formatted_date": "Sep 13",
+      "posts": [
+        {
+          "title": "Saturday Street Style",
+          "platform": "Instagram Story",
+          "time": "2:00 PM",
+          "asset": "real_amazon_pdp_rebel_rooftop.png",
+          "crooks_code": "Code 29: Story",
+          "content": "Weekend street style showcase",
+          "priority": "Medium"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-14",
+      "day_name": "Sunday",
+      "formatted_date": "Sep 14",
+      "posts": [
+        {
+          "title": "Sunday Reflection",
+          "platform": "Instagram Feed",
+          "time": "11:00 AM",
+          "asset": "sept_15_hispanic_heritage_launch.png",
+          "crooks_code": "Code 11: Culture",
+          "content": "Preparing for Hispanic Heritage Month",
+          "priority": "High"
+        }
+      ]
+    }
+  ],
+  "30day": [
+    {
+      "week": 1,
+      "dates": "Sep 8-14, 2025",
+      "theme": "NFL Season & Sports Culture",
+      "focus": "Game day culture meets street authenticity",
+      "posts": [
+        {
+          "date": "2025-09-08",
+          "title": "NFL Season Kickoff Street Style",
+          "platform": "Instagram Story",
+          "asset_status": "✅ MAPPED",
+          "asset": "real_instagram_story_rebel_rooftop.png",
+          "crooks_code": "Code 29: Story",
+          "priority": "High"
+        },
+        {
+          "date": "2025-09-09",
+          "title": "Monday Night Football Prep",
+          "platform": "TikTok",
+          "asset_status": "🔨 NEEDS CREATION",
+          "asset": "TikTok video (15-30s)",
+          "crooks_code": "Code 05: Crooks Wear Crowns",
+          "priority": "Medium"
+        }
+      ]
+    },
+    {
+      "week": 2,
+      "dates": "Sep 15-21, 2025",
+      "theme": "Hispanic Heritage Month",
+      "focus": "Celebrating cultural roots and community heritage",
+      "posts": [
+        {
+          "date": "2025-09-15",
+          "title": "Hispanic Heritage Month Launch",
+          "platform": "Instagram Feed",
+          "asset_status": "✅ MAPPED",
+          "asset": "sept_15_hispanic_heritage_launch.png",
+          "crooks_code": "Code 11: Culture",
+          "priority": "High"
+        }
+      ]
+    }
+  ],
+  "60day": [
+    {
+      "title": "Hip Hop History Month",
+      "date_range": "October 2025",
+      "description": "Celebrating 52 years of Hip Hop culture and its influence on street fashion",
+      "opportunity": "Partner with local Hip Hop artists and DJs for authentic content",
+      "cultural_moment": "Hip Hop Anniversary (1973-2025)",
+      "content_pillars": ["Heritage", "Music Culture", "Street Authenticity"],
+      "deliverables": ["Artist collaborations", "Heritage content series", "Community events"]
+    },
+    {
+      "title": "Q4 Holiday Strategy",
+      "date_range": "November-December 2025",
+      "description": "Holiday shopping season with cultural authenticity",
+      "opportunity": "Black Friday and holiday gift campaigns",
+      "cultural_moment": "Holiday season meets street culture",
+      "content_pillars": ["Gift Guides", "Holiday Style", "Community"],
+      "deliverables": ["Holiday campaigns", "Gift content", "Year-end celebration"]
+    }
+  ],
+  "90day": [
+    {
+      "title": "HVD Partnership Phase 2 Transition",
+      "date_range": "November 2025",
+      "description": "Scaling from Foundation phase to Growth phase",
+      "milestone": "Increase monthly budget from $4,000 to $7,500",
+      "focus_areas": ["Expanded content creation", "Multi-platform strategy", "Community building"],
+      "success_metrics": ["16 social posts/month", "8 ad creatives/month", "6 email campaigns/month"]
+    },
+    {
+      "title": "TikTok Shop Launch Preparation",
+      "date_range": "January 2026",
+      "description": "Preparing for e-commerce integration and Phase 3 transition",
+      "milestone": "Full retainer partnership at $10,000/month",
+      "focus_areas": ["E-commerce content", "Product showcases", "Shopping integration"],
+      "success_metrics": ["20 social posts/month", "12 ad creatives/month", "8 email campaigns/month"]
+    }
+  ]
+}
+
