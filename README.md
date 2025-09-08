@@ -22,8 +22,7 @@ This is the exact front-end experience extracted from the working Crooks & Castl
 - **requirements.txt**: All Python dependencies
 
 ### **Required Folders**
-```
-├── src/static/
+├── static/
 │   ├── index_enhanced_planning.html
 │   └── assets/
 │       └── _assets_manifest.json
@@ -34,6 +33,7 @@ This is the exact front-end experience extracted from the working Crooks & Castl
 ├── app.py (your Flask application)
 ├── requirements.txt
 └── README.md
+
 ```
 
 ## 🔌 **API Endpoints**
