@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("crooks")
 
 # When deploying under repo root, BASE_DIR is project root on Render
-BASE_DIR = Path(os.environ.get("BASE_DIR", Path(__file__).resolve().parent))
+BASE_DIR = Path(os.environ.get("BASE_DIR", Path(__file__).resolve().parent.parent))
 DATA_DIR = BASE_DIR / "data"
 UPLOADS_DIR = BASE_DIR / "uploads"
 STATIC_DIR = BASE_DIR / "static"  # if you keep Manus HTML here (optional)
