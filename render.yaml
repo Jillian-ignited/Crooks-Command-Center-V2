@@ -1,0 +1,11 @@
+├── static/
+│   ├── index_enhanced_planning.html
+│   └── assets/
+│       └── _assets_manifest.json
+├── data/
+│   └── tactical_calendar.json
+├── agency_reports/
+│   └── report_sample.csv
+├── app.py (your Flask application)
+├── requirements.txt
+└── README.md
