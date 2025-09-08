@@ -102,3 +102,9 @@ def api_deliverables():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+from flask import redirect
+
+@app.get("/")
+def root():
+    # land on the Manus-style UI instead of the bare status page
+    return redirect("/ui", code=302)
