@@ -1982,6 +1982,24 @@ def download_asset(asset_id):
         logger.error(f"Error downloading asset: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/uploads/<filename>')
+def serve_uploaded_file(filename):
+    """Serve uploaded asset files"""
+    try:
+        file_path = UPLOAD_FOLDER / filename
+        if file_path.exists():
+            return send_file(file_path)
+        else:
+            # Try in assets folder
+            file_path = ASSETS_FOLDER / filename
+            if file_path.exists():
+                return send_file(file_path)
+            else:
+                return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        logger.error(f"Error serving file {filename}: {str(e)}")
+        return jsonify({'error': 'File serving error'}), 500
+
 @app.route('/api/upload-assets', methods=['POST'])
 def upload_assets():
     """Upload new assets"""
