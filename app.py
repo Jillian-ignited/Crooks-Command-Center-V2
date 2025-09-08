@@ -26,7 +26,7 @@ log = logging.getLogger("crooks")
 BASE_DIR = Path(os.environ.get("BASE_DIR", Path(__file__).resolve().parent))
 DATA_DIR = BASE_DIR / "data"
 UPLOADS_DIR = BASE_DIR / "uploads"
-STATIC_DIR = BASE_DIR / "src" / "static"  # if you keep Manus HTML here (optional)
+STATIC_DIR = BASE_DIR / "static"  # if you keep Manus HTML here (optional)
 
 # Ensure dirs exist
 for p in [DATA_DIR, UPLOADS_DIR]:
