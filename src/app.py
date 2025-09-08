@@ -1998,11 +1998,31 @@ def download_asset(asset_id):
         if not asset:
             return jsonify({'success': False, 'message': 'Asset not found'}), 404
         
-        return send_file(asset['file_path'], as_attachment=True, download_name=asset['name'])
+        # Try multiple file locations
+        file_path = None
+        
+        # First try the stored file_path
+        if asset['file_path'] and Path(asset['file_path']).exists():
+            file_path = asset['file_path']
+        else:
+            # Try in uploads folder
+            upload_path = UPLOAD_FOLDER / asset['name']
+            if upload_path.exists():
+                file_path = str(upload_path)
+            else:
+                # Try in assets folder
+                assets_path = ASSETS_FOLDER / asset['name']
+                if assets_path.exists():
+                    file_path = str(assets_path)
+        
+        if not file_path:
+            return jsonify({'success': False, 'message': 'File not found on server'}), 404
+            
+        return send_file(file_path, as_attachment=True, download_name=asset['name'])
         
     except Exception as e:
-        logger.error(f"Error downloading asset: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"Error downloading asset {asset_id}: {str(e)}")
+        return jsonify({'success': False, 'message': 'Download error'}), 500
 
 @app.route('/uploads/<filename>')
 def serve_uploaded_file(filename):
