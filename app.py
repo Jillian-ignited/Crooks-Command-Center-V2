@@ -1,638 +1,532 @@
 #!/usr/bin/env python3
 """
-Crooks & Castles — Command Center (Render + Postgres)
-One-file Flask app with:
-- UI at /ui (loads src/static/index_enhanced_planning.html if present)
-- Calendar, Assets, Deliverables APIs
-- Seed endpoint to import JSON from src/data/*
+Crooks & Castles — Command Center (Render-friendly)
+- No Postgres. No psycopg2. Pure Flask + filesystem + optional seed JSON.
+- Clean JSON uploads. Stable calendar + assets + agency endpoints.
 """
 
 import os
 import json
+import uuid
 import logging
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, Any, List
 
-import psycopg2
-import psycopg2.extras
-from flask import Flask, jsonify, request, send_from_directory, Response
+from flask import Flask, jsonify, send_from_directory, request, Response, render_template_string
 from flask_cors import CORS
 
-# -----------------------------------------------------------------------------
-# App & Config
-# -----------------------------------------------------------------------------
+# ----------------------------
+# App setup
+# ----------------------------
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("command-center")
+log = logging.getLogger("crooks")
 
-APP_ROOT = Path(__file__).resolve().parent
-STATIC_DIR = APP_ROOT / "src" / "static"
-DATA_DIR = APP_ROOT / "src" / "data"
+# When deploying under repo root, BASE_DIR is project root on Render
+BASE_DIR = Path(os.environ.get("BASE_DIR", Path(__file__).resolve().parent))
+DATA_DIR = BASE_DIR / "data"
+UPLOADS_DIR = BASE_DIR / "uploads"
+STATIC_DIR = BASE_DIR / "src" / "static"  # if you keep Manus HTML here (optional)
 
-app = Flask(
-    __name__,
-    static_folder=str(STATIC_DIR),         # serves /static/*
-    static_url_path="/static"
-)
+# Ensure dirs exist
+for p in [DATA_DIR, UPLOADS_DIR]:
+    p.mkdir(parents=True, exist_ok=True)
+
+SEED_CALENDAR_FILE = DATA_DIR / "seed_calendar.json"
+SEED_ASSETS_FILE = DATA_DIR / "seed_assets.json"
+ASSET_INDEX = DATA_DIR / "assets_index.json"  # persistent lightweight index
+
+# ----------------------------
+# Helpers
+# ----------------------------
+def read_json(path: Path, default):
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.warning(f"Failed reading JSON {path}: {e}")
+    return default
+
+def write_json(path: Path, payload: Any):
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        return True
+    except Exception as e:
+        log.error(f"Failed writing JSON {path}: {e}")
+        return False
+
+def ext_for_mime(mime: str) -> str:
+    if not mime:
+        return ""
+    if mime.startswith("image/"):
+        return "." + mime.split("/", 1)[1]
+    if mime.startswith("video/"):
+        return "." + mime.split("/", 1)[1]
+    return ""
+
+def safe_filename(original: str) -> str:
+    base = Path(original).name
+    return base.replace("..", "_").replace("/", "_").replace("\\", "_")
+
+def now_iso() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+# Asset index schema:
+# {
+#   "assets": [
+#     {
+#       "id": "uuid",
+#       "filename": "stored_name.ext",
+#       "original_name": "...",
+#       "mime": "image/png",
+#       "size": 12345,
+#       "source": "upload|seed",
+#       "uploaded_at": "iso",
+#       "badge_score": 90,
+#       "code": "Code 11: Culture"
+#     }
+#   ]
+# }
+def load_asset_index() -> Dict[str, Any]:
+    data = read_json(ASSET_INDEX, {"assets": []})
+    # prune records whose files are gone
+    assets = []
+    for a in data.get("assets", []):
+        if (UPLOADS_DIR / a.get("filename", "")).exists() or (DATA_DIR / "assets" / a.get("filename", "")).exists():
+            assets.append(a)
+    data["assets"] = assets
+    return data
+
+def save_asset_index(index: Dict[str, Any]):
+    write_json(ASSET_INDEX, index)
+
+def calc_badge_score(name: str, mime: str) -> int:
+    score = 75
+    n = (name or "").lower()
+    if mime and mime.startswith("image/"):
+        score += 10
+    if mime and mime.startswith("video/"):
+        score += 15
+    if any(k in n for k in ["crooks", "castle", "heritage", "street"]):
+        score += 10
+    return min(score, 100)
+
+def default_calendar_payload(days: int) -> List[Dict[str, Any]]:
+    today = datetime.utcnow()
+    result = []
+    for i in range(days):
+        dt = today + timedelta(days=i)
+        result.append({
+            "date": dt.strftime("%Y-%m-%d"),
+            "day_name": dt.strftime("%A"),
+            "formatted_date": dt.strftime("%b %d"),
+            "posts": []
+        })
+    return result
+
+# ----------------------------
+# Flask app
+# ----------------------------
+app = Flask(__name__)
 CORS(app)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-ADMIN_KEY = os.getenv("ADMIN_KEY", "").strip()
+# ----------------------------
+# UI (tries to serve Manus HTML if present; else a simple console)
+# ----------------------------
+@app.route("/")
+def home():
+    # If you added Manus HTML at src/static/index_enhanced_planning.html, serve it
+    html_path = STATIC_DIR / "index_enhanced_planning.html"
+    if html_path.exists():
+        # Let the HTML make fetch calls to our /api/* endpoints
+        return send_from_directory(str(STATIC_DIR), "index_enhanced_planning.html")
 
-if not DATABASE_URL:
-    log.warning("DATABASE_URL is not set. Set it in Render → Settings → Environment.")
+    # Fallback minimal console so you have working buttons even without Manus HTML
+    return render_template_string(
+        """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Crooks & Castles Command Center</title>
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Arial; background:#0a0a0a; color:#fff; padding:24px; }
+    a, button { color:#22c55e; }
+    .row { margin: 10px 0; }
+    .card { background:#111; border:1px solid #222; border-radius:8px; padding:16px; margin-bottom:12px; }
+    .btn { background:#22c55e; color:#000; padding:8px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:600; }
+    .muted { color:#9ca3af; font-size:12px; }
+    code { background:#111827; padding:2px 6px; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <h1>🏰 Crooks & Castles Command Center <span class="muted">— minimal console</span></h1>
+  <div class="card">
+    <div class="row">
+      <strong>Quick actions</strong>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="seedDemo()">Seed demo data</button>
+      <button class="btn" onclick="debug()">Debug check</button>
+      <button class="btn" onclick="resetDB()">Reset DB</button>
+    </div>
+    <div class="row muted">APIs: <code>/api/calendar/7day</code> <code>/api/assets</code> <code>/api/deliverables</code></div>
+  </div>
 
-# -----------------------------------------------------------------------------
-# DB Helpers
-# -----------------------------------------------------------------------------
-def db() -> psycopg2.extensions.connection:
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+  <div class="card">
+    <div class="row"><strong>Asset upload</strong></div>
+    <div class="row">
+      <input type="file" id="fileInput" multiple>
+      <button class="btn" onclick="upload()">Upload</button>
+    </div>
+    <pre id="out" class="row muted"></pre>
+  </div>
 
-def init_db() -> None:
-    with db() as conn:
-        with conn.cursor() as cur:
-            # posts
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS posts (
-                id SERIAL PRIMARY KEY,
-                title TEXT NOT NULL,
-                content TEXT,
-                platform TEXT,
-                scheduled_at TIMESTAMPTZ,
-                code_name TEXT,
-                badge_score INT,
-                hashtags TEXT,
-                status TEXT,
-                owner TEXT,
-                due_date DATE,
-                asset_id TEXT
-            );
-            """)
-            # assets
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS assets (
-                id TEXT PRIMARY KEY,
-                original_name TEXT NOT NULL,
-                file_type TEXT,
-                file_url TEXT,
-                badge_score INT,
-                assigned_code TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                usage_count INT DEFAULT 0
-            );
-            """)
-            # deliverables (monthly)
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS deliverables_monthly (
-                year_month TEXT PRIMARY KEY,
-                phase TEXT,
-                budget TEXT,
-                social_target INT,
-                social_current INT,
-                creative_target INT,
-                creative_current INT,
-                email_target INT,
-                email_current INT,
-                notes TEXT,
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            """)
-        conn.commit()
-
-init_db()
-
-# -----------------------------------------------------------------------------
-# Utilities
-# -----------------------------------------------------------------------------
-def require_admin() -> Optional[Response]:
-    key = request.headers.get("X-Admin-Key", "")
-    if not ADMIN_KEY or key != ADMIN_KEY:
-        return jsonify({"ok": False, "error": "Unauthorized"}), 401
-    return None
-
-def load_json(relpath: str) -> Optional[Any]:
-    p = DATA_DIR / relpath
-    if not p.exists():
-        return None
-    with p.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-def to_ct_label(dt: datetime) -> str:
-    # Label only; assumes server UTC with CT label for display
-    # (good enough for planning; adjust if you need true tz conversion)
-    return dt.strftime("%H:%M CT")
-
-def day_range(days: int = 7) -> List[date]:
-    today = datetime.utcnow().date()
-    return [today + timedelta(days=i) for i in range(days)]
-
-# -----------------------------------------------------------------------------
-# Health & UI
-# -----------------------------------------------------------------------------
-@app.get("/healthz")
-def healthz():
-    return jsonify({"ok": True, "db": bool(DATABASE_URL)})
-
-@app.get("/")
-def root():
-    base = request.host_url.rstrip("/")
-    return (
-        "🏰 Crooks & Castles — Command Center Live<br>"
-        '<a href="/ui">Open UI</a><br><br>'
-        f'APIs: <a href="/api/calendar/7day">/api/calendar/7day</a> '
-        f'| <a href="/api/assets">/api/assets</a> '
-        f'| <a href="/api/deliverables">/api/deliverables</a><br><br>'
-        'Admin: POST /api/seed (with X-Admin-Key)'
+<script>
+  async function seedDemo() {
+    const r = await fetch('/seed-demo', {method:'POST'});
+    document.getElementById('out').textContent = await r.text();
+  }
+  async function debug() {
+    const r = await fetch('/debug');
+    document.getElementById('out').textContent = await r.text();
+  }
+  async function resetDB() {
+    const r = await fetch('/reset-db', {method:'POST'});
+    document.getElementById('out').textContent = await r.text();
+  }
+  async function upload() {
+    const fi = document.getElementById('fileInput');
+    if (!fi.files.length) { alert('Pick files'); return; }
+    const fd = new FormData();
+    for (const f of fi.files) fd.append('files', f);
+    const r = await fetch('/api/upload-assets', { method:'POST', body: fd });
+    const t = await r.text(); // always JSON; if HTML error page, you'll see it here
+    document.getElementById('out').textContent = t;
+  }
+</script>
+</body>
+</html>
+        """
     )
 
-@app.get("/ui")
-def ui():
-    # Serve Manus-style UI file if present; else simple fallback
-    target = STATIC_DIR / "index_enhanced_planning.html"
+# Serve other static files (CSS/JS/assets) for Manus UI if it exists
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    target = STATIC_DIR / filename
     if target.exists():
-        return send_from_directory(str(STATIC_DIR), "index_enhanced_planning.html")
-    # Fallback minimal UI
-    html = f"""
-    <!doctype html>
-    <meta charset="utf-8">
-    <title>Command Center</title>
-    <body style="font-family: system-ui; padding: 24px;">
-      <h1>🏰 Crooks & Castles — Command Center</h1>
-      <p>Static UI not found. Add <code>src/static/index_enhanced_planning.html</code> for the full Manus UI.</p>
-      <p><a href="/api/calendar/7day" target="_blank">/api/calendar/7day</a> •
-         <a href="/api/assets" target="_blank">/api/assets</a> •
-         <a href="/api/deliverables" target="_blank">/api/deliverables</a></p>
-    </body>
-    """
-    return html
+        return send_from_directory(str(STATIC_DIR), filename)
+    return Response("Not found", status=404)
 
-# -----------------------------------------------------------------------------
+# ----------------------------
+# Health + Debug
+# ----------------------------
+@app.route("/healthz")
+def healthz():
+    return jsonify({
+        "ok": True,
+        "time": now_iso(),
+        "base_dir": str(BASE_DIR),
+        "uploads_dir": str(UPLOADS_DIR),
+        "data_dir": str(DATA_DIR),
+        "static_dir": str(STATIC_DIR)
+    })
+
+@app.route("/debug")
+def debug():
+    index = load_asset_index()
+    seeds = {
+        "has_seed_calendar": SEED_CALENDAR_FILE.exists(),
+        "has_seed_assets": SEED_ASSETS_FILE.exists(),
+    }
+    return jsonify({
+        "ok": True,
+        "assets_index_count": len(index.get("assets", [])),
+        "uploads_files": sorted([p.name for p in UPLOADS_DIR.glob("*")]),
+        "seeds": seeds
+    })
+
+# ----------------------------
 # Calendar APIs
-# -----------------------------------------------------------------------------
+# ----------------------------
+def _calendar_payload(days: int):
+    # If a seed file exists, prefer it.
+    seed = read_json(SEED_CALENDAR_FILE, None)
+    if seed and isinstance(seed, dict):
+        # Expect keys "7day","30day","60day","90day" in seed
+        key = "7day" if days == 7 else "30day" if days == 30 else "60day" if days == 60 else "90day"
+        if key in seed:
+            return seed[key]
+    # else synthesize empty structure
+    return default_calendar_payload(days)
+
 @app.get("/api/calendar/7day")
-def api_calendar_7day():
-    # Build 7-day window from posts; if empty, try seed file
-    days = day_range(7)
-    by_date: Dict[str, Dict[str, Any]] = {}
-
-    with db() as conn:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        start = datetime.combine(days[0], datetime.min.time())
-        end = datetime.combine(days[-1], datetime.max.time())
-        cur.execute("""
-            SELECT * FROM posts
-            WHERE scheduled_at >= %s AND scheduled_at <= %s
-            ORDER BY scheduled_at ASC
-        """, (start, end))
-        rows = cur.fetchall()
-
-    if not rows:
-        seeded = load_json("seed_calendar_7day.json")
-        if seeded:
-            return jsonify({"success": True, "view_type": "7day", "calendar_data": seeded})
-
-    for d in days:
-        key = d.isoformat()
-        by_date[key] = {
-            "date": key,
-            "day_name": d.strftime("%A"),
-            "formatted_date": d.strftime("%b %d"),
-            "posts": []
-        }
-
-    for r in rows:
-        dt = (r.get("scheduled_at") or datetime.utcnow())
-        dkey = dt.date().isoformat()
-        by_date.setdefault(dkey, {
-            "date": dkey,
-            "day_name": dt.strftime("%A"),
-            "formatted_date": dt.strftime("%b %d"),
-            "posts": []
-        })
-        by_date[dkey]["posts"].append({
-            "title": r.get("title"),
-            "platform": r.get("platform") or "",
-            "time_slot": to_ct_label(dt),
-            "code_name": r.get("code_name") or "No Code",
-            "badge_score": r.get("badge_score") or 85,
-            "hashtags": r.get("hashtags") or "",
-            "content": r.get("content") or ""
-        })
-
-    return jsonify({"success": True, "view_type": "7day", "calendar_data": list(by_date.values())})
+def api_calendar_7():
+    return jsonify({"success": True, "view_type": "7day", "calendar_data": _calendar_payload(7)})
 
 @app.get("/api/calendar/30day")
-def api_calendar_30day():
-    # 30 days starting today; fallback to seed file
-    days = day_range(30)
-    with_db: List[Dict[str, Any]] = []
-
-    with db() as conn:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        start = datetime.combine(days[0], datetime.min.time())
-        end = datetime.combine(days[-1], datetime.max.time())
-        cur.execute("""
-            SELECT * FROM posts
-            WHERE scheduled_at >= %s AND scheduled_at <= %s
-            ORDER BY scheduled_at ASC
-        """, (start, end))
-        rows = cur.fetchall()
-
-    if not rows:
-        seed = load_json("seed_calendar_30day.json")
-        if seed:
-            return jsonify({"success": True, "view_type": "30day", **seed})
-
-    # Group by date only for days with posts
-    grouped: Dict[str, Dict[str, Any]] = {}
-    for r in rows:
-        dt = r.get("scheduled_at") or datetime.utcnow()
-        key = dt.date().isoformat()
-        grouped.setdefault(key, {
-            "date": key,
-            "day_name": dt.strftime("%A"),
-            "formatted_date": dt.strftime("%b %d"),
-            "posts": []
-        })
-        grouped[key]["posts"].append({
-            "title": r.get("title"),
-            "platform": r.get("platform") or "",
-            "time_slot": to_ct_label(dt),
-            "code_name": r.get("code_name") or "No Code",
-            "badge_score": r.get("badge_score") or 85,
-            "hashtags": r.get("hashtags") or "",
-            "content": r.get("content") or ""
-        })
-
-    return jsonify({"success": True, "view_type": "30day", "calendar_data": list(grouped.values())})
+def api_calendar_30():
+    return jsonify({"success": True, "view_type": "30day", "calendar_data": _calendar_payload(30)})
 
 @app.get("/api/calendar/60day")
-def api_calendar_60day():
-    seed = load_json("seed_opportunities_60day.json")
-    if seed:
-        return jsonify({"success": True, "view_type": "60day", **seed})
-    # Minimal fallback
-    return jsonify({"success": True, "view_type": "60day", "opportunities": []})
+def api_calendar_60():
+    # In seed, you can put opportunity objects; fallback gives empty shell
+    payload = read_json(SEED_CALENDAR_FILE, {})
+    opportunities = payload.get("60day", [])
+    return jsonify({"success": True, "view_type": "60day", "opportunities": opportunities})
 
 @app.get("/api/calendar/90day")
-def api_calendar_90day():
-    seed = load_json("seed_longrange_90day.json")
-    if seed:
-        return jsonify({"success": True, "view_type": "90day", **seed})
-    # Minimal fallback
-    return jsonify({"success": True, "view_type": "90day", "long_range": []})
+def api_calendar_90():
+    payload = read_json(SEED_CALENDAR_FILE, {})
+    long_range = payload.get("90day", [])
+    return jsonify({"success": True, "view_type": "90day", "long_range": long_range})
 
-# -----------------------------------------------------------------------------
-# Assets
-# -----------------------------------------------------------------------------
+# ----------------------------
+# Assets APIs
+# ----------------------------
 @app.get("/api/assets")
-def get_assets():
-    with db() as conn:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("SELECT * FROM assets ORDER BY created_at DESC;")
-        rows = cur.fetchall()
+def api_assets():
+    """
+    Returns both:
+    - uploaded files in /uploads
+    - seeded assets (optional) stored under data/assets/<filename> with records in seed_assets.json
+    """
+    index = load_asset_index()
 
-    if not rows:
-        seed = load_json("seed_assets.json")
-        if seed:
-            rows = seed
+    # Add any loose files in /uploads that aren't indexed yet
+    known = {a["filename"] for a in index["assets"]}
+    for file in UPLOADS_DIR.glob("*"):
+        if file.is_file() and file.name not in known:
+            # best-effort mime guess
+            mime = "image/" + file.suffix[1:] if file.suffix.lower() in [".png", ".jpg", ".jpeg", ".gif", ".webp"] else "application/octet-stream"
+            asset_id = str(uuid.uuid4())
+            index["assets"].append({
+                "id": asset_id,
+                "filename": file.name,
+                "original_name": file.name,
+                "mime": mime,
+                "size": file.stat().st_size,
+                "source": "upload",
+                "uploaded_at": now_iso(),
+                "badge_score": calc_badge_score(file.name, mime),
+                "code": "Code 11: Culture"
+            })
+    save_asset_index(index)
 
-    return jsonify({"success": True, "assets": rows})
+    # Combine assets (already includes uploads; seed assets will be added via /seed-demo)
+    return jsonify({"success": True, "assets": index["assets"]})
 
-@app.post("/api/assets")
-def create_asset():
-    # Admin-only
-    unauthorized = require_admin()
-    if unauthorized:
-        return unauthorized
+@app.post("/api/upload-assets")
+def api_upload_assets():
+    """
+    Robust upload endpoint:
+    - Always returns JSON (no HTML error page).
+    - Accepts multiple files under field name 'files'.
+    - Saves to /uploads and updates assets_index.json.
+    """
+    try:
+        if "files" not in request.files:
+            return jsonify({"success": False, "message": "No files provided (expected field 'files')"}), 400
 
-    body = request.get_json(force=True)
-    required = ["original_name", "file_type", "file_url"]
-    for k in required:
-        if not body.get(k):
-            return jsonify({"success": False, "error": f"Missing '{k}'"}), 400
+        files = request.files.getlist("files")
+        if not files:
+            return jsonify({"success": False, "message": "Empty file list"}), 400
 
-    asset = {
-        "id": body.get("id") or f"asset-{int(datetime.utcnow().timestamp())}",
-        "original_name": body["original_name"],
-        "file_type": body["file_type"],
-        "file_url": body["file_url"],
-        "badge_score": int(body.get("badge_score", 85)),
-        "assigned_code": body.get("assigned_code"),
-        "created_at": datetime.utcnow(),
-        "usage_count": int(body.get("usage_count", 0)),
-    }
+        index = load_asset_index()
+        added = []
 
-    with db() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO assets (id, original_name, file_type, file_url, badge_score, assigned_code, created_at, usage_count)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            ON CONFLICT (id) DO UPDATE SET
-              original_name=EXCLUDED.original_name,
-              file_type=EXCLUDED.file_type,
-              file_url=EXCLUDED.file_url,
-              badge_score=EXCLUDED.badge_score,
-              assigned_code=EXCLUDED.assigned_code,
-              created_at=EXCLUDED.created_at,
-              usage_count=EXCLUDED.usage_count;
-        """, (
-            asset["id"], asset["original_name"], asset["file_type"], asset["file_url"],
-            asset["badge_score"], asset["assigned_code"], asset["created_at"], asset["usage_count"]
-        ))
-        conn.commit()
+        for f in files:
+            if not f or not f.filename:
+                continue
+            orig = safe_filename(f.filename)
+            mime = f.mimetype or "application/octet-stream"
+            ext = Path(orig).suffix
+            # Generate a stored filename to avoid collisions
+            uid = str(uuid.uuid4())
+            stored = f"{uid}{ext}"
+            dest = UPLOADS_DIR / stored
+            f.save(str(dest))
 
-    return jsonify({"success": True, "asset": asset})
+            record = {
+                "id": uid,
+                "filename": stored,
+                "original_name": orig,
+                "mime": mime,
+                "size": dest.stat().st_size,
+                "source": "upload",
+                "uploaded_at": now_iso(),
+                "badge_score": calc_badge_score(orig, mime),
+                "code": "Code 11: Culture"
+            }
+            index["assets"].append(record)
+            added.append(record)
 
-# -----------------------------------------------------------------------------
-# Deliverables
-# -----------------------------------------------------------------------------
+        save_asset_index(index)
+        return jsonify({"success": True, "uploaded_count": len(added), "assets": added})
+    except Exception as e:
+        log.exception("Upload failed")
+        # Still JSON
+        return jsonify({"success": False, "message": f"Upload error: {str(e)}"}), 500
+
+@app.get("/assets/<path:filename>")
+def serve_asset(filename: str):
+    """
+    Serves files from uploads/ (primary) or data/assets/ (seeded).
+    Your front end can reference /assets/<filename>.
+    """
+    file_path = UPLOADS_DIR / filename
+    if file_path.exists():
+        return send_from_directory(str(UPLOADS_DIR), filename)
+
+    seed_path = DATA_DIR / "assets" / filename
+    if seed_path.exists():
+        return send_from_directory(str(DATA_DIR / "assets"), filename)
+
+    return jsonify({"success": False, "message": "Asset not found"}), 404
+
+# ----------------------------
+# Agency / Deliverables
+# ----------------------------
 @app.get("/api/deliverables")
-def get_deliverables():
-    # Pull current month; if not found, fallback to seed_deliverables.json
+def api_deliverables():
+    """
+    Computes deliverable progress from:
+    - 7-day calendar posts (if present in seed)
+    - asset count (uploads + seeds)
+    Email count is simulated unless your seed uses platform:"Email".
+    """
+    # current phase by month (demo logic)
     now = datetime.utcnow()
-    ym = f"{now.year}-{str(now.month).zfill(2)}"
+    if now.month in [9, 10] and now.year == 2025:
+        phase = ("phase1", "Foundation & Awareness", "Sep-Oct 2025", "$4,000/month",
+                 {"social_posts": 12, "ad_creatives": 4, "email_campaigns": 2})
+    elif now.month in [11, 12] and now.year == 2025:
+        phase = ("phase2", "Growth & Q4 Push", "Nov-Dec 2025", "$7,500/month",
+                 {"social_posts": 16, "ad_creatives": 8, "email_campaigns": 6})
+    else:
+        phase = ("phase3", "Full Retainer + TikTok Shop", "Jan 2026+", "$10,000/month",
+                 {"social_posts": 20, "ad_creatives": 12, "email_campaigns": 8})
 
-    with db() as conn:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("SELECT * FROM deliverables_monthly WHERE year_month=%s;", (ym,))
-        row = cur.fetchone()
+    _, name, period, budget, targets = phase
 
-        # derive counts from posts & assets
-        cur.execute("SELECT COUNT(*) FROM posts WHERE date_trunc('month', scheduled_at)=date_trunc('month', %s::timestamptz);", (now,))
-        posts_cnt = cur.fetchone()["count"]
-        cur.execute("SELECT COUNT(*) FROM assets WHERE date_trunc('month', created_at)=date_trunc('month', %s::timestamptz);", (now,))
-        assets_cnt = cur.fetchone()["count"]
-        # emails = posts with platform='Email'
-        cur.execute("SELECT COUNT(*) FROM posts WHERE platform='Email' AND date_trunc('month', scheduled_at)=date_trunc('month', %s::timestamptz);", (now,))
-        emails_cnt = cur.fetchone()["count"]
+    # posts: count from 7-day seed if provided
+    seed = read_json(SEED_CALENDAR_FILE, {})
+    posts_count = 0
+    emails_count = 0
+    seven = seed.get("7day", [])
+    for day in seven:
+        for p in day.get("posts", []):
+            posts_count += 1
+            if str(p.get("platform", "")).lower() == "email":
+                emails_count += 1
 
-    if not row:
-        seed = load_json("seed_deliverables.json")
-        if seed:
-            return jsonify({"success": True, **seed})
-        # default minimal
-        row = dict(
-            year_month=ym,
-            phase="Foundation & Awareness",
-            budget="$4,000/month",
-            social_target=12, social_current=posts_cnt,
-            creative_target=4, creative_current=assets_cnt,
-            email_target=2, email_current=emails_cnt,
-            notes="",
-        )
+    # assets = indexed assets
+    assets_index = load_asset_index()
+    creatives_count = len(assets_index.get("assets", []))
 
-    # compute progress
     def pct(cur, tgt): 
-        return 0 if not tgt else min(100.0, (cur / float(tgt)) * 100.0)
+        return min(100, round((cur / tgt) * 100, 1) if tgt else 0.0)
 
-    progress = {
-        "social_posts": {
-            "current": int(row.get("social_current", 0)),
-            "target": int(row.get("social_target", 12)),
-            "progress": round(pct(int(row.get("social_current", 0)), int(row.get("social_target", 12))), 1),
-            "outstanding": max(0, int(row.get("social_target", 12)) - int(row.get("social_current", 0))),
-            "status": "ahead" if int(row.get("social_current", 0)) > int(row.get("social_target", 12))
-                               else "on_track" if pct(int(row.get("social_current", 0)), int(row.get("social_target", 12))) >= 80
-                               else "behind"
-        },
-        "ad_creatives": {
-            "current": int(row.get("creative_current", 0)),
-            "target": int(row.get("creative_target", 4)),
-            "progress": round(pct(int(row.get("creative_current", 0)), int(row.get("creative_target", 4))), 1),
-            "outstanding": max(0, int(row.get("creative_target", 4)) - int(row.get("creative_current", 0))),
-            "status": "ahead" if int(row.get("creative_current", 0)) > int(row.get("creative_target", 4))
-                               else "on_track" if pct(int(row.get("creative_current", 0)), int(row.get("creative_target", 4))) >= 80
-                               else "behind"
-        },
-        "email_campaigns": {
-            "current": int(row.get("email_current", 0)),
-            "target": int(row.get("email_target", 2)),
-            "progress": round(pct(int(row.get("email_current", 0)), int(row.get("email_target", 2))), 1),
-            "outstanding": max(0, int(row.get("email_target", 2)) - int(row.get("email_current", 0))),
-            "status": "ahead" if int(row.get("email_current", 0)) > int(row.get("email_target", 2))
-                               else "on_track" if pct(int(row.get("email_current", 0)), int(row.get("email_target", 2))) >= 80
-                               else "behind"
-        }
-    }
-    overall = round((progress["social_posts"]["progress"] +
-                     progress["ad_creatives"]["progress"] +
-                     progress["email_campaigns"]["progress"]) / 3.0, 1)
+    p_prog = pct(posts_count, targets["social_posts"])
+    c_prog = pct(creatives_count, targets["ad_creatives"])
+    e_prog = pct(emails_count, targets["email_campaigns"])
+    overall = round((p_prog + c_prog + e_prog) / 3, 1)
+
+    def status(cur, tgt, prog):
+        if cur > tgt: return "ahead"
+        if prog >= 80: return "on_track"
+        return "behind"
 
     return jsonify({
         "success": True,
-        "current_phase": {
-            "name": row.get("phase", "Foundation & Awareness"),
-            "period": f"{date.today():%b %Y}",
-            "budget": row.get("budget", "$4,000/month")
+        "current_phase": {"name": name, "period": period, "budget": budget},
+        "current_progress": {
+            "social_posts": {
+                "current": posts_count, "target": targets["social_posts"],
+                "progress": p_prog, "outstanding": max(0, targets["social_posts"] - posts_count),
+                "status": status(posts_count, targets["social_posts"], p_prog)
+            },
+            "ad_creatives": {
+                "current": creatives_count, "target": targets["ad_creatives"],
+                "progress": c_prog, "outstanding": max(0, targets["ad_creatives"] - creatives_count),
+                "status": status(creatives_count, targets["ad_creatives"], c_prog)
+            },
+            "email_campaigns": {
+                "current": emails_count, "target": targets["email_campaigns"],
+                "progress": e_prog, "outstanding": max(0, targets["email_campaigns"] - emails_count),
+                "status": status(emails_count, targets["email_campaigns"], e_prog)
+            }
         },
-        "current_progress": progress,
         "overall_progress": overall
     })
 
-@app.put("/api/deliverables/<year_month>")
-def put_deliverables(year_month: str):
-    # Admin-only
-    unauthorized = require_admin()
-    if unauthorized:
-        return unauthorized
+# ----------------------------
+# Maintenance routes
+# ----------------------------
+@app.post("/seed-demo")
+def seed_demo():
+    """
+    Loads seed_assets.json (copies files from data/assets/* into index),
+    ensures seed_calendar.json is recognized.
+    """
+    # 1) Seed assets metadata
+    index = load_asset_index()
+    assets = index.get("assets", [])
+    before = len(assets)
 
-    body = request.get_json(force=True)
-    fields = ("phase","budget","social_target","social_current","creative_target",
-              "creative_current","email_target","email_current","notes")
-    vals = [body.get(k) for k in fields]
+    seed_assets = read_json(SEED_ASSETS_FILE, {"assets": []}).get("assets", [])
+    seed_folder = DATA_DIR / "assets"
+    seed_folder.mkdir(parents=True, exist_ok=True)
 
-    with db() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO deliverables_monthly
-              (year_month, phase, budget, social_target, social_current,
-               creative_target, creative_current, email_target, email_current, notes, updated_at)
-            VALUES
-              (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (year_month) DO UPDATE SET
-              phase=EXCLUDED.phase,
-              budget=EXCLUDED.budget,
-              social_target=EXCLUDED.social_target,
-              social_current=EXCLUDED.social_current,
-              creative_target=EXCLUDED.creative_target,
-              creative_current=EXCLUDED.creative_current,
-              email_target=EXCLUDED.email_target,
-              email_current=EXCLUDED.email_current,
-              notes=EXCLUDED.notes,
-              updated_at=NOW();
-        """, (year_month, *vals))
-        conn.commit()
-    return jsonify({"success": True, "year_month": year_month})
+    for rec in seed_assets:
+        # Expect fields: filename (file must exist under data/assets), original_name, mime
+        fname = rec.get("filename")
+        if not fname:
+            continue
+        # record if file exists
+        if not (seed_folder / fname).exists():
+            # seed listing says file exists but it's missing on disk — skip, but keep going
+            continue
+        # If already present in index, skip
+        if any(a.get("filename") == fname for a in assets):
+            continue
+        uid = str(uuid.uuid4())
+        assets.append({
+            "id": uid,
+            "filename": fname,  # served via /assets/<filename> out of data/assets
+            "original_name": rec.get("original_name", fname),
+            "mime": rec.get("mime", "image/png"),
+            "size": (seed_folder / fname).stat().st_size,
+            "source": "seed",
+            "uploaded_at": now_iso(),
+            "badge_score": calc_badge_score(fname, rec.get("mime", "")),
+            "code": rec.get("code", "Code 11: Culture")
+        })
 
-# -----------------------------------------------------------------------------
-# Posts (create)
-# -----------------------------------------------------------------------------
-@app.post("/api/posts")
-def create_post():
-    # Admin-only
-    unauthorized = require_admin()
-    if unauthorized:
-        return unauthorized
+    index["assets"] = assets
+    save_asset_index(index)
 
-    b = request.get_json(force=True)
-    required = ["title"]
-    for k in required:
-        if not b.get(k):
-            return jsonify({"success": False, "error": f"Missing '{k}'"}), 400
-
-    # Parse dates
-    scheduled_at = b.get("scheduled_at")
-    due_date_s = b.get("due_date")
-
-    with db() as conn:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("""
-            INSERT INTO posts
-            (title, content, platform, scheduled_at, code_name, badge_score, hashtags, status, owner, due_date, asset_id)
-            VALUES
-            (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING *;
-        """, (
-            b["title"],
-            b.get("content"),
-            b.get("platform"),
-            scheduled_at,
-            b.get("code_name"),
-            b.get("badge_score"),
-            b.get("hashtags"),
-            b.get("status"),
-            b.get("owner"),
-            due_date_s,
-            b.get("asset_id")
-        ))
-        row = cur.fetchone()
-        conn.commit()
-
-    return jsonify({"success": True, "post": row})
-
-# -----------------------------------------------------------------------------
-# Seed endpoint (loads JSON from src/data/*)
-# -----------------------------------------------------------------------------
-@app.post("/api/seed")
-def seed_all():
-    # Admin-only
-    unauthorized = require_admin()
-    if unauthorized:
-        return unauthorized
-
-    # Seed assets
-    assets = load_json("seed_assets.json") or []
-    with db() as conn:
-        cur = conn.cursor()
-        for a in assets:
-            cur.execute("""
-                INSERT INTO assets (id, original_name, file_type, file_url, badge_score, assigned_code, created_at, usage_count)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (id) DO NOTHING;
-            """, (
-                a.get("id") or f"asset-{int(datetime.utcnow().timestamp())}",
-                a.get("original_name"),
-                a.get("file_type"),
-                a.get("file_url"),
-                a.get("badge_score", 85),
-                a.get("assigned_code"),
-                a.get("created_at") or datetime.utcnow(),
-                a.get("usage_count", 0),
-            ))
-        conn.commit()
-
-    # Seed 7/30 day posts from seed files (if present)
-    seeded_posts = 0
-    cal7 = load_json("seed_calendar_7day.json") or []
-    cal30 = (load_json("seed_calendar_30day.json") or {}).get("calendar_data", [])
-
-    def add_posts_from_calendar(items: List[Dict[str, Any]]):
-        nonlocal seeded_posts
-        with db() as conn:
-            cur = conn.cursor()
-            for day in items:
-                dstr = day.get("date")
-                for p in day.get("posts", []):
-                    # Compose scheduled_at from date + "time_slot" if present; default 10:00
-                    tslot = p.get("time_slot") or "10:00 CT"
-                    hhmm = (tslot.split(" ")[0] if tslot else "10:00")
-                    scheduled_at = f"{dstr}T{hhmm}:00-05:00" if dstr else None
-                    cur.execute("""
-                        INSERT INTO posts
-                        (title, content, platform, scheduled_at, code_name, badge_score, hashtags, status)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                    """, (
-                        p.get("title"),
-                        p.get("content"),
-                        p.get("platform"),
-                        scheduled_at,
-                        p.get("code_name"),
-                        p.get("badge_score", 85),
-                        p.get("hashtags"),
-                        "scheduled"
-                    ))
-                    seeded_posts += 1
-            conn.commit()
-
-    if cal7:
-        add_posts_from_calendar(cal7)
-    if cal30:
-        add_posts_from_calendar(cal30)
-
-    # Seed deliverables (optional)
-    dseed = load_json("seed_deliverables.json")
-    if dseed:
-        now = datetime.utcnow()
-        ym = f"{now.year}-{str(now.month).zfill(2)}"
-        with db() as conn:
-            cur = conn.cursor()
-            cp = dseed.get("current_phase", {})
-            prog = dseed.get("current_progress", {})
-            cur.execute("""
-                INSERT INTO deliverables_monthly
-                (year_month, phase, budget,
-                 social_target, social_current,
-                 creative_target, creative_current,
-                 email_target, email_current, notes, updated_at)
-                VALUES
-                (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
-                ON CONFLICT (year_month) DO UPDATE SET
-                  phase=EXCLUDED.phase,
-                  budget=EXCLUDED.budget,
-                  social_target=EXCLUDED.social_target,
-                  social_current=EXCLUDED.social_current,
-                  creative_target=EXCLUDED.creative_target,
-                  creative_current=EXCLUDED.creative_current,
-                  email_target=EXCLUDED.email_target,
-                  email_current=EXCLUDED.email_current,
-                  notes=EXCLUDED.notes,
-                  updated_at=NOW();
-            """, (
-                ym,
-                cp.get("name", "Foundation & Awareness"),
-                cp.get("period", "$4,000/month"),
-                prog.get("social_posts", {}).get("target", 12),
-                prog.get("social_posts", {}).get("current", 0),
-                prog.get("ad_creatives", {}).get("target", 4),
-                prog.get("ad_creatives", {}).get("current", 0),
-                prog.get("email_campaigns", {}).get("target", 2),
-                prog.get("email_campaigns", {}).get("current", 0),
-                ""
-            ))
-            conn.commit()
+    # 2) Calendar seed — nothing to do here except acknowledge presence
+    has_cal = SEED_CALENDAR_FILE.exists()
 
     return jsonify({
         "success": True,
-        "seeded_assets": len(assets),
-        "seeded_posts": seeded_posts
+        "added_assets": len(index["assets"]) - before,
+        "has_calendar_seed": has_cal
     })
 
-# -----------------------------------------------------------------------------
-# Main (for local run; Render uses gunicorn)
-# -----------------------------------------------------------------------------
+@app.post("/reset-db")
+def reset_db():
+    """
+    Clears asset index (doesn't delete files), so you can re-seed cleanly.
+    """
+    write_json(ASSET_INDEX, {"assets": []})
+    return jsonify({"success": True, "message": "Asset index cleared. Files on disk were not deleted."})
+
+# ----------------------------
+# Entrypoint
+# ----------------------------
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "5103"))
-    log.info("Starting Crooks & Castles Command Center on port %s", port)
-    app.run(host="0.0.0.0", port=port)
+    # Local run: flask dev server
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5103)), debug=False)
