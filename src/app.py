@@ -2039,28 +2039,32 @@ def upload_assets():
             if file.filename == '':
                 continue
             
-            # Generate unique ID and save file
+            # Generate unique filename and save file
             asset_id = str(uuid.uuid4())
             file_extension = os.path.splitext(file.filename)[1]
-            file_path = os.path.join(ASSETS_FOLDER, f"{asset_id}{file_extension}")
+            saved_filename = f"{asset_id}{file_extension}"
+            file_path = UPLOAD_FOLDER / saved_filename
             
-            file.save(file_path)
+            # Ensure upload directory exists
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            
+            file.save(str(file_path))
             
             # Calculate badge score
             badge_score = calculate_asset_badge_score(file.filename, file.content_type)
             
-            # Save to database
+            # Save to database with the saved filename (not full path)
             cursor.execute('''
                 INSERT INTO assets (id, name, category, format, compliance_score, usage_count, file_path, upload_date, crooks_code, cultural_relevance)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 asset_id,
-                file.filename,
+                saved_filename,  # Use the saved filename
                 'User Upload',  # Default category
                 file.content_type,
                 badge_score,
                 0,  # Initial usage count
-                file_path,
+                str(file_path),  # Full path for internal use
                 datetime.datetime.now().isoformat(),
                 f"Code {badge_score//10}: Upload",  # Generate code based on score
                 'User uploaded content'  # Default cultural relevance
