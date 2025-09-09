@@ -2024,6 +2024,77 @@ def download_asset(asset_id):
         logger.error(f"Error downloading asset {asset_id}: {str(e)}")
         return jsonify({'success': False, 'message': 'Download error'}), 500
 
+@app.route('/api/diagnose-assets', methods=['GET'])
+def diagnose_assets():
+    """Diagnose asset file status WITHOUT deleting anything"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get all assets
+        cursor.execute('SELECT id, name, file_path, category, crooks_code FROM assets')
+        assets = cursor.fetchall()
+        
+        found_assets = []
+        missing_assets = []
+        
+        for asset in assets:
+            file_locations = []
+            file_exists = False
+            
+            # Check stored file_path
+            if asset['file_path'] and Path(asset['file_path']).exists():
+                file_locations.append(f"✅ Stored path: {asset['file_path']}")
+                file_exists = True
+            elif asset['file_path']:
+                file_locations.append(f"❌ Stored path: {asset['file_path']} (not found)")
+            
+            # Check uploads folder
+            upload_path = UPLOAD_FOLDER / asset['name']
+            if upload_path.exists():
+                file_locations.append(f"✅ Uploads: {upload_path}")
+                file_exists = True
+            else:
+                file_locations.append(f"❌ Uploads: {upload_path} (not found)")
+            
+            # Check assets folder
+            assets_path = ASSETS_FOLDER / asset['name']
+            if assets_path.exists():
+                file_locations.append(f"✅ Assets: {assets_path}")
+                file_exists = True
+            else:
+                file_locations.append(f"❌ Assets: {assets_path} (not found)")
+            
+            asset_info = {
+                'id': asset['id'],
+                'name': asset['name'],
+                'category': asset['category'],
+                'crooks_code': asset['crooks_code'],
+                'file_locations': file_locations,
+                'file_exists': file_exists
+            }
+            
+            if file_exists:
+                found_assets.append(asset_info)
+            else:
+                missing_assets.append(asset_info)
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'total_assets': len(assets),
+            'found_count': len(found_assets),
+            'missing_count': len(missing_assets),
+            'found_assets': found_assets,
+            'missing_assets': missing_assets,
+            'message': f'Diagnosis complete. {len(found_assets)} assets have files, {len(missing_assets)} are missing files.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error during asset diagnosis: {str(e)}")
+        return jsonify({'success': False, 'message': 'Diagnosis error'}), 500
+
 @app.route('/uploads/<filename>')
 def serve_uploaded_file(filename):
     """Serve uploaded asset files"""
@@ -2395,4 +2466,3 @@ if __name__ == '__main__':
     
     # Start server
     app.run(host='0.0.0.0', port=5103, debug=False)
-
