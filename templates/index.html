@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kynd Vibes Command Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with KyndVibes Branding -->
+        <header class="header">
+            <div class="brand-section">
+                <div class="energy-rays">
+                    <div class="ray"></div>
+                    <div class="ray"></div>
+                    <div class="ray"></div>
+                    <div class="ray"></div>
+                    <div class="ray"></div>
+                    <div class="ray"></div>
+                    <div class="ray"></div>
+                </div>
+                <h1 class="brand-name">Kynd Vibes</h1>
+                <p class="brand-tagline">amazing not surprising</p>
+            </div>
+            <div class="command-center-title">
+                <h2>Command Center</h2>
+                <p class="subtitle">High Frequency Brand Management</p>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Grid -->
+        <main class="dashboard">
+            <!-- Calendar Section -->
+            <section class="card calendar-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Calendar & Events</h3>
+                    <div class="card-actions">
+                        <select id="calendar-period" class="period-selector">
+                            <option value="7day">Next 7 Days</option>
+                            <option value="30day">Next 30 Days</option>
+                            <option value="60day">Next 60 Days</option>
+                            <option value="90day">Next 90 Days</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div id="calendar-content" class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading calendar events...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Assets Section -->
+            <section class="card assets-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-images"></i> Brand Assets</h3>
+                    <div class="card-actions">
+                        <button class="btn btn-secondary" onclick="refreshAssets()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div id="assets-content" class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading brand assets...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Upload Section -->
+            <section class="card upload-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> Upload Asset</h3>
+                </div>
+                <div class="card-content">
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <p class="upload-text">Drag & drop files here or click to browse</p>
+                        <p class="upload-subtext">Supports: PNG, JPG, PDF, DOC, MP4 (Max 16MB)</p>
+                        <input type="file" id="file-input" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt,.mp4,.mov">
+                        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                            Choose Files
+                        </button>
+                    </div>
+                    <div id="upload-progress" class="upload-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <p class="progress-text">Uploading...</p>
+                    </div>
+                    <div id="upload-results" class="upload-results"></div>
+                </div>
+            </section>
+
+            <!-- Deliverables Section -->
+            <section class="card deliverables-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-tasks"></i> Deliverables</h3>
+                    <div class="card-actions">
+                        <button class="btn btn-primary" onclick="showAddDeliverableForm()">
+                            <i class="fas fa-plus"></i> Add New
+                        </button>
+                        <button class="btn btn-secondary" onclick="refreshDeliverables()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div id="deliverables-content" class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading deliverables...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="card quick-actions-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                </div>
+                <div class="card-content">
+                    <div class="quick-actions-grid">
+                        <button class="quick-action-btn" onclick="checkHealth()">
+                            <i class="fas fa-heartbeat"></i>
+                            <span>Health Check</span>
+                        </button>
+                        <button class="quick-action-btn" onclick="exportData()">
+                            <i class="fas fa-download"></i>
+                            <span>Export Data</span>
+                        </button>
+                        <button class="quick-action-btn" onclick="viewBrandGuide()">
+                            <i class="fas fa-book"></i>
+                            <span>Brand Guide</span>
+                        </button>
+                        <button class="quick-action-btn" onclick="openFrequencyCollective()">
+                            <i class="fas fa-users"></i>
+                            <span>Frequency Collective</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Section -->
+            <section class="card status-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-info-circle"></i> System Status</h3>
+                </div>
+                <div class="card-content">
+                    <div id="status-content">
+                        <div class="status-item">
+                            <span class="status-label">API Health:</span>
+                            <span class="status-value" id="api-status">Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Updated:</span>
+                            <span class="status-value" id="last-updated">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Brand Frequency:</span>
+                            <span class="status-value high-frequency">High ✨</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p class="footer-text">Made with meaning • High Frequency Apparel</p>
+                <div class="talisman-symbol">
+                    <i class="fas fa-feather-alt"></i>
+                    <span class="talisman-number">44</span>
+                    <i class="fas fa-fire"></i>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"        </div>
+    </div>
+
+    <!-- Add Deliverable Modal -->
+    <div id="add-deliverable-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus"></i> Add New Deliverable</h3>
+                <button class="modal-close" onclick="hideAddDeliverableForm()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="add-deliverable-form" onsubmit="submitDeliverable(event)">
+                <div class="form-group">
+                    <label for="deliverable-title">Title *</label>
+                    <input type="text" id="deliverable-title" name="title" required 
+                           placeholder="e.g., Brand Guidelines Document">
+                </div>
+                
+                <div class="form-group">
+                    <label for="deliverable-description">Description *</label>
+                    <textarea id="deliverable-description" name="description" required 
+                              placeholder="Detailed description of the deliverable..."></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="deliverable-due-date">Due Date *</label>
+                        <input type="date" id="deliverable-due-date" name="due_date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deliverable-priority">Priority *</label>
+                        <select id="deliverable-priority" name="priority" required>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="deliverable-assignee">Assignee</label>
+                    <input type="text" id="deliverable-assignee" name="assignee" 
+                           placeholder="Team member or department" value="Team">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideAddDeliverableForm()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create Deliverable
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

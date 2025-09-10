@@ -1,0 +1,41 @@
+[
+  {
+    "id": "656f5a7b-290b-44ad-a80a-f722423c6202",
+    "title": "Gratitude Collection Launch",
+    "description": "Launch new gratitude-themed apparel collection",
+    "start_date": "2025-09-15T17:11:35.290894",
+    "end_date": "2025-09-15T17:11:35.290915",
+    "type": "product_launch",
+    "status": "scheduled",
+    "campaign_type": "product_launch",
+    "priority": "high",
+    "color": "#FF1493",
+    "created_date": "2025-09-09T17:11:35.290917",
+    "assets_required": [
+      "hero_image",
+      "product_shots",
+      "social_media_posts"
+    ],
+    "assets_completed": [],
+    "progress": 30
+  },
+  {
+    "id": "e282886d-62f2-4467-97dd-c77f6bed6a1f",
+    "title": "Frequency Collective Recruitment Drive",
+    "description": "Campus ambassador program recruitment campaign",
+    "start_date": "2025-09-20T17:11:35.290926",
+    "end_date": "2025-10-04T17:11:35.290928",
+    "type": "marketing",
+    "status": "planning",
+    "campaign_type": "frequency_collective",
+    "priority": "medium",
+    "color": "#00CED1",
+    "created_date": "2025-09-09T17:11:35.290930",
+    "assets_required": [
+      "recruitment_graphics",
+      "social_media_kit"
+    ],
+    "assets_completed": [],
+    "progress": 10
+  }
+]
