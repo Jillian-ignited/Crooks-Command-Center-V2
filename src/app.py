@@ -2024,6 +2024,52 @@ def download_asset(asset_id):
         logger.error(f"Error downloading asset {asset_id}: {str(e)}")
         return jsonify({'success': False, 'message': 'Download error'}), 500
 
+@app.route('/api/fix-file-paths', methods=['POST'])
+def fix_file_paths():
+    """Fix file paths in database to point to correct server locations"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get all assets with old file paths
+        cursor.execute('SELECT id, original_name, file_path FROM assets')
+        assets = cursor.fetchall()
+        
+        fixed_count = 0
+        
+        for asset in assets:
+            old_path = asset['file_path']
+            filename = asset['original_name']
+            
+            # Check if file exists in uploads folder
+            new_path = str(UPLOAD_FOLDER / filename)
+            
+            if Path(new_path).exists():
+                # Update the database with correct path
+                cursor.execute('UPDATE assets SET file_path = ? WHERE id = ?', (new_path, asset['id']))
+                fixed_count += 1
+                logger.info(f"Fixed path for {filename}: {old_path} -> {new_path}")
+            else:
+                # Try assets folder
+                assets_path = str(ASSETS_FOLDER / filename)
+                if Path(assets_path).exists():
+                    cursor.execute('UPDATE assets SET file_path = ? WHERE id = ?', (assets_path, asset['id']))
+                    fixed_count += 1
+                    logger.info(f"Fixed path for {filename}: {old_path} -> {assets_path}")
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Fixed file paths for {fixed_count} assets',
+            'fixed_count': fixed_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fixing file paths: {str(e)}")
+        return jsonify({'success': False, 'message': 'Fix error'}), 500
+
 @app.route('/api/diagnose-assets', methods=['GET'])
 def diagnose_assets():
     """Diagnose asset file status WITHOUT deleting anything"""
@@ -2466,3 +2512,4 @@ if __name__ == '__main__':
     
     # Start server
     app.run(host='0.0.0.0', port=5103, debug=False)
+
