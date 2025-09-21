@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements_render.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    startCommand: python start.py
     envVars:
       - key: FLASK_ENV
         value: production
@@ -13,7 +13,3 @@ services:
       - key: SECRET_KEY
         generateValue: true
     healthCheckPath: /
-    disk:
-      name: crooks-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
