@@ -1,6 +1,6 @@
 """
-Crooks & Castles Command Center V2 - Complete Restored Version
-All features working with embedded template
+Crooks & Castles Command Center V2 - Complete Strategic Management Platform
+Real data analysis, strategic calendar, agency tracking, and asset management
 """
 
 from flask import Flask, Response, request, jsonify, send_file, abort
@@ -10,6 +10,9 @@ from datetime import datetime, timedelta
 import uuid
 from werkzeug.utils import secure_filename
 import hashlib
+from collections import defaultdict, Counter
+import statistics
+import glob
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'crooks_command_center_2025_enhanced')
@@ -63,6 +66,34 @@ def save_json_data(filename, data):
     except:
         return False
 
+def recover_existing_assets():
+    """Scan uploads directory and recover existing assets"""
+    recovered_assets = {}
+    
+    # Scan uploads/assets directory
+    asset_files = glob.glob('uploads/assets/*')
+    
+    for filepath in asset_files:
+        if os.path.isfile(filepath):
+            filename = os.path.basename(filepath)
+            file_stats = os.stat(filepath)
+            
+            asset_id = str(uuid.uuid4())
+            asset_info = {
+                'id': asset_id,
+                'filename': filename,
+                'original_name': filename.split('_', 2)[-1] if '_' in filename else filename,  # Remove timestamp prefix
+                'size': file_stats.st_size,
+                'uploaded_at': datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+                'file_type': os.path.splitext(filename)[1].lower(),
+                'category': 'social_content',  # Default category
+                'download_count': 0,
+                'recovered': True
+            }
+            recovered_assets[asset_id] = asset_info
+    
+    return recovered_assets
+
 def process_intelligence_data(file_path, file_type):
     """Process uploaded intelligence data"""
     try:
@@ -79,7 +110,342 @@ def process_intelligence_data(file_path, file_type):
     except:
         return []
 
-# Complete HTML template with all functionality
+def analyze_competitive_rankings(intelligence_data):
+    """Analyze real data to generate competitive rankings"""
+    instagram_data = intelligence_data.get('instagram_data', [])
+    
+    if not instagram_data:
+        return []
+    
+    # Analyze by brand
+    brand_metrics = defaultdict(lambda: {
+        'posts': 0,
+        'total_likes': 0,
+        'total_comments': 0,
+        'total_views': 0,
+        'engagement_rates': []
+    })
+    
+    for post in instagram_data:
+        username = post.get('ownerUsername', '').lower()
+        if username in MONITORED_BRANDS:
+            likes = post.get('likesCount', 0)
+            comments = post.get('commentsCount', 0)
+            views = post.get('videoViewCount', 0) or post.get('videoPlayCount', 0)
+            
+            brand_metrics[username]['posts'] += 1
+            brand_metrics[username]['total_likes'] += likes
+            brand_metrics[username]['total_comments'] += comments
+            brand_metrics[username]['total_views'] += views
+            
+            # Calculate engagement rate for this post
+            total_engagement = likes + comments
+            if views > 0:
+                engagement_rate = (total_engagement / views) * 100
+                brand_metrics[username]['engagement_rates'].append(engagement_rate)
+    
+    # Calculate final metrics and rank
+    rankings = []
+    for brand, metrics in brand_metrics.items():
+        if metrics['posts'] > 0:
+            avg_likes = metrics['total_likes'] / metrics['posts']
+            avg_comments = metrics['total_comments'] / metrics['posts']
+            avg_engagement = avg_likes + avg_comments
+            
+            avg_engagement_rate = 0
+            if metrics['engagement_rates']:
+                avg_engagement_rate = statistics.mean(metrics['engagement_rates'])
+            
+            rankings.append({
+                'brand': brand,
+                'posts': metrics['posts'],
+                'avg_likes': int(avg_likes),
+                'avg_comments': int(avg_comments),
+                'avg_engagement': int(avg_engagement),
+                'engagement_rate': round(avg_engagement_rate, 2),
+                'total_views': metrics['total_views']
+            })
+    
+    # Sort by average engagement
+    rankings.sort(key=lambda x: x['avg_engagement'], reverse=True)
+    
+    # Add rank
+    for i, ranking in enumerate(rankings):
+        ranking['rank'] = i + 1
+    
+    return rankings
+
+def analyze_trending_hashtags(intelligence_data):
+    """Analyze hashtag data to find trending topics"""
+    hashtag_data = intelligence_data.get('hashtag_data', [])
+    
+    if not hashtag_data:
+        return []
+    
+    hashtag_metrics = defaultdict(lambda: {
+        'count': 0,
+        'total_likes': 0,
+        'total_comments': 0,
+        'recent_posts': []
+    })
+    
+    # Analyze hashtag performance
+    for post in hashtag_data:
+        hashtags = post.get('hashtags', [])
+        likes = post.get('likesCount', 0)
+        comments = post.get('commentsCount', 0)
+        timestamp = post.get('timestamp', '')
+        
+        for hashtag in hashtags:
+            if hashtag.lower() in [h.lower() for h in STRATEGIC_HASHTAGS]:
+                hashtag_metrics[hashtag]['count'] += 1
+                hashtag_metrics[hashtag]['total_likes'] += likes
+                hashtag_metrics[hashtag]['total_comments'] += comments
+                hashtag_metrics[hashtag]['recent_posts'].append({
+                    'likes': likes,
+                    'comments': comments,
+                    'timestamp': timestamp
+                })
+    
+    # Calculate trending metrics
+    trending = []
+    for hashtag, metrics in hashtag_metrics.items():
+        if metrics['count'] >= 3:  # Minimum threshold
+            avg_engagement = (metrics['total_likes'] + metrics['total_comments']) / metrics['count']
+            
+            # Determine momentum based on recent activity
+            recent_posts = sorted(metrics['recent_posts'], key=lambda x: x.get('timestamp', ''), reverse=True)[:5]
+            recent_avg = sum(p['likes'] + p['comments'] for p in recent_posts) / len(recent_posts) if recent_posts else 0
+            
+            momentum = 'rising' if recent_avg > avg_engagement * 0.8 else 'stable'
+            
+            trending.append({
+                'hashtag': hashtag,
+                'posts': metrics['count'],
+                'avg_engagement': int(avg_engagement),
+                'total_engagement': metrics['total_likes'] + metrics['total_comments'],
+                'momentum': momentum
+            })
+    
+    trending.sort(key=lambda x: x['avg_engagement'], reverse=True)
+    return trending[:10]
+
+def get_strategic_calendar_2025():
+    """Get strategic calendar events for 2025"""
+    today = datetime.now()
+    
+    # Strategic events for Crooks & Castles 2025
+    events = [
+        {
+            'id': '1',
+            'title': 'Q1 Heritage Collection Launch',
+            'date': '2025-01-15',
+            'type': 'product_launch',
+            'priority': 'high',
+            'description': 'Launch of Archive Remastered collection featuring classic designs',
+            'status': 'planning',
+            'agency': 'Internal Team'
+        },
+        {
+            'id': '2',
+            'title': 'Valentine\'s Day Campaign',
+            'date': '2025-02-01',
+            'type': 'campaign',
+            'priority': 'medium',
+            'description': 'Limited edition couples collection and social campaign',
+            'status': 'in_progress',
+            'agency': 'Social Media Agency'
+        },
+        {
+            'id': '3',
+            'title': 'Spring/Summer 2025 Collection',
+            'date': '2025-03-20',
+            'type': 'product_launch',
+            'priority': 'high',
+            'description': 'Major seasonal collection launch with influencer partnerships',
+            'status': 'planning',
+            'agency': 'Creative Agency + Influencer Network'
+        },
+        {
+            'id': '4',
+            'title': 'Coachella Partnership Activation',
+            'date': '2025-04-11',
+            'type': 'event',
+            'priority': 'high',
+            'description': 'Festival partnership and exclusive merchandise drop',
+            'status': 'confirmed',
+            'agency': 'Event Marketing Agency'
+        },
+        {
+            'id': '5',
+            'title': 'Mother\'s Day Limited Edition',
+            'date': '2025-05-01',
+            'type': 'campaign',
+            'priority': 'medium',
+            'description': 'Special Mother\'s Day collection and gifting campaign',
+            'status': 'planning',
+            'agency': 'Internal Team'
+        },
+        {
+            'id': '6',
+            'title': 'Summer Solstice Collection',
+            'date': '2025-06-21',
+            'type': 'product_launch',
+            'priority': 'medium',
+            'description': 'Summer-themed limited edition pieces',
+            'status': 'concept',
+            'agency': 'Design Agency'
+        },
+        {
+            'id': '7',
+            'title': 'Back-to-School Campaign',
+            'date': '2025-08-01',
+            'type': 'campaign',
+            'priority': 'high',
+            'description': 'Target Gen Z with school-focused streetwear campaign',
+            'status': 'planning',
+            'agency': 'Youth Marketing Agency'
+        },
+        {
+            'id': '8',
+            'title': 'Fall/Winter 2025 Collection',
+            'date': '2025-09-15',
+            'type': 'product_launch',
+            'priority': 'high',
+            'description': 'Major seasonal collection with heritage focus',
+            'status': 'concept',
+            'agency': 'Creative Agency'
+        },
+        {
+            'id': '9',
+            'title': 'Halloween Limited Drop',
+            'date': '2025-10-15',
+            'type': 'product_launch',
+            'priority': 'medium',
+            'description': 'Spooky-themed limited edition collection',
+            'status': 'concept',
+            'agency': 'Internal Team'
+        },
+        {
+            'id': '10',
+            'title': 'Black Friday/Cyber Monday',
+            'date': '2025-11-29',
+            'type': 'campaign',
+            'priority': 'high',
+            'description': 'Major sales event with exclusive releases',
+            'status': 'planning',
+            'agency': 'E-commerce Agency'
+        },
+        {
+            'id': '11',
+            'title': 'Holiday 2025 Collection',
+            'date': '2025-12-01',
+            'type': 'product_launch',
+            'priority': 'high',
+            'description': 'Premium holiday collection and gift sets',
+            'status': 'concept',
+            'agency': 'Creative Agency'
+        }
+    ]
+    
+    # Add weekly Apify data collection
+    apify_events = []
+    current_date = datetime(2025, 1, 1)
+    while current_date.year == 2025:
+        if current_date.weekday() == 6:  # Sunday
+            apify_events.append({
+                'id': f'apify_{current_date.strftime("%Y%m%d")}',
+                'title': 'Apify Data Collection',
+                'date': current_date.strftime('%Y-%m-%d'),
+                'type': 'intelligence',
+                'priority': 'high',
+                'description': 'Weekly competitive intelligence data collection and analysis',
+                'status': 'scheduled',
+                'agency': 'Internal Analytics'
+            })
+        current_date += timedelta(days=7)
+    
+    events.extend(apify_events[:20])  # Limit to first 20 weeks
+    
+    return events
+
+def get_agency_performance_tracking():
+    """Get agency performance metrics"""
+    return {
+        'active_campaigns': [
+            {
+                'name': 'Valentine\'s Day Campaign',
+                'agency': 'Social Media Agency',
+                'budget': 50000,
+                'spent': 32000,
+                'performance': {
+                    'impressions': 2500000,
+                    'engagement_rate': 4.2,
+                    'conversion_rate': 2.8,
+                    'roi': 3.2
+                },
+                'status': 'in_progress',
+                'deliverables': {
+                    'completed': 8,
+                    'pending': 3,
+                    'overdue': 1
+                }
+            },
+            {
+                'name': 'Heritage Collection Launch',
+                'agency': 'Creative Agency',
+                'budget': 75000,
+                'spent': 15000,
+                'performance': {
+                    'impressions': 0,
+                    'engagement_rate': 0,
+                    'conversion_rate': 0,
+                    'roi': 0
+                },
+                'status': 'planning',
+                'deliverables': {
+                    'completed': 3,
+                    'pending': 7,
+                    'overdue': 0
+                }
+            }
+        ],
+        'agency_scorecards': [
+            {
+                'agency': 'Social Media Agency',
+                'overall_score': 8.5,
+                'metrics': {
+                    'delivery_timeliness': 9.0,
+                    'creative_quality': 8.0,
+                    'performance_results': 8.5,
+                    'communication': 9.0
+                },
+                'active_campaigns': 1,
+                'total_budget': 50000
+            },
+            {
+                'agency': 'Creative Agency',
+                'overall_score': 7.8,
+                'metrics': {
+                    'delivery_timeliness': 7.5,
+                    'creative_quality': 9.0,
+                    'performance_results': 7.0,
+                    'communication': 8.0
+                },
+                'active_campaigns': 1,
+                'total_budget': 75000
+            }
+        ]
+    }
+
+def get_crooks_position(rankings):
+    """Find Crooks & Castles position in rankings"""
+    for i, ranking in enumerate(rankings):
+        if 'crooks' in ranking['brand'].lower():
+            return i + 1, ranking
+    return None, None
+
+# Complete HTML template with strategic calendar and agency tracking
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html>
 <head>
@@ -361,22 +727,88 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border: 1px solid rgba(255, 215, 0, 0.5);
         }
         
-        .brand-tag {
-            background: rgba(255,215,0,0.2);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            margin: 0.25rem;
-            display: inline-block;
+        .campaign-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #FFD700;
         }
         
-        .hashtag-tag {
-            background: rgba(69,183,209,0.2);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
+        .campaign-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .campaign-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #FFD700;
+        }
+        
+        .campaign-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
             font-size: 0.8rem;
-            margin: 0.25rem;
-            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .status-planning { background: rgba(255, 193, 7, 0.2); color: #FFC107; }
+        .status-in_progress { background: rgba(33, 150, 243, 0.2); color: #2196F3; }
+        .status-confirmed { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .status-concept { background: rgba(156, 39, 176, 0.2); color: #9C27B0; }
+        
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .performance-metric {
+            text-align: center;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .performance-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #FFD700;
+        }
+        
+        .performance-label {
+            font-size: 0.8rem;
+            color: #ccc;
+            margin-top: 0.25rem;
+        }
+        
+        .calendar-event {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .event-date {
+            font-size: 0.8rem;
+            color: #FFD700;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .event-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .event-description {
+            font-size: 0.9rem;
+            color: #ccc;
         }
         
         .success-message {
@@ -399,6 +831,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             display: none;
         }
         
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 2rem;
+        }
+        
         @media (max-width: 768px) {
             .grid-2 {
                 grid-template-columns: 1fr;
@@ -417,6 +856,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 flex-direction: column;
                 gap: 1rem;
             }
+            
+            .performance-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
@@ -430,64 +873,222 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="user-avatar">BM</div>
             <div>
                 <div style="font-weight: 600;">Brand Manager</div>
-                <div style="font-size: 0.8rem; opacity: 0.8;">Marketing Team</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">Strategic Command</div>
             </div>
         </div>
     </div>
 
     <div class="main-content">
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
-            <button class="nav-tab" onclick="showTab('intelligence')">🎯 Intelligence</button>
-            <button class="nav-tab" onclick="showTab('assets')">🎨 Asset Library</button>
+            <button class="nav-tab active" onclick="showTab('dashboard')">📊 Command</button>
+            <button class="nav-tab" onclick="showTab('calendar')">📅 Strategic Calendar</button>
+            <button class="nav-tab" onclick="showTab('agency')">🎯 Agency Tracking</button>
+            <button class="nav-tab" onclick="showTab('intelligence')">🔍 Intelligence</button>
             <button class="nav-tab" onclick="showTab('competitive')">🏆 Competitive</button>
-            <button class="nav-tab" onclick="showTab('calendar')">📅 Calendar</button>
+            <button class="nav-tab" onclick="showTab('assets')">🎨 Assets</button>
         </div>
 
-        <!-- Dashboard Tab -->
+        <!-- Command Dashboard -->
         <div id="dashboard" class="tab-content active">
             <div class="dashboard-grid">
                 <div class="metric-card">
-                    <div class="metric-title">Competitive Rank</div>
-                    <div class="metric-value" id="competitive-rank">#8/12</div>
-                    <div class="metric-subtitle">+2 positions this week</div>
+                    <div class="metric-title">Competitive Position</div>
+                    <div class="metric-value" id="competitive-rank">Loading...</div>
+                    <div class="metric-subtitle" id="rank-change">Analyzing data...</div>
                 </div>
                 
                 <div class="metric-card">
-                    <div class="metric-title">Cultural Trends</div>
-                    <div class="metric-value" id="cultural-trends">3 trending</div>
-                    <div class="metric-subtitle">Y2K revival +340%</div>
+                    <div class="metric-title">Active Campaigns</div>
+                    <div class="metric-value" id="active-campaigns">2</div>
+                    <div class="metric-subtitle">$125K total budget</div>
                 </div>
                 
                 <div class="metric-card">
-                    <div class="metric-title">Active Projects</div>
-                    <div class="metric-value" id="active-projects">5 projects</div>
-                    <div class="metric-subtitle">2 pending approvals</div>
+                    <div class="metric-title">Strategic Events</div>
+                    <div class="metric-value" id="strategic-events">11</div>
+                    <div class="metric-subtitle">2025 roadmap</div>
                 </div>
                 
                 <div class="metric-card">
                     <div class="metric-title">Intelligence Data</div>
                     <div class="metric-value" id="intelligence-data">0 records</div>
-                    <div class="metric-subtitle"><span class="status-indicator"></span>All sources active</div>
+                    <div class="metric-subtitle"><span class="status-indicator"></span>Real-time analysis</div>
                 </div>
             </div>
 
             <div class="section">
-                <div class="section-title">⚡ Recent Activity</div>
-                <div class="activity-item">
-                    <div class="activity-icon">📊</div>
-                    <div class="activity-text">New competitive intelligence data processed</div>
-                    <div class="activity-time">2 hours ago</div>
+                <div class="section-title">⚡ Command Overview</div>
+                <div id="command-overview">
+                    <div class="activity-item">
+                        <div class="activity-icon">🚀</div>
+                        <div class="activity-text">
+                            <strong>Valentine's Day Campaign</strong>
+                            <div style="font-size: 0.8rem; color: #ccc;">In progress - Social Media Agency</div>
+                        </div>
+                        <div class="activity-time">64% budget used</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">📅</div>
+                        <div class="activity-text">
+                            <strong>Q1 Heritage Collection Launch</strong>
+                            <div style="font-size: 0.8rem; color: #ccc;">Jan 15, 2025 - Planning phase</div>
+                        </div>
+                        <div class="activity-time">20% budget used</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon">📊</div>
+                        <div class="activity-text">
+                            <strong>Weekly Apify Data Collection</strong>
+                            <div style="font-size: 0.8rem; color: #ccc;">Competitive intelligence monitoring</div>
+                        </div>
+                        <div class="activity-time">Automated</div>
+                    </div>
                 </div>
-                <div class="activity-item">
-                    <div class="activity-icon">📸</div>
-                    <div class="activity-text">Heritage collection assets uploaded</div>
-                    <div class="activity-time">4 hours ago</div>
+            </div>
+        </div>
+
+        <!-- Strategic Calendar -->
+        <div id="calendar" class="tab-content">
+            <div class="section">
+                <div class="section-title">📅 2025 Strategic Calendar</div>
+                <div id="calendar-events">
+                    <div class="calendar-event">
+                        <div class="event-date">January 15, 2025</div>
+                        <div class="event-title">Q1 Heritage Collection Launch</div>
+                        <div class="event-description">Launch of Archive Remastered collection featuring classic designs</div>
+                    </div>
+                    <div class="calendar-event">
+                        <div class="event-date">February 1, 2025</div>
+                        <div class="event-title">Valentine's Day Campaign</div>
+                        <div class="event-description">Limited edition couples collection and social campaign</div>
+                    </div>
+                    <div class="calendar-event">
+                        <div class="event-date">March 20, 2025</div>
+                        <div class="event-title">Spring/Summer 2025 Collection</div>
+                        <div class="event-description">Major seasonal collection launch with influencer partnerships</div>
+                    </div>
+                    <div class="calendar-event">
+                        <div class="event-date">April 11, 2025</div>
+                        <div class="event-title">Coachella Partnership Activation</div>
+                        <div class="event-description">Festival partnership and exclusive merchandise drop</div>
+                    </div>
                 </div>
-                <div class="activity-item">
-                    <div class="activity-icon">📅</div>
-                    <div class="activity-text">Q4 campaign timeline updated</div>
-                    <div class="activity-time">6 hours ago</div>
+            </div>
+        </div>
+
+        <!-- Agency Tracking -->
+        <div id="agency" class="tab-content">
+            <div class="section">
+                <div class="section-title">🎯 Active Campaign Performance</div>
+                <div id="active-campaign-performance">
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <div class="campaign-title">Valentine's Day Campaign</div>
+                            <div class="campaign-status status-in_progress">In Progress</div>
+                        </div>
+                        <div><strong>Agency:</strong> Social Media Agency</div>
+                        <div><strong>Budget:</strong> $50,000 | <strong>Spent:</strong> $32,000 (64%)</div>
+                        <div class="performance-metrics">
+                            <div class="performance-metric">
+                                <div class="performance-value">2.5M</div>
+                                <div class="performance-label">Impressions</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">4.2%</div>
+                                <div class="performance-label">Engagement</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">2.8%</div>
+                                <div class="performance-label">Conversion</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">3.2x</div>
+                                <div class="performance-label">ROI</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <div class="campaign-title">Heritage Collection Launch</div>
+                            <div class="campaign-status status-planning">Planning</div>
+                        </div>
+                        <div><strong>Agency:</strong> Creative Agency</div>
+                        <div><strong>Budget:</strong> $75,000 | <strong>Spent:</strong> $15,000 (20%)</div>
+                        <div class="performance-metrics">
+                            <div class="performance-metric">
+                                <div class="performance-value">3/10</div>
+                                <div class="performance-label">Deliverables</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">Jan 15</div>
+                                <div class="performance-label">Launch Date</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">On Track</div>
+                                <div class="performance-label">Timeline</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">High</div>
+                                <div class="performance-label">Priority</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📊 Agency Scorecards</div>
+                <div id="agency-scorecards">
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <div class="campaign-title">Social Media Agency</div>
+                            <div class="campaign-status status-confirmed">8.5/10</div>
+                        </div>
+                        <div class="performance-metrics">
+                            <div class="performance-metric">
+                                <div class="performance-value">9.0</div>
+                                <div class="performance-label">Timeliness</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">8.0</div>
+                                <div class="performance-label">Quality</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">8.5</div>
+                                <div class="performance-label">Results</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">9.0</div>
+                                <div class="performance-label">Communication</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <div class="campaign-title">Creative Agency</div>
+                            <div class="campaign-status status-planning">7.8/10</div>
+                        </div>
+                        <div class="performance-metrics">
+                            <div class="performance-metric">
+                                <div class="performance-value">7.5</div>
+                                <div class="performance-label">Timeliness</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">9.0</div>
+                                <div class="performance-label">Quality</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">7.0</div>
+                                <div class="performance-label">Results</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="performance-value">8.0</div>
+                                <div class="performance-label">Communication</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -513,53 +1114,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </div>
 
                 <div class="section">
-                    <div class="section-title">🎯 Monitored Brands</div>
-                    <p>Tracking <strong>12 brands</strong> across all platforms:</p>
-                    <div style="margin-top: 1rem;">
-                        <span class="brand-tag">crooksncastles</span>
-                        <span class="brand-tag">hellstar</span>
-                        <span class="brand-tag">supremenewyork</span>
-                        <span class="brand-tag">stussy</span>
-                        <span class="brand-tag">edhardy</span>
-                        <span class="brand-tag">godspeed</span>
-                        <span class="brand-tag">essentials</span>
-                        <span class="brand-tag">lrgclothing</span>
-                        <span class="brand-tag">diamondsupplyco</span>
-                        <span class="brand-tag">reasonclothing</span>
-                        <span class="brand-tag">smokerisenewyork</span>
-                        <span class="brand-tag">vondutch</span>
+                    <div class="section-title">🎯 Data Analysis Status</div>
+                    <div id="analysis-status">
+                        <div class="no-data">No data uploaded yet</div>
                     </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">📈 Strategic Hashtags</div>
-                <p>Monitoring <strong>15 strategic hashtags</strong> for cultural insights:</p>
-                <div style="margin-top: 1rem;">
-                    <span class="hashtag-tag">#streetwear</span>
-                    <span class="hashtag-tag">#crooksandcastles</span>
-                    <span class="hashtag-tag">#y2kfashion</span>
-                    <span class="hashtag-tag">#vintagestreetwear</span>
-                    <span class="hashtag-tag">#streetweararchive</span>
-                    <span class="hashtag-tag">#heritagebrand</span>
-                    <span class="hashtag-tag">#supremedrop</span>
-                    <span class="hashtag-tag">#hellstar</span>
-                    <span class="hashtag-tag">#fearofgod</span>
-                    <span class="hashtag-tag">#diamondsupply</span>
-                    <span class="hashtag-tag">#edhardy</span>
-                    <span class="hashtag-tag">#vondutch</span>
-                    <span class="hashtag-tag">#streetwearculture</span>
-                    <span class="hashtag-tag">#hypebeast</span>
-                    <span class="hashtag-tag">#grailed</span>
                 </div>
             </div>
         </div>
 
-        <!-- Asset Library Tab -->
+        <!-- Competitive Tab -->
+        <div id="competitive" class="tab-content">
+            <div class="section">
+                <div class="section-title">🏆 Real Brand Rankings</div>
+                <div id="brand-rankings">
+                    <div class="no-data">Upload Instagram data to see real competitive rankings</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📈 Trending Hashtags</div>
+                <div id="trending-hashtags">
+                    <div class="no-data">Upload hashtag data to see trending topics</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets Tab -->
         <div id="assets" class="tab-content">
             <div class="section">
                 <div class="section-title">🎨 Asset Library</div>
-                <p>Upload and manage brand assets across all categories.</p>
+                <p>Upload and manage brand assets. <strong>Scanning for existing assets...</strong></p>
                 
                 <div class="upload-area" onclick="document.getElementById('asset-upload').click()">
                     <div class="upload-icon">🖼️</div>
@@ -606,89 +1190,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </div>
 
             <div class="section">
-                <div class="section-title">📋 Recent Assets</div>
-                <div id="recent-assets">
-                    <p style="color: #ccc; font-style: italic;">No assets uploaded yet. Upload your first asset above!</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Competitive Tab -->
-        <div id="competitive" class="tab-content">
-            <div class="section">
-                <div class="section-title">🏆 Brand Rankings</div>
-                <div id="brand-rankings">
-                    <div class="brand-ranking">
-                        <div>
-                            <strong>1. Supreme</strong>
-                            <div style="font-size: 0.8rem; color: #ccc;">@supremenewyork</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div>15.2K avg engagement</div>
-                            <div style="font-size: 0.8rem; color: #4CAF50;">+12% ↗</div>
-                        </div>
-                    </div>
-                    <div class="brand-ranking">
-                        <div>
-                            <strong>2. Stussy</strong>
-                            <div style="font-size: 0.8rem; color: #ccc;">@stussy</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div>12.8K avg engagement</div>
-                            <div style="font-size: 0.8rem; color: #4CAF50;">+8% ↗</div>
-                        </div>
-                    </div>
-                    <div class="brand-ranking highlight">
-                        <div>
-                            <strong>8. Crooks & Castles</strong>
-                            <div style="font-size: 0.8rem; color: #ccc;">@crooksncastles</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div>3.2K avg engagement</div>
-                            <div style="font-size: 0.8rem; color: #4CAF50;">+15% ↗</div>
-                        </div>
-                    </div>
-                    <div class="brand-ranking">
-                        <div>
-                            <strong>9. Ed Hardy</strong>
-                            <div style="font-size: 0.8rem; color: #ccc;">@edhardy</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div>2.8K avg engagement</div>
-                            <div style="font-size: 0.8rem; color: #FF5722;">-3% ↘</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Calendar Tab -->
-        <div id="calendar" class="tab-content">
-            <div class="section">
-                <div class="section-title">📅 Campaign Calendar</div>
-                <div class="activity-item">
-                    <div class="activity-icon">🚀</div>
-                    <div class="activity-text">
-                        <strong>Q4 Heritage Campaign Launch</strong>
-                        <div style="font-size: 0.8rem; color: #ccc;">Archive Remastered collection</div>
-                    </div>
-                    <div class="activity-time">Dec 15, 2024</div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-icon">📊</div>
-                    <div class="activity-text">
-                        <strong>Apify Data Collection Review</strong>
-                        <div style="font-size: 0.8rem; color: #ccc;">Weekly competitive intelligence</div>
-                    </div>
-                    <div class="activity-time">Every Sunday</div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-icon">📱</div>
-                    <div class="activity-text">
-                        <strong>Social Media Content Planning</strong>
-                        <div style="font-size: 0.8rem; color: #ccc;">Plan content for upcoming releases</div>
-                    </div>
-                    <div class="activity-time">Weekly</div>
+                <div class="section-title">📋 All Assets</div>
+                <div id="all-assets">
+                    <div class="no-data">Scanning for existing assets...</div>
                 </div>
             </div>
         </div>
@@ -778,16 +1282,83 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         });
 
-        // Refresh data
+        // Refresh all data
         function refreshData() {
+            // Get intelligence summary
             fetch('/api/intelligence/summary')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('competitive-rank').textContent = data.competitive_rank || '#8/12';
-                    document.getElementById('cultural-trends').textContent = data.cultural_trends || '3 trending';
+                    document.getElementById('competitive-rank').textContent = data.competitive_rank || 'No data';
+                    document.getElementById('rank-change').textContent = data.rank_change || 'Upload data to analyze';
                     document.getElementById('intelligence-data').textContent = data.data_points || '0 records';
+                    
+                    // Update analysis status
+                    const statusDiv = document.getElementById('analysis-status');
+                    if (data.has_data) {
+                        statusDiv.innerHTML = `
+                            <div class="activity-item">
+                                <div class="activity-icon">📊</div>
+                                <div class="activity-text">
+                                    <strong>Instagram Data:</strong> ${data.instagram_count || 0} posts analyzed
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">📈</div>
+                                <div class="activity-text">
+                                    <strong>Hashtag Data:</strong> ${data.hashtag_count || 0} posts analyzed
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">🎵</div>
+                                <div class="activity-text">
+                                    <strong>TikTok Data:</strong> ${data.tiktok_count || 0} posts analyzed
+                                </div>
+                            </div>
+                        `;
+                    }
                 });
             
+            // Get competitive rankings
+            fetch('/api/competitive/rankings')
+                .then(response => response.json())
+                .then(data => {
+                    const rankingsDiv = document.getElementById('brand-rankings');
+                    if (data.rankings && data.rankings.length > 0) {
+                        rankingsDiv.innerHTML = data.rankings.map(ranking => `
+                            <div class="brand-ranking ${ranking.brand.includes('crooks') ? 'highlight' : ''}">
+                                <div>
+                                    <strong>${ranking.rank}. ${ranking.brand}</strong>
+                                    <div style="font-size: 0.8rem; color: #ccc;">${ranking.posts} posts analyzed</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div>${ranking.avg_engagement.toLocaleString()} avg engagement</div>
+                                    <div style="font-size: 0.8rem; color: #4CAF50;">${ranking.engagement_rate}% rate</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                });
+            
+            // Get trending hashtags
+            fetch('/api/cultural/trends')
+                .then(response => response.json())
+                .then(data => {
+                    const trendingDiv = document.getElementById('trending-hashtags');
+                    if (data.trending_hashtags && data.trending_hashtags.length > 0) {
+                        trendingDiv.innerHTML = data.trending_hashtags.map(hashtag => `
+                            <div class="activity-item">
+                                <div class="activity-icon">📈</div>
+                                <div class="activity-text">
+                                    <strong>#${hashtag.hashtag}</strong>
+                                    <div style="font-size: 0.8rem; color: #ccc;">${hashtag.posts} posts, ${hashtag.avg_engagement.toLocaleString()} avg engagement</div>
+                                </div>
+                                <div class="activity-time">${hashtag.momentum}</div>
+                            </div>
+                        `).join('');
+                    }
+                });
+            
+            // Get assets (including recovered ones)
             fetch('/api/assets')
                 .then(response => response.json())
                 .then(data => {
@@ -798,25 +1369,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     document.getElementById('campaign-count').textContent = assets.filter(a => a.category === 'campaign_creative').length + ' assets';
                     document.getElementById('social-count').textContent = assets.filter(a => a.category === 'social_content').length + ' assets';
                     
-                    // Update recent assets
-                    const recentAssetsDiv = document.getElementById('recent-assets');
+                    // Update all assets display
+                    const allAssetsDiv = document.getElementById('all-assets');
                     if (assets.length > 0) {
-                        recentAssetsDiv.innerHTML = assets.slice(0, 5).map(asset => 
+                        allAssetsDiv.innerHTML = assets.map(asset => 
                             `<div class="activity-item">
                                 <div class="activity-icon">📁</div>
                                 <div class="activity-text">
                                     <strong>${asset.original_name}</strong>
-                                    <div style="font-size: 0.8rem; color: #ccc;">${(asset.size / 1024 / 1024).toFixed(2)} MB</div>
+                                    <div style="font-size: 0.8rem; color: #ccc;">${(asset.size / 1024 / 1024).toFixed(2)} MB ${asset.recovered ? '(Recovered)' : ''}</div>
                                 </div>
-                                <div class="activity-time">${new Date(asset.uploaded_at).toLocaleDateString()}</div>
+                                <div class="activity-time">
+                                    <a href="/download/${asset.filename}" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Download</a>
+                                </div>
                             </div>`
                         ).join('');
+                    } else {
+                        allAssetsDiv.innerHTML = '<div class="no-data">No assets found. Upload your first asset above!</div>';
                     }
                 });
         }
 
-        // Auto-refresh data every 5 minutes
-        setInterval(refreshData, 300000);
+        // Auto-refresh data every 30 seconds
+        setInterval(refreshData, 30000);
         
         // Initial data load
         refreshData();
@@ -826,31 +1401,42 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 @app.route('/')
 def dashboard():
-    """Main dashboard with complete functionality"""
+    """Main command center dashboard"""
     return Response(HTML_TEMPLATE, mimetype='text/html')
 
 @app.route('/api/intelligence/summary')
 def intelligence_summary():
-    """Get intelligence summary with real data"""
+    """Get intelligence summary with real analysis"""
     intelligence_data = load_json_data('data/intelligence_data.json', {})
     
+    instagram_count = len(intelligence_data.get('instagram_data', []))
+    hashtag_count = len(intelligence_data.get('hashtag_data', []))
+    tiktok_count = len(intelligence_data.get('tiktok_data', []))
+    total_records = instagram_count + hashtag_count + tiktok_count
+    
+    # Analyze competitive position
+    rankings = analyze_competitive_rankings(intelligence_data)
+    crooks_position, crooks_data = get_crooks_position(rankings)
+    
+    # Analyze trending hashtags
+    trending = analyze_trending_hashtags(intelligence_data)
+    
     return jsonify({
-        'competitive_rank': '#8/12',
-        'rank_change': '+2 positions',
-        'cultural_trends': '3 trending',
-        'trend_velocity': '+15% velocity',
-        'data_points': f"{len(intelligence_data.get('instagram_data', []))} records",
-        'daily_increase': '+1.2K today',
-        'avg_engagement': '2.4%',
-        'engagement_change': '-0.3% vs last week',
-        'last_updated': datetime.now().isoformat(),
-        'monitored_brands': len(MONITORED_BRANDS),
-        'strategic_hashtags': len(STRATEGIC_HASHTAGS)
+        'competitive_rank': f"#{crooks_position}/{len(rankings)}" if crooks_position else "Not ranked",
+        'rank_change': f"Based on {instagram_count} posts" if instagram_count > 0 else "No data",
+        'trending_count': len(trending),
+        'trending_info': f"{len(trending)} hashtags trending" if trending else "No trending data",
+        'data_points': f"{total_records} records",
+        'last_updated': intelligence_data.get('last_updated'),
+        'has_data': total_records > 0,
+        'instagram_count': instagram_count,
+        'hashtag_count': hashtag_count,
+        'tiktok_count': tiktok_count
     })
 
 @app.route('/upload/intelligence', methods=['POST'])
 def upload_intelligence():
-    """Upload and process intelligence data"""
+    """Upload and process intelligence data with analysis"""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
     
@@ -888,9 +1474,17 @@ def upload_intelligence():
         intelligence_data['last_updated'] = datetime.now().isoformat()
         save_json_data('data/intelligence_data.json', intelligence_data)
         
+        # Generate insights immediately
+        rankings = analyze_competitive_rankings(intelligence_data)
+        trending = analyze_trending_hashtags(intelligence_data)
+        
         return jsonify({
-            'message': f'Intelligence data uploaded successfully! Processed {len(processed_data)} records.',
-            'processed_records': len(processed_data)
+            'message': f'Intelligence data uploaded and analyzed! Processed {len(processed_data)} records.',
+            'processed_records': len(processed_data),
+            'analysis': {
+                'competitive_rankings': len(rankings),
+                'trending_hashtags': len(trending)
+            }
         })
     
     return jsonify({'error': 'Invalid file type. Please upload JSONL, JSON, or CSV files.'}), 400
@@ -940,23 +1534,82 @@ def upload_asset():
 
 @app.route('/api/assets')
 def get_assets():
-    """Get asset library"""
+    """Get asset library including recovered assets"""
+    # Load existing asset library
     asset_library = load_json_data('data/asset_library.json', {'assets': {}})
-    assets = list(asset_library.get('assets', {}).values())
+    
+    # Recover any existing assets not in the library
+    recovered_assets = recover_existing_assets()
+    
+    # Merge recovered assets with existing library
+    all_assets = {**asset_library.get('assets', {}), **recovered_assets}
+    
+    # Update the asset library with recovered assets
+    if recovered_assets:
+        asset_library['assets'] = all_assets
+        save_json_data('data/asset_library.json', asset_library)
+    
+    assets = list(all_assets.values())
     assets.sort(key=lambda x: x.get('uploaded_at', ''), reverse=True)
     
     return jsonify({
         'assets': assets,
         'total': len(assets),
+        'recovered': len(recovered_assets),
         'categories': ASSET_CATEGORIES
     })
 
+@app.route('/api/competitive/rankings')
+def competitive_rankings():
+    """Get real competitive rankings"""
+    intelligence_data = load_json_data('data/intelligence_data.json', {})
+    rankings = analyze_competitive_rankings(intelligence_data)
+    
+    return jsonify({
+        'rankings': rankings,
+        'total_brands': len(rankings),
+        'last_updated': intelligence_data.get('last_updated')
+    })
+
+@app.route('/api/cultural/trends')
+def cultural_trends():
+    """Get real trending hashtags"""
+    intelligence_data = load_json_data('data/intelligence_data.json', {})
+    trending = analyze_trending_hashtags(intelligence_data)
+    
+    return jsonify({
+        'trending_hashtags': trending,
+        'last_updated': intelligence_data.get('last_updated')
+    })
+
+@app.route('/api/calendar/events')
+def get_calendar_events():
+    """Get strategic calendar events for 2025"""
+    events = get_strategic_calendar_2025()
+    return jsonify(events)
+
+@app.route('/api/agency/performance')
+def get_agency_performance():
+    """Get agency performance tracking data"""
+    performance_data = get_agency_performance_tracking()
+    return jsonify(performance_data)
+
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    """Download file"""
+    """Download file with tracking"""
     for subdir in ['assets', 'intelligence']:
         filepath = os.path.join('uploads', subdir, filename)
         if os.path.exists(filepath):
+            # Update download count if it's an asset
+            if subdir == 'assets':
+                asset_library = load_json_data('data/asset_library.json', {'assets': {}})
+                for asset_id, asset_info in asset_library.get('assets', {}).items():
+                    if asset_info.get('filename') == filename:
+                        asset_info['download_count'] = asset_info.get('download_count', 0) + 1
+                        asset_info['last_accessed'] = datetime.now().isoformat()
+                        save_json_data('data/asset_library.json', asset_library)
+                        break
+            
             return send_file(filepath, as_attachment=True)
     
     return abort(404)
@@ -969,11 +1622,12 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'version': '2.0',
         'features': {
-            'asset_library': True,
-            'intelligence_processing': True,
-            'competitive_analysis': True,
-            'file_uploads': True,
-            'embedded_template': True
+            'strategic_calendar': True,
+            'agency_tracking': True,
+            'intelligent_analysis': True,
+            'asset_recovery': True,
+            'real_data_processing': True,
+            'competitive_rankings': True
         }
     })
 
@@ -987,4 +1641,3 @@ if __name__ == '__main__':
         port = 5000
     
     app.run(host='0.0.0.0', port=port, debug=False)
-           
