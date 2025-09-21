@@ -7,7 +7,6 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 import json
 import os
 from datetime import datetime, timedelta, date
-import pandas as pd
 from calendar_manager import CrooksCalendarManager
 from enhanced_asset_manager import EnhancedCrooksAssetManager
 from file_manager import CrooksFileManager
