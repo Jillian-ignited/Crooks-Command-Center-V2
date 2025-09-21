@@ -4,5 +4,5 @@ gunicorn==21.2.0
 python-dateutil==2.8.2
 requests==2.31.0
 openpyxl==3.1.2
-numpy==2.1.1 --only-binary=:all:
-pandas==2.2.2 --only-binary=:all:
+numpy==2.1.2 --only-binary=:all:
+pandas==2.3.2 --only-binary=:all:
