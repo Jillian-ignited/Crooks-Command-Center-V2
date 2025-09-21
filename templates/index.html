@@ -3,556 +3,416 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crooks & Castles Command Center V2 - Collaborative Intelligence Platform</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced_collaborative.css') }}">
+    <title>Crooks & Castles Command Center V2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+            color: #000;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+        
+        .crown {
+            font-size: 2rem;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #FFD700; }
+            to { text-shadow: 0 0 20px #FFD700, 0 0 30px #FFD700; }
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #FF6B6B;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .main-content {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+        
+        .metric-title {
+            font-size: 0.9rem;
+            color: #FFD700;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-subtitle {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FFD700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(255, 215, 0, 0.5);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+        
+        .upload-area.dragover {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+            color: #000;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .activity-icon {
+            font-size: 1.5rem;
+        }
+        
+        .activity-text {
+            flex: 1;
+        }
+        
+        .activity-time {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <div class="brand-logo">
-                <i class="fas fa-crown"></i>
-                <span>Crooks Command Center</span>
-            </div>
-            <div class="user-info">
-                <div class="user-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="user-details">
-                    <span class="user-name">{{ dashboard_data.user.name if dashboard_data.user else 'Team Member' }}</span>
-                    <span class="user-role">{{ dashboard_data.user.role.replace('_', ' ').title() if dashboard_data.user else 'Brand Manager' }}</span>
-                </div>
-            </div>
+    <div class="header">
+        <div class="logo">
+            <span class="crown">👑</span>
+            <span>Crooks & Castles Command Center V2</span>
         </div>
-        
-        <ul class="nav-menu">
-            <li class="nav-item active" data-tab="dashboard">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>Dashboard</span>
-            </li>
-            <li class="nav-item" data-tab="intelligence">
-                <i class="fas fa-brain"></i>
-                <span>Brand Intelligence</span>
-                <span class="badge">{{ intelligence_summary.data_sources.instagram + intelligence_summary.data_sources.hashtags + intelligence_summary.data_sources.tiktok if intelligence_summary.data_sources else 0 }}</span>
-            </li>
-            <li class="nav-item" data-tab="cultural-radar">
-                <i class="fas fa-satellite-dish"></i>
-                <span>Cultural Radar</span>
-                <span class="badge trending">{{ cultural_radar.trending_hashtags|length if cultural_radar.trending_hashtags else 0 }}</span>
-            </li>
-            <li class="nav-item" data-tab="projects">
-                <i class="fas fa-project-diagram"></i>
-                <span>Collaborative Projects</span>
-                <span class="badge">{{ dashboard_data.active_projects|length if dashboard_data.active_projects else 0 }}</span>
-            </li>
-            <li class="nav-item" data-tab="assets">
-                <i class="fas fa-folder-open"></i>
-                <span>Asset Library</span>
-                <span class="badge">{{ dashboard_data.team_stats.total_assets if dashboard_data.team_stats else 0 }}</span>
-            </li>
-            <li class="nav-item" data-tab="calendar">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Strategic Calendar</span>
-                <span class="badge">{{ upcoming_events|length if upcoming_events else 0 }}</span>
-            </li>
-            <li class="nav-item" data-tab="reports">
-                <i class="fas fa-chart-line"></i>
-                <span>Reports & Analytics</span>
-            </li>
-            <li class="nav-item" data-tab="file-manager">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <span>File Manager</span>
-            </li>
-        </ul>
-        
-        <div class="sidebar-footer">
-            <div class="intelligence-status">
-                <div class="status-indicator active"></div>
-                <span>Intelligence Active</span>
-                <small>Last updated: {{ intelligence_summary.last_updated[:10] if intelligence_summary.last_updated else 'Never' }}</small>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <header class="content-header">
-                <h1><i class="fas fa-crown"></i> Crooks & Castles Command Center</h1>
-                <p>Collaborative Brand Intelligence & Strategic Planning Platform</p>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="refreshIntelligence()">
-                        <i class="fas fa-sync-alt"></i> Refresh Intelligence
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportReport()">
-                        <i class="fas fa-download"></i> Export Report
-                    </button>
-                </div>
-            </header>
-
-            <!-- Key Metrics Dashboard -->
-            <div class="metrics-grid">
-                <div class="metric-card competitive">
-                    <div class="metric-icon">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                    <div class="metric-content">
-                        <h3>Competitive Rank</h3>
-                        <div class="metric-value">
-                            #{{ intelligence_summary.crooks_rank if intelligence_summary.crooks_rank != 'N/A' else '?' }}<span>/{{ intelligence_summary.total_brands or 12 }}</span>
-                        </div>
-                        <div class="metric-change negative">
-                            <i class="fas fa-arrow-down"></i> Need improvement
-                        </div>
-                    </div>
-                </div>
-
-                <div class="metric-card cultural">
-                    <div class="metric-icon">
-                        <i class="fas fa-fire"></i>
-                    </div>
-                    <div class="metric-content">
-                        <h3>Cultural Trends</h3>
-                        <div class="metric-value">
-                            {{ cultural_radar.trending_hashtags|length if cultural_radar.trending_hashtags else 0 }}<span> trending</span>
-                        </div>
-                        <div class="metric-change positive">
-                            <i class="fas fa-arrow-up"></i> Y2K revival +340%
-                        </div>
-                    </div>
-                </div>
-
-                <div class="metric-card projects">
-                    <div class="metric-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="metric-content">
-                        <h3>Active Projects</h3>
-                        <div class="metric-value">
-                            {{ dashboard_data.active_projects|length if dashboard_data.active_projects else 0 }}<span> projects</span>
-                        </div>
-                        <div class="metric-change neutral">
-                            <i class="fas fa-clock"></i> {{ dashboard_data.pending_approvals|length if dashboard_data.pending_approvals else 0 }} pending approvals
-                        </div>
-                    </div>
-                </div>
-
-                <div class="metric-card intelligence">
-                    <div class="metric-icon">
-                        <i class="fas fa-database"></i>
-                    </div>
-                    <div class="metric-content">
-                        <h3>Intelligence Data</h3>
-                        <div class="metric-value">
-                            {{ (intelligence_summary.data_sources.instagram + intelligence_summary.data_sources.hashtags + intelligence_summary.data_sources.tiktok) if intelligence_summary.data_sources else 0 }}<span> records</span>
-                        </div>
-                        <div class="metric-change positive">
-                            <i class="fas fa-check"></i> All sources active
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions & Recent Activity -->
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-                    <div class="quick-actions">
-                        <button class="action-btn" onclick="showTab('file-manager')">
-                            <i class="fas fa-upload"></i>
-                            <span>Upload Intelligence Data</span>
-                        </button>
-                        <button class="action-btn" onclick="createProject()">
-                            <i class="fas fa-plus"></i>
-                            <span>New Project</span>
-                        </button>
-                        <button class="action-btn" onclick="showTab('assets')">
-                            <i class="fas fa-image"></i>
-                            <span>Upload Asset</span>
-                        </button>
-                        <button class="action-btn" onclick="generateReport()">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Generate Report</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="dashboard-card">
-                    <h3><i class="fas fa-clock"></i> Recent Activity</h3>
-                    <div class="activity-feed">
-                        {% if dashboard_data.recent_activity %}
-                            {% for activity in dashboard_data.recent_activity %}
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="fas fa-{{ 'upload' if activity.type == 'asset_uploaded' else 'edit' if activity.type == 'project_updated' else 'check' }}"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <p>{{ activity.description }}</p>
-                                    <small>{{ activity.timestamp[:16] }}</small>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="empty-state">
-                                <i class="fas fa-history"></i>
-                                <p>No recent activity</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- File Manager Tab -->
-        <div id="file-manager" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-cloud-upload-alt"></i> File Manager</h1>
-                <p>Upload intelligence data, assets, and campaign materials</p>
-            </header>
-
-            <div class="file-manager-grid">
-                <!-- Intelligence Data Upload -->
-                <div class="upload-section">
-                    <h3><i class="fas fa-brain"></i> Intelligence Data Upload</h3>
-                    <div class="upload-tabs">
-                        <button class="upload-tab active" data-type="instagram">
-                            <i class="fab fa-instagram"></i> Instagram Data
-                        </button>
-                        <button class="upload-tab" data-type="hashtags">
-                            <i class="fas fa-hashtag"></i> Hashtag Data
-                        </button>
-                        <button class="upload-tab" data-type="tiktok">
-                            <i class="fab fa-tiktok"></i> TikTok Data
-                        </button>
-                    </div>
-                    
-                    <div class="dropzone-container">
-                        <div id="intelligence-dropzone" class="dropzone">
-                            <div class="dz-message">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <h4>Drop JSONL files here or click to upload</h4>
-                                <p>Upload your Apify intelligence data for processing</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="upload-info">
-                        <h4>Supported Formats:</h4>
-                        <ul>
-                            <li><strong>JSONL</strong> - Apify export format (recommended)</li>
-                            <li><strong>JSON</strong> - Standard JSON format</li>
-                            <li><strong>CSV</strong> - Comma-separated values</li>
-                        </ul>
-                        <p><strong>Max file size:</strong> 16MB per file</p>
-                    </div>
-                </div>
-
-                <!-- Asset Upload -->
-                <div class="upload-section">
-                    <h3><i class="fas fa-images"></i> Brand Assets Upload</h3>
-                    <div class="asset-category-selector">
-                        <select id="asset-category">
-                            <option value="logos_branding">Logos & Branding</option>
-                            <option value="heritage_archive">Heritage Archive</option>
-                            <option value="product_imagery">Product Imagery</option>
-                            <option value="campaign_creative">Campaign Creative</option>
-                            <option value="collaboration_assets">Collaboration Assets</option>
-                            <option value="cultural_content">Cultural Content</option>
-                            <option value="design_templates">Design Templates</option>
-                            <option value="video_content">Video Content</option>
-                        </select>
-                    </div>
-                    
-                    <div class="dropzone-container">
-                        <div id="asset-dropzone" class="dropzone">
-                            <div class="dz-message">
-                                <i class="fas fa-images"></i>
-                                <h4>Drop assets here or click to upload</h4>
-                                <p>Upload images, videos, documents, and design files</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="upload-info">
-                        <h4>Supported Formats:</h4>
-                        <ul>
-                            <li><strong>Images:</strong> JPG, PNG, SVG, WebP</li>
-                            <li><strong>Videos:</strong> MP4, MOV, AVI</li>
-                            <li><strong>Documents:</strong> PDF, DOC, DOCX</li>
-                            <li><strong>Design:</strong> AI, PSD, SKETCH, FIGMA</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Report & Document Upload -->
-                <div class="upload-section">
-                    <h3><i class="fas fa-file-alt"></i> Reports & Documents</h3>
-                    <div class="dropzone-container">
-                        <div id="document-dropzone" class="dropzone">
-                            <div class="dz-message">
-                                <i class="fas fa-file-alt"></i>
-                                <h4>Drop documents here or click to upload</h4>
-                                <p>Upload reports, presentations, and planning documents</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="upload-info">
-                        <h4>Document Types:</h4>
-                        <ul>
-                            <li><strong>Reports:</strong> PDF, DOCX, XLSX</li>
-                            <li><strong>Presentations:</strong> PPTX, KEY</li>
-                            <li><strong>Planning:</strong> PDF, DOCX, TXT</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- File Library -->
-            <div class="file-library">
-                <h3><i class="fas fa-folder-open"></i> File Library</h3>
-                <div class="library-filters">
-                    <button class="filter-btn active" data-filter="all">All Files</button>
-                    <button class="filter-btn" data-filter="intelligence">Intelligence Data</button>
-                    <button class="filter-btn" data-filter="assets">Brand Assets</button>
-                    <button class="filter-btn" data-filter="reports">Reports</button>
-                    <button class="filter-btn" data-filter="recent">Recent Uploads</button>
-                </div>
-                
-                <div class="file-grid" id="file-library-grid">
-                    <!-- Files will be populated dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Brand Intelligence Tab -->
-        <div id="intelligence" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-brain"></i> Brand Intelligence</h1>
-                <p>Competitive analysis and market positioning insights</p>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="refreshIntelligenceData()">
-                        <i class="fas fa-sync-alt"></i> Refresh Data
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportIntelligenceReport()">
-                        <i class="fas fa-download"></i> Export Report
-                    </button>
-                </div>
-            </header>
-
-            <!-- Competitive Rankings -->
-            <div class="intelligence-grid">
-                <div class="intelligence-card full-width">
-                    <h3><i class="fas fa-trophy"></i> Competitive Rankings</h3>
-                    <div class="rankings-table">
-                        <div class="table-header">
-                            <div class="rank-col">Rank</div>
-                            <div class="brand-col">Brand</div>
-                            <div class="posts-col">Posts</div>
-                            <div class="engagement-col">Avg Engagement</div>
-                            <div class="performance-col">Performance</div>
-                            <div class="actions-col">Actions</div>
-                        </div>
-                        <div id="rankings-body">
-                            <!-- Rankings will be populated dynamically -->
-                        </div>
-                    </div>
-                </div>
-
-                <div class="intelligence-card">
-                    <h3><i class="fas fa-chart-line"></i> Performance Metrics</h3>
-                    <canvas id="performanceChart"></canvas>
-                </div>
-
-                <div class="intelligence-card">
-                    <h3><i class="fas fa-bullseye"></i> Strategic Opportunities</h3>
-                    <div class="opportunities-list" id="opportunities-list">
-                        <!-- Opportunities will be populated dynamically -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cultural Radar Tab -->
-        <div id="cultural-radar" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-satellite-dish"></i> Cultural Radar</h1>
-                <p>Real-time cultural trends and Gen Z insights</p>
-            </header>
-
-            <div class="cultural-grid">
-                <div class="cultural-card">
-                    <h3><i class="fas fa-fire"></i> Trending Hashtags</h3>
-                    <div class="hashtag-list" id="trending-hashtags">
-                        <!-- Trending hashtags will be populated dynamically -->
-                    </div>
-                </div>
-
-                <div class="cultural-card">
-                    <h3><i class="fab fa-tiktok"></i> TikTok Cultural Moments</h3>
-                    <div class="tiktok-insights" id="tiktok-insights">
-                        <!-- TikTok insights will be populated dynamically -->
-                    </div>
-                </div>
-
-                <div class="cultural-card full-width">
-                    <h3><i class="fas fa-chart-area"></i> Cultural Velocity Tracking</h3>
-                    <canvas id="velocityChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Projects Tab -->
-        <div id="projects" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-project-diagram"></i> Collaborative Projects</h1>
-                <p>Team projects and campaign development</p>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="createNewProject()">
-                        <i class="fas fa-plus"></i> New Project
-                    </button>
-                </div>
-            </header>
-
-            <div class="projects-grid" id="projects-grid">
-                <!-- Projects will be populated dynamically -->
-            </div>
-        </div>
-
-        <!-- Assets Tab -->
-        <div id="assets" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-folder-open"></i> Asset Library</h1>
-                <p>Brand assets and collaborative content management</p>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showTab('file-manager')">
-                        <i class="fas fa-upload"></i> Upload Assets
-                    </button>
-                </div>
-            </header>
-
-            <div class="assets-filter">
-                <button class="filter-btn active" data-category="all">All Assets</button>
-                <button class="filter-btn" data-category="logos_branding">Logos & Branding</button>
-                <button class="filter-btn" data-category="heritage_archive">Heritage Archive</button>
-                <button class="filter-btn" data-category="product_imagery">Product Imagery</button>
-                <button class="filter-btn" data-category="campaign_creative">Campaign Creative</button>
-                <button class="filter-btn" data-category="collaboration_assets">Collaborations</button>
-            </div>
-
-            <div class="assets-grid" id="assets-grid">
-                <!-- Assets will be populated dynamically -->
-            </div>
-        </div>
-
-        <!-- Calendar Tab -->
-        <div id="calendar" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-calendar-alt"></i> Strategic Calendar</h1>
-                <p>Strategic planning and intelligence scheduling</p>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="createEvent()">
-                        <i class="fas fa-plus"></i> New Event
-                    </button>
-                </div>
-            </header>
-
-            <div class="calendar-container">
-                <div class="calendar-header">
-                    <button class="btn btn-secondary" onclick="previousMonth()">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <h2 id="calendar-month-year">{{ calendar_view.month_name }} {{ calendar_view.year }}</h2>
-                    <button class="btn btn-secondary" onclick="nextMonth()">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-                
-                <div class="calendar-grid" id="calendar-grid">
-                    <!-- Calendar will be populated dynamically -->
-                </div>
-            </div>
-
-            <div class="upcoming-events">
-                <h3><i class="fas fa-clock"></i> Upcoming Events</h3>
-                <div class="events-list" id="upcoming-events-list">
-                    <!-- Upcoming events will be populated dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Reports Tab -->
-        <div id="reports" class="tab-content">
-            <header class="content-header">
-                <h1><i class="fas fa-chart-line"></i> Reports & Analytics</h1>
-                <p>Comprehensive reporting and data export</p>
-            </header>
-
-            <div class="reports-grid">
-                <div class="report-card">
-                    <h3><i class="fas fa-file-pdf"></i> Weekly Intelligence Report</h3>
-                    <p>Comprehensive weekly brand intelligence summary</p>
-                    <button class="btn btn-primary" onclick="generateWeeklyReport()">
-                        <i class="fas fa-download"></i> Generate Report
-                    </button>
-                </div>
-
-                <div class="report-card">
-                    <h3><i class="fas fa-chart-bar"></i> Competitive Analysis</h3>
-                    <p>Detailed competitive positioning analysis</p>
-                    <button class="btn btn-primary" onclick="generateCompetitiveReport()">
-                        <i class="fas fa-download"></i> Generate Report
-                    </button>
-                </div>
-
-                <div class="report-card">
-                    <h3><i class="fas fa-satellite-dish"></i> Cultural Radar Report</h3>
-                    <p>Cultural trends and opportunity analysis</p>
-                    <button class="btn btn-primary" onclick="generateCulturalReport()">
-                        <i class="fas fa-download"></i> Generate Report
-                    </button>
-                </div>
-
-                <div class="report-card">
-                    <h3><i class="fas fa-users"></i> Team Performance</h3>
-                    <p>Collaborative project and team analytics</p>
-                    <button class="btn btn-primary" onclick="generateTeamReport()">
-                        <i class="fas fa-download"></i> Generate Report
-                    </button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modals -->
-    <div id="modal-overlay" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="modal-title">Modal Title</h3>
-                <button class="modal-close" onclick="closeModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="modal-body">
-                <!-- Modal content will be populated dynamically -->
-            </div>
-            <div class="modal-footer" id="modal-footer">
-                <!-- Modal footer will be populated dynamically -->
+        <div class="user-info">
+            <div class="user-avatar">{{ current_user.name[0] }}</div>
+            <div>
+                <div style="font-weight: 600;">{{ current_user.name }}</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">{{ user_roles[current_user.role].name }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Notification System -->
-    <div id="notification-container" class="notification-container">
-        <!-- Notifications will be added dynamically -->
+    <div class="main-content">
+        <div class="dashboard-grid">
+            <div class="metric-card">
+                <div class="metric-title">Competitive Rank</div>
+                <div class="metric-value">{{ dashboard_data.competitive_rank }}</div>
+                <div class="metric-subtitle">Need improvement</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Cultural Trends</div>
+                <div class="metric-value">{{ dashboard_data.cultural_trends }}</div>
+                <div class="metric-subtitle">Y2K revival +340%</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Active Projects</div>
+                <div class="metric-value">{{ dashboard_data.active_projects }}</div>
+                <div class="metric-subtitle">0 pending approvals</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Intelligence Data</div>
+                <div class="metric-value">{{ dashboard_data.intelligence_data }}</div>
+                <div class="metric-subtitle"><span class="status-indicator"></span>All sources active</div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="section">
+                <div class="section-title">
+                    📊 Brand Intelligence
+                </div>
+                <p>Upload your Apify intelligence data for competitive analysis and cultural insights.</p>
+                
+                <div class="upload-area" onclick="document.getElementById('intelligence-upload').click()">
+                    <div class="upload-icon">📈</div>
+                    <div><strong>Drop JSONL files here or click to upload</strong></div>
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #ccc;">
+                        Supported: JSONL, JSON, CSV (Max 16MB)
+                    </div>
+                </div>
+                <input type="file" id="intelligence-upload" style="display: none;" accept=".jsonl,.json,.csv" onchange="uploadFile(this, 'intelligence')">
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    🎨 Asset Library
+                </div>
+                <p>Upload brand assets, creative materials, and campaign content.</p>
+                
+                <div class="upload-area" onclick="document.getElementById('asset-upload').click()">
+                    <div class="upload-icon">🖼️</div>
+                    <div><strong>Drop assets here or click to upload</strong></div>
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #ccc;">
+                        Images, Videos, Documents, Design Files
+                    </div>
+                </div>
+                <input type="file" id="asset-upload" style="display: none;" multiple onchange="uploadFile(this, 'asset')">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                ⚡ Recent Activity
+            </div>
+            {% for activity in dashboard_data.recent_activity %}
+            <div class="activity-item">
+                <div class="activity-icon">{{ activity.icon }}</div>
+                <div class="activity-text">{{ activity.action }}</div>
+                <div class="activity-time">{{ activity.timestamp }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                🚀 Quick Actions
+            </div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button class="btn" onclick="refreshIntelligence()">Refresh Intelligence</button>
+                <button class="btn" onclick="generateReport()">Generate Report</button>
+                <button class="btn" onclick="viewCalendar()">View Calendar</button>
+                <button class="btn" onclick="manageAssets()">Manage Assets</button>
+            </div>
+        </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/enhanced_collaborative.js') }}"></script>
+    <script>
+        // File upload functionality
+        function uploadFile(input, type) {
+            const files = input.files;
+            if (files.length === 0) return;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('file', files[i]);
+            }
+
+            const endpoint = type === 'intelligence' ? '/upload/intelligence' : '/upload/asset';
+            
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Upload failed: ' + data.error);
+                } else {
+                    alert('Upload successful!');
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                alert('Upload failed. Please try again.');
+            });
+        }
+
+        // Drag and drop functionality
+        document.querySelectorAll('.upload-area').forEach(area => {
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                const input = area.nextElementSibling;
+                input.files = files;
+                
+                const type = input.id.includes('intelligence') ? 'intelligence' : 'asset';
+                uploadFile(input, type);
+            });
+        });
+
+        // Quick action functions
+        function refreshIntelligence() {
+            fetch('/api/intelligence/summary')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Intelligence refreshed:', data);
+                    alert('Intelligence data refreshed!');
+                });
+        }
+
+        function generateReport() {
+            alert('Report generation feature coming soon!');
+        }
+
+        function viewCalendar() {
+            alert('Calendar view feature coming soon!');
+        }
+
+        function manageAssets() {
+            alert('Asset management feature coming soon!');
+        }
+
+        // Auto-refresh intelligence data every 5 minutes
+        setInterval(refreshIntelligence, 300000);
+    </script>
 </body>
 </html>
