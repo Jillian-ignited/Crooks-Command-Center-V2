@@ -3,247 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kynd Vibes Command Center</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>🏰 Crooks & Castles Command Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/command_center.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header with KyndVibes Branding -->
-        <header class="header">
-            <div class="brand-section">
-                <div class="energy-rays">
-                    <div class="ray"></div>
-                    <div class="ray"></div>
-                    <div class="ray"></div>
-                    <div class="ray"></div>
-                    <div class="ray"></div>
-                    <div class="ray"></div>
-                    <div class="ray"></div>
-                </div>
-                <h1 class="brand-name">Kynd Vibes</h1>
-                <p class="brand-tagline">amazing not surprising</p>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="crown-icon">👑</span>
+                <span class="logo-text">CROOKS & CASTLES COMMAND CENTER</span>
             </div>
-            <div class="command-center-title">
-                <h2>Command Center</h2>
-                <p class="subtitle">High Frequency Brand Management</p>
-            </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- Main Dashboard Grid -->
-        <main class="dashboard">
-            <!-- Calendar Section -->
-            <section class="card calendar-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-calendar-alt"></i> Calendar & Events</h3>
-                    <div class="card-actions">
-                        <select id="calendar-period" class="period-selector">
-                            <option value="7day">Next 7 Days</option>
-                            <option value="30day">Next 30 Days</option>
-                            <option value="60day">Next 60 Days</option>
-                            <option value="90day">Next 90 Days</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div id="calendar-content" class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>Loading calendar events...</p>
-                    </div>
-                </div>
-            </section>
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" data-section="intelligence">
+            <span class="tab-text">Brand Intelligence</span>
+            <span class="tab-badge">1</span>
+        </button>
+        <button class="nav-tab" data-section="cultural-radar">
+            <span class="tab-text">Cultural Radar</span>
+            <span class="tab-badge">2</span>
+        </button>
+        <button class="nav-tab" data-section="competitive">
+            <span class="tab-text">Competitive Analysis</span>
+            <span class="tab-badge">3</span>
+        </button>
+    </nav>
 
-            <!-- Assets Section -->
-            <section class="card assets-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-images"></i> Brand Assets</h3>
-                    <div class="card-actions">
-                        <button class="btn btn-secondary" onclick="refreshAssets()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Brand Intelligence Section -->
+        <section id="intelligence" class="content-section active">
+            <div class="section-grid">
+                <!-- Upload Card -->
+                <div class="card upload-card">
+                    <div class="card-header">
+                        <i class="fas fa-upload"></i>
+                        <span>Upload Intelligence Data</span>
                     </div>
-                </div>
-                <div class="card-content">
-                    <div id="assets-content" class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>Loading brand assets...</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Upload Section -->
-            <section class="card upload-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-cloud-upload-alt"></i> Upload Asset</h3>
-                </div>
-                <div class="card-content">
-                    <div class="upload-area" id="upload-area">
-                        <div class="upload-icon">
-                            <i class="fas fa-cloud-upload-alt"></i>
+                    <div class="card-content">
+                        <p>Upload performance reports for dynamic insights</p>
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">
+                                <h4>📈 Upload Performance Report (CSV, Excel, JSONL)</h4>
+                                <p>Supports engagement metrics, conversion data, reach analytics</p>
+                            </div>
+                            <input type="file" id="file-input" accept=".jsonl,.csv,.json" style="display: none;">
                         </div>
-                        <p class="upload-text">Drag & drop files here or click to browse</p>
-                        <p class="upload-subtext">Supports: PNG, JPG, PDF, DOC, MP4 (Max 16MB)</p>
-                        <input type="file" id="file-input" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt,.mp4,.mov">
-                        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-                            Choose Files
-                        </button>
+                        <p class="upload-note">Upload a report to see dynamic performance insights and recommendations</p>
                     </div>
-                    <div id="upload-progress" class="upload-progress hidden">
-                        <div class="progress-bar">
-                            <div class="progress-fill"></div>
-                        </div>
-                        <p class="progress-text">Uploading...</p>
-                    </div>
-                    <div id="upload-results" class="upload-results"></div>
                 </div>
-            </section>
 
-            <!-- Deliverables Section -->
-            <section class="card deliverables-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-tasks"></i> Deliverables</h3>
-                    <div class="card-actions">
-                        <button class="btn btn-primary" onclick="showAddDeliverableForm()">
-                            <i class="fas fa-plus"></i> Add New
-                        </button>
-                        <button class="btn btn-secondary" onclick="refreshDeliverables()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
+                <!-- Performance Metrics Card -->
+                <div class="card metrics-card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Performance Metrics</span>
                     </div>
-                </div>
-                <div class="card-content">
-                    <div id="deliverables-content" class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>Loading deliverables...</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Quick Actions -->
-            <section class="card quick-actions-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-                </div>
-                <div class="card-content">
-                    <div class="quick-actions-grid">
-                        <button class="quick-action-btn" onclick="checkHealth()">
-                            <i class="fas fa-heartbeat"></i>
-                            <span>Health Check</span>
-                        </button>
-                        <button class="quick-action-btn" onclick="exportData()">
-                            <i class="fas fa-download"></i>
-                            <span>Export Data</span>
-                        </button>
-                        <button class="quick-action-btn" onclick="viewBrandGuide()">
-                            <i class="fas fa-book"></i>
-                            <span>Brand Guide</span>
-                        </button>
-                        <button class="quick-action-btn" onclick="openFrequencyCollective()">
-                            <i class="fas fa-users"></i>
-                            <span>Frequency Collective</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Status Section -->
-            <section class="card status-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-info-circle"></i> System Status</h3>
-                </div>
-                <div class="card-content">
-                    <div id="status-content">
-                        <div class="status-item">
-                            <span class="status-label">API Health:</span>
-                            <span class="status-value" id="api-status">Checking...</span>
+                    <div class="card-content">
+                        <p>Real-time tracking of key performance indicators</p>
+                        
+                        <div class="metric-display">
+                            <div class="metric-value" id="brand-rank">95%</div>
+                            <div class="metric-label">Avg Compliance Score</div>
                         </div>
-                        <div class="status-item">
-                            <span class="status-label">Last Updated:</span>
-                            <span class="status-value" id="last-updated">-</span>
+                        
+                        <div class="metric-display">
+                            <div class="metric-value" id="total-mentions">8</div>
+                            <div class="metric-label">Assets Created</div>
                         </div>
-                        <div class="status-item">
-                            <span class="status-label">Brand Frequency:</span>
-                            <span class="status-value high-frequency">High ✨</span>
+                        
+                        <div class="metric-display">
+                            <div class="metric-value" id="cultural-moments">3</div>
+                            <div class="metric-label">Cultural Moments</div>
                         </div>
                     </div>
                 </div>
-            </section>
-        </main>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="footer-content">
-                <p class="footer-text">Made with meaning • High Frequency Apparel</p>
-                <div class="talisman-symbol">
-                    <i class="fas fa-feather-alt"></i>
-                    <span class="talisman-number">44</span>
-                    <i class="fas fa-fire"></i>
+                <!-- Brand Rankings Card -->
+                <div class="card rankings-card">
+                    <div class="card-header">
+                        <i class="fas fa-trophy"></i>
+                        <span>Competitive Rankings</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="rankings-list" id="competitive-rankings">
+                            <div class="ranking-item">
+                                <div class="rank-position">1</div>
+                                <div class="brand-info">
+                                    <div class="brand-name">Supreme</div>
+                                    <div class="brand-metric">12.5k avg engagement</div>
+                                </div>
+                            </div>
+                            <div class="ranking-item">
+                                <div class="rank-position">2</div>
+                                <div class="brand-info">
+                                    <div class="brand-name">Stussy</div>
+                                    <div class="brand-metric">8.2k avg engagement</div>
+                                </div>
+                            </div>
+                            <div class="ranking-item">
+                                <div class="rank-position">3</div>
+                                <div class="brand-info">
+                                    <div class="brand-name">Fear of God</div>
+                                    <div class="brand-metric">7.8k avg engagement</div>
+                                </div>
+                            </div>
+                            <div class="ranking-item crooks-rank">
+                                <div class="rank-position">9</div>
+                                <div class="brand-info">
+                                    <div class="brand-name">Crooks & Castles</div>
+                                    <div class="brand-metric">1.2k avg engagement</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </footer>
-    </div>
+        </section>
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"        </div>
-    </div>
+        <!-- Cultural Radar Section -->
+        <section id="cultural-radar" class="content-section">
+            <div class="section-grid">
+                <!-- Trending Themes Card -->
+                <div class="card trends-card">
+                    <div class="card-header">
+                        <i class="fas fa-fire"></i>
+                        <span>Trending Themes</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="trends-list" id="cultural-trends">
+                            <div class="trend-item">
+                                <div class="trend-name">#y2kfashion</div>
+                                <div class="trend-velocity">+340%</div>
+                            </div>
+                            <div class="trend-item">
+                                <div class="trend-name">#streetweararchive</div>
+                                <div class="trend-velocity">+280%</div>
+                            </div>
+                            <div class="trend-item">
+                                <div class="trend-name">#vintagestreetwear</div>
+                                <div class="trend-velocity">+220%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Add Deliverable Modal -->
-    <div id="add-deliverable-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-plus"></i> Add New Deliverable</h3>
-                <button class="modal-close" onclick="hideAddDeliverableForm()">
-                    <i class="fas fa-times"></i>
-                </button>
+                <!-- Cultural Moments Card -->
+                <div class="card moments-card">
+                    <div class="card-header">
+                        <i class="fas fa-star"></i>
+                        <span>Cultural Moments</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="moments-list" id="cultural-moments-list">
+                            <div class="moment-item">
+                                <div class="moment-content">Sean Paul collaboration driving authentic cultural connection</div>
+                                <div class="moment-engagement">2.3k engagement</div>
+                            </div>
+                            <div class="moment-item">
+                                <div class="moment-content">Archive Medusa pieces trending on resale platforms</div>
+                                <div class="moment-engagement">1.8k engagement</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TikTok Insights Card -->
+                <div class="card tiktok-card">
+                    <div class="card-header">
+                        <i class="fab fa-tiktok"></i>
+                        <span>TikTok Cultural Intelligence</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="tiktok-insights" id="tiktok-insights">
+                            <div class="insight-item">
+                                <div class="insight-text">"Streetwear drop" content up 2.3x this week</div>
+                                <div class="insight-metric">340 videos</div>
+                            </div>
+                            <div class="insight-item">
+                                <div class="insight-text">Y2K revival driving Gen Z engagement</div>
+                                <div class="insight-metric">+180% velocity</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <form id="add-deliverable-form" onsubmit="submitDeliverable(event)">
-                <div class="form-group">
-                    <label for="deliverable-title">Title *</label>
-                    <input type="text" id="deliverable-title" name="title" required 
-                           placeholder="e.g., Brand Guidelines Document">
-                </div>
-                
-                <div class="form-group">
-                    <label for="deliverable-description">Description *</label>
-                    <textarea id="deliverable-description" name="description" required 
-                              placeholder="Detailed description of the deliverable..."></textarea>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="deliverable-due-date">Due Date *</label>
-                        <input type="date" id="deliverable-due-date" name="due_date" required>
+        </section>
+
+        <!-- Competitive Analysis Section -->
+        <section id="competitive" class="content-section">
+            <div class="section-grid">
+                <!-- Strategic Insights Card -->
+                <div class="card insights-card">
+                    <div class="card-header">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Strategic Insights</span>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="deliverable-priority">Priority *</label>
-                        <select id="deliverable-priority" name="priority" required>
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                        </select>
+                    <div class="card-content">
+                        <div class="insights-list" id="strategic-insights">
+                            <div class="insight-card priority-high">
+                                <div class="insight-header">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span class="priority-label">High Priority</span>
+                                </div>
+                                <div class="insight-content">
+                                    <h4>Engagement Gap Critical</h4>
+                                    <p>Crooks ranks #9/12 with 10x lower engagement than top performer</p>
+                                    <button class="action-btn">Review Strategy</button>
+                                </div>
+                            </div>
+                            
+                            <div class="insight-card priority-medium">
+                                <div class="insight-header">
+                                    <i class="fas fa-trending-up"></i>
+                                    <span class="priority-label">Medium Priority</span>
+                                </div>
+                                <div class="insight-content">
+                                    <h4>Y2K Revival Opportunity</h4>
+                                    <p>Archive content outperforming new releases 3:1 ratio</p>
+                                    <button class="action-btn">Create Content</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="deliverable-assignee">Assignee</label>
-                    <input type="text" id="deliverable-assignee" name="assignee" 
-                           placeholder="Team member or department" value="Team">
+
+                <!-- Competitor Activity Card -->
+                <div class="card activity-card">
+                    <div class="card-header">
+                        <i class="fas fa-users"></i>
+                        <span>Competitor Activity</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="activity-list">
+                            <div class="activity-item">
+                                <div class="activity-brand">Supreme</div>
+                                <div class="activity-status active">8 posts this week</div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-brand">Hellstar</div>
+                                <div class="activity-status active">6 posts this week</div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-brand">Crooks & Castles</div>
+                                <div class="activity-status inactive">0 posts this week</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="hideAddDeliverableForm()">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Create Deliverable
-                    </button>
-                </div>
-            </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Processing intelligence data...</p>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <!-- Notifications Container -->
+    <div id="notifications" class="notifications-container"></div>
+
+    <script src="{{ url_for('static', filename='js/command_center.js') }}"></script>
 </body>
 </html>
