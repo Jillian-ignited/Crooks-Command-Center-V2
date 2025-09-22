@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 Startup script for Crooks & Castles Command Center V2 on Render
 """
