@@ -1,0 +1,50 @@
+# Data files (keep these out of version control)
+*.jsonl
+*.json
+*.csv
+/assets/
+/team_data/
+/content_library/
+/calendar_data/
+/competitive_data/
+/exports/
+/agency_collaboration/
+/data_sources/
+/campaign_data/
+/competitive_intelligence/
+/cultural_moments/
+/collaboration/
+/analytics/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
