@@ -27,7 +27,12 @@ ASSETS_FOLDER = os.path.join(STATIC_FOLDER, 'assets')
 
 # Ensure directories exist
 for folder in [UPLOAD_FOLDER, THUMBNAILS_FOLDER, ASSETS_FOLDER]:
-    os.makedirs(folder, exist_ok=True)
+    try:
+        os.makedirs(folder, exist_ok=True)
+    except (FileExistsError, OSError) as e:
+        # Directory might exist or have permission issues, continue anyway
+        print(f"Directory {folder} handling: {e}")
+        pass
 
 # Global data storage
 intelligence_data = {
