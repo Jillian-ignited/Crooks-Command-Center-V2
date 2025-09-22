@@ -1,7 +1,18 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-function fmtNum(n){ return n.toLocaleString(); }
+async function safeFetch(url, opts = {}) {
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    return await r.json();
+  } catch (e) {
+    console.error('Fetch error', url, e);
+    return { error: e.message };
+  }
+}
+
+function fmtNum(n){ try { return Number(n).toLocaleString(); } catch(e){ return n; } }
 
 function switchTab(key){
   $$('.tab').forEach(b=>b.classList.remove('active'));
@@ -15,8 +26,8 @@ $$('.tab').forEach(btn => {
 });
 
 async function loadIntelligence(){
-  const res = await fetch('/api/intelligence');
-  const data = await res.json();
+  const data = await safeFetch('/api/intelligence');
+  if (data.error) { $('#intel-metrics').textContent = 'Error: ' + data.error; return; }
   const m = data.engagement;
   const metrics = {
     totals: m.totals,
@@ -26,33 +37,34 @@ async function loadIntelligence(){
   };
   $('#intel-metrics').textContent = JSON.stringify(metrics, null, 2);
 
-  const tags = data.hashtags.slice(0, 24);
+  const tags = (data.hashtags || []).slice(0, 24);
   const hc = $('#hashtags');
   hc.innerHTML = '';
   tags.forEach(t => {
     const el = document.createElement('div');
     el.className = 'asset';
-    el.innerHTML = `<strong>#${t.hashtag}</strong><div class="meta">count: ${t.count} · ${t.categories.join(', ')}</div>`;
+    el.innerHTML = `<strong>#${t.hashtag}</strong><div class="meta">count: ${t.count} · ${(t.categories||[]).join(', ')}</div>`;
     hc.appendChild(el);
   });
 
-  const moments = data.cultural_moments;
+  const moments = data.cultural_moments || [];
   const mc = $('#moments');
   mc.innerHTML = '';
   moments.forEach(mo => {
     const el = document.createElement('div');
     el.className = 'asset';
-    el.innerHTML = `<div><strong>${mo.labels.join(' / ')}</strong></div><div class="meta">${mo.timestamp || ''}</div><div>${mo.summary}</div>`;
+    el.innerHTML = `<div><strong>${(mo.labels||[]).join(' / ')}</strong></div><div class="meta">${mo.timestamp || ''}</div><div>${mo.summary || ''}</div>`;
     mc.appendChild(el);
   });
 
-  const comp = data.competitive.brand_mentions || [];
+  const comp = (data.competitive && data.competitive.brand_mentions) ? data.competitive.brand_mentions : [];
   const cc = $('#competitors');
   cc.innerHTML = '';
   comp.forEach(c => {
+    const sov = (c.share_pct !== undefined) ? ` · share: ${c.share_pct}%` : '';
     const el = document.createElement('div');
     el.className = 'asset';
-    el.innerHTML = `<div><strong>${c.brand}</strong></div><div class="meta">mentions: ${c.mentions}</div>`;
+    el.innerHTML = `<div><strong>${c.brand}</strong></div><div class="meta">mentions: ${c.mentions}${sov}</div>`;
     cc.appendChild(el);
   });
 
@@ -70,11 +82,11 @@ async function loadIntelligence(){
 }
 
 async function loadAssets(){
-  const res = await fetch('/api/assets');
-  const data = await res.json();
+  const data = await safeFetch('/api/assets');
+  if (data.error) { $('#asset-grid').innerHTML = `<div class="asset">Error: ${data.error}</div>`; return; }
   const grid = $('#asset-grid');
   grid.innerHTML = '';
-  data.catalog.assets.forEach(a => {
+  (data.catalog.assets || []).forEach(a => {
     const imgSrc = a.thumbnail ? `/uploads/${a.thumbnail}` : '/static/img/placeholder.png';
     const card = document.createElement('div');
     card.className = 'asset';
@@ -88,27 +100,26 @@ async function loadAssets(){
 }
 
 async function loadCalendar(view='7_day_view'){
-  const res = await fetch(`/api/calendar/${view}`);
-  const data = await res.json();
+  const data = await safeFetch(`/api/calendar/${view}`);
+  if (data.error) { $('#calendar-events').innerHTML = `<div class="asset">Error: ${data.error}</div>`; return; }
   const wrap = $('#calendar-events');
   wrap.innerHTML = '';
-  data.events.forEach(ev => {
+  (data.events || []).forEach(ev => {
     const el = document.createElement('div');
     el.className = 'asset';
     el.innerHTML = `
       <div><strong>${ev.title}</strong> — ${ev.date}</div>
-      <div class="meta">${ev.cultural_context}</div>
-      <div>Deliverables: ${ev.deliverables.join(', ')}</div>
-      <div>KPIs: ${Object.entries(ev.target_kpis).map(([k,v])=>k+': '+v).join(' · ')}</div>
-      <div>Status: ${ev.status}</div>
+      <div class="meta">${ev.cultural_context || ''}</div>
+      <div>Deliverables: ${(ev.deliverables || []).join(', ')}</div>
+      <div>KPIs: ${Object.entries(ev.target_kpis || {}).map(([k,v])=>k+': '+v).join(' · ')}</div>
+      <div>Status: ${ev.status || ''}</div>
     `;
     wrap.appendChild(el);
   });
 }
 
 async function loadAgency(){
-  const res = await fetch('/api/agency');
-  const data = await res.json();
+  const data = await safeFetch('/api/agency');
   $('#agency-data').textContent = JSON.stringify(data, null, 2);
 }
 
@@ -132,12 +143,16 @@ function enableUpload(){
   async function sendFiles(files){
     const form = new FormData();
     files.forEach(f => form.append('files', f));
-    const res = await fetch('/api/upload', { method: 'POST', body: form });
-    const data = await res.json();
-    const out = $('#upload-results');
-    out.innerHTML = '<div class="asset"><strong>Upload Results</strong><pre class="mono">'+JSON.stringify(data, null, 2)+'</pre></div>';
-    loadAssets();
-    loadIntelligence();
+    let out = $('#upload-results');
+    try{
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      out.innerHTML = '<div class="asset"><strong>Upload Results</strong><pre class="mono">'+JSON.stringify(data, null, 2)+'</pre></div>';
+      loadAssets();
+      loadIntelligence();
+    }catch(e){
+      out.innerHTML = '<div class="asset">Upload error: '+(e.message||e)+'</div>';
+    }
   }
 }
 
@@ -149,6 +164,36 @@ window.addEventListener('DOMContentLoaded', () => {
   enableUpload();
 
   $$('#calendar .view-switch .btn').forEach(b => {
-    b.addEventListener('click', () => loadCalendar(b.dataset.view));
+    if (b.dataset.view) {
+      b.addEventListener('click', () => loadCalendar(b.dataset.view));
+    }
   });
+
+  // Lightweight Asset search UX
+  const hdr = document.querySelector('#assets .card h2');
+  if(hdr && !document.getElementById('asset-search')){
+    const s = document.createElement('input');
+    s.id = 'asset-search';
+    s.placeholder = 'Search assets…';
+    s.className = 'btn';
+    s.style.marginLeft = '8px';
+    hdr.appendChild(s);
+    s.addEventListener('input', async () => {
+      const q = s.value.trim();
+      if(!q){ return loadAssets(); }
+      const r = await safeFetch('/api/assets/search?q='+encodeURIComponent(q));
+      const grid = $('#asset-grid'); grid.innerHTML='';
+      (r.results||[]).forEach(a => {
+        const imgSrc = a.thumbnail ? `/uploads/${a.thumbnail}` : '/static/img/placeholder.png`;
+        const card = document.createElement('div');
+        card.className = 'asset';
+        card.innerHTML = `
+          <img src="${imgSrc}" alt="${a.filename}" onerror="this.src='/static/img/placeholder.png'">
+          <div class="meta">${a.filename}<br>${(a.size_bytes/1024).toFixed(1)} KB · ${a.type}</div>
+          <div class="actions"><a class="btn small" href="/api/assets/${a.id}/download"><i class="fa-solid fa-download"></i> Download</a></div>
+        `;
+        grid.appendChild(card);
+      });
+    });
+  }
 });
