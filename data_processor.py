@@ -5,13 +5,6 @@ from collections import Counter, defaultdict
 import re
 import statistics
 
-INTEL_FOLDER = os.path.join('uploads', 'intel')
-PROCESSED_DATA_FILE = os.path.join('data', 'processed_intelligence.json')
-
-# Ensure directories exist
-os.makedirs(INTEL_FOLDER, exist_ok=True)
-os.makedirs(os.path.dirname(PROCESSED_DATA_FILE), exist_ok=True)
-
 def load_jsonl_data(file_path):
     """Load and validate JSONL data with error handling"""
     data = []
@@ -169,340 +162,114 @@ def determine_hashtag_relevance(hashtag, cultural_context):
     else:
         return 'low'
 
-def competitive_analysis(instagram_data, tiktok_data=None):
-    """Perform competitive analysis with actionable insights"""
-    competitors = identify_competitors(instagram_data)
-    
-    analysis = {
-        'total_posts_analyzed': len(instagram_data),
-        'analysis_date': datetime.now().isoformat(),
-        'competitors': {},
-        'market_insights': {},
-        'opportunities': [],
-        'threats': [],
-        'recommendations': []
+def process_intelligence_data():
+    """Process all available intelligence data files"""
+    intelligence_data = {
+        'instagram_data': [],
+        'tiktok_data': [],
+        'competitive_data': [],
+        'processing_summary': {},
+        'analysis_timestamp': datetime.now().isoformat()
     }
     
-    # Analyze each competitor
-    for competitor in competitors:
-        competitor_posts = [post for post in instagram_data 
-                          if post.get('ownerUsername', '').lower() == competitor.lower()]
-        
-        if competitor_posts:
-            competitor_analysis = analyze_competitor(competitor, competitor_posts)
-            analysis['competitors'][competitor] = competitor_analysis
+    # Look for data files in uploads directory
+    upload_dir = 'uploads'
+    if os.path.exists(upload_dir):
+        for filename in os.listdir(upload_dir):
+            if filename.endswith('.jsonl'):
+                filepath = os.path.join(upload_dir, filename)
+                result = load_jsonl_data(filepath)
+                
+                if result['status'] == 'success':
+                    if 'instagram' in filename.lower():
+                        intelligence_data['instagram_data'].extend(result['data'])
+                    elif 'tiktok' in filename.lower():
+                        intelligence_data['tiktok_data'].extend(result['data'])
+                    elif 'competitive' in filename.lower():
+                        intelligence_data['competitive_data'].extend(result['data'])
+                
+                intelligence_data['processing_summary'][filename] = {
+                    'records': result['total_records'],
+                    'errors': result['error_count'],
+                    'status': result['status']
+                }
     
-    # Generate market insights
-    analysis['market_insights'] = generate_market_insights(instagram_data, tiktok_data)
+    return intelligence_data
+
+def generate_competitive_analysis():
+    """Generate comprehensive competitive analysis"""
+    intelligence_data = process_intelligence_data()
     
-    # Identify opportunities and threats
-    analysis['opportunities'] = identify_opportunities(analysis['competitors'], analysis['market_insights'])
-    analysis['threats'] = identify_threats(analysis['competitors'], analysis['market_insights'])
+    # Combine all data for analysis
+    all_posts = (intelligence_data['instagram_data'] + 
+                intelligence_data['competitive_data'])
     
-    # Generate actionable recommendations
-    analysis['recommendations'] = generate_recommendations(analysis)
+    if not all_posts:
+        return {
+            'error': 'No data available for analysis',
+            'total_posts': 0,
+            'analysis_timestamp': datetime.now().isoformat()
+        }
+    
+    analysis = {
+        'analysis_timestamp': datetime.now().isoformat(),
+        'data_summary': {
+            'instagram_posts': len(intelligence_data['instagram_data']),
+            'tiktok_videos': len(intelligence_data['tiktok_data']),
+            'competitive_posts': len(intelligence_data['competitive_data']),
+            'total_analyzed': len(all_posts)
+        },
+        'hashtag_analysis': analyze_hashtags(all_posts, min_frequency=3),
+        'engagement_insights': analyze_engagement_patterns(all_posts),
+        'competitor_insights': analyze_competitors(all_posts),
+        'cultural_moments': identify_cultural_moments(all_posts),
+        'recommendations': generate_recommendations(all_posts),
+        'trustworthiness_score': calculate_trustworthiness_score(intelligence_data)
+    }
     
     return analysis
 
-def identify_competitors(data):
-    """Identify key competitors from the data"""
-    # Known streetwear competitors
-    known_competitors = [
-        'supremenewyork', 'offwhite', 'fearofgod', 'kith', 'stussy', 
-        'bape_us', 'antisocialsocialclub', 'golf_wang', 'braindead',
-        'humanmade', 'neighborhoodnyc', 'wtaps', 'visvim'
-    ]
-    
-    # Find competitors present in data
-    found_competitors = []
-    usernames = set(post.get('ownerUsername', '').lower() for post in data)
-    
-    for competitor in known_competitors:
-        if competitor.lower() in usernames:
-            found_competitors.append(competitor)
-    
-    return found_competitors
-
-def analyze_competitor(competitor_name, posts):
-    """Analyze individual competitor performance"""
+def analyze_engagement_patterns(posts):
+    """Analyze engagement patterns and trends"""
     if not posts:
         return {}
     
-    total_engagement = sum(calculate_engagement(post) for post in posts)
-    avg_engagement = total_engagement / len(posts)
-    
-    # Analyze posting patterns
-    posting_frequency = analyze_posting_frequency(posts)
-    
-    # Analyze content themes
-    content_themes = analyze_content_themes(posts)
-    
-    # Calculate engagement metrics
-    engagement_metrics = calculate_detailed_engagement_metrics(posts)
-    
-    return {
-        'total_posts': len(posts),
-        'total_engagement': total_engagement,
-        'avg_engagement': round(avg_engagement, 2),
-        'posting_frequency': posting_frequency,
-        'content_themes': content_themes,
-        'engagement_metrics': engagement_metrics,
-        'performance_score': calculate_performance_score(posts),
-        'strengths': identify_competitor_strengths(posts),
-        'weaknesses': identify_competitor_weaknesses(posts)
-    }
-
-def analyze_posting_frequency(posts):
-    """Analyze posting frequency patterns"""
-    if not posts:
-        return {}
-    
-    # Group posts by date
-    posts_by_date = defaultdict(int)
-    for post in posts:
-        timestamp = post.get('timestamp', '')
-        if timestamp:
-            try:
-                date = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).date()
-                posts_by_date[date.isoformat()] += 1
-            except:
-                continue
-    
-    if not posts_by_date:
-        return {}
-    
-    daily_counts = list(posts_by_date.values())
-    
-    return {
-        'avg_posts_per_day': round(statistics.mean(daily_counts), 2),
-        'max_posts_per_day': max(daily_counts),
-        'min_posts_per_day': min(daily_counts),
-        'total_active_days': len(posts_by_date),
-        'consistency_score': calculate_consistency_score(daily_counts)
-    }
-
-def analyze_content_themes(posts):
-    """Analyze content themes and topics"""
-    themes = defaultdict(int)
-    
-    # Theme keywords
-    theme_keywords = {
-        'product_showcase': ['new', 'drop', 'release', 'collection', 'available'],
-        'lifestyle': ['lifestyle', 'mood', 'vibes', 'aesthetic', 'style'],
-        'community': ['community', 'family', 'crew', 'squad', 'team'],
-        'culture': ['culture', 'heritage', 'authentic', 'tradition', 'legacy'],
-        'collaboration': ['collab', 'collaboration', 'partnership', 'with'],
-        'behind_scenes': ['behind', 'bts', 'process', 'making', 'studio']
-    }
-    
-    for post in posts:
-        caption = post.get('caption', '').lower()
-        for theme, keywords in theme_keywords.items():
-            if any(keyword in caption for keyword in keywords):
-                themes[theme] += 1
-    
-    # Calculate theme percentages
-    total_posts = len(posts)
-    theme_percentages = {theme: round((count / total_posts) * 100, 1) 
-                        for theme, count in themes.items()}
-    
-    return theme_percentages
-
-def calculate_detailed_engagement_metrics(posts):
-    """Calculate detailed engagement metrics"""
-    if not posts:
-        return {}
-    
-    likes = [post.get('likesCount', 0) for post in posts]
-    comments = [post.get('commentsCount', 0) for post in posts]
-    
-    return {
-        'avg_likes': round(statistics.mean(likes), 2),
-        'avg_comments': round(statistics.mean(comments), 2),
-        'engagement_rate': calculate_engagement_rate(posts),
-        'top_performing_post': find_top_performing_post(posts),
-        'engagement_consistency': calculate_engagement_consistency(posts)
-    }
-
-def calculate_engagement_rate(posts):
-    """Calculate engagement rate (simplified without follower count)"""
-    if not posts:
-        return 0
-    
-    total_engagement = sum(calculate_engagement(post) for post in posts)
-    # Estimate engagement rate based on average performance
-    avg_engagement = total_engagement / len(posts)
-    
-    # Rough engagement rate estimation (would need follower count for accuracy)
-    estimated_rate = min(avg_engagement / 1000, 10)  # Cap at 10%
-    return round(estimated_rate, 2)
-
-def find_top_performing_post(posts):
-    """Find the top performing post"""
-    if not posts:
-        return None
-    
-    top_post = max(posts, key=calculate_engagement)
-    
-    return {
-        'id': top_post.get('id', ''),
-        'caption': top_post.get('caption', '')[:100] + '...' if len(top_post.get('caption', '')) > 100 else top_post.get('caption', ''),
-        'engagement_score': calculate_engagement(top_post),
-        'likes': top_post.get('likesCount', 0),
-        'comments': top_post.get('commentsCount', 0)
-    }
-
-def calculate_consistency_score(values):
-    """Calculate consistency score based on standard deviation"""
-    if len(values) < 2:
-        return 1.0
-    
-    mean_val = statistics.mean(values)
-    std_dev = statistics.stdev(values)
-    
-    # Lower standard deviation relative to mean = higher consistency
-    if mean_val == 0:
-        return 1.0
-    
-    coefficient_of_variation = std_dev / mean_val
-    consistency_score = max(0, 1 - coefficient_of_variation)
-    
-    return round(consistency_score, 2)
-
-def calculate_engagement_consistency(posts):
-    """Calculate engagement consistency"""
     engagement_scores = [calculate_engagement(post) for post in posts]
-    return calculate_consistency_score(engagement_scores)
-
-def calculate_performance_score(posts):
-    """Calculate overall performance score for competitor"""
-    if not posts:
-        return 0
     
-    # Factors: engagement, consistency, posting frequency
-    avg_engagement = statistics.mean([calculate_engagement(post) for post in posts])
-    consistency = calculate_engagement_consistency(posts)
-    frequency_score = min(len(posts) / 30, 1)  # Normalize to 30 posts max
+    # Calculate statistics
+    avg_engagement = statistics.mean(engagement_scores)
+    median_engagement = statistics.median(engagement_scores)
+    max_engagement = max(engagement_scores)
     
-    # Weighted score
-    performance_score = (avg_engagement * 0.5) + (consistency * 0.3) + (frequency_score * 0.2)
+    # Find top performing posts
+    posts_with_engagement = [(post, calculate_engagement(post)) for post in posts]
+    top_posts = sorted(posts_with_engagement, key=lambda x: x[1], reverse=True)[:5]
     
-    return round(performance_score, 2)
-
-def identify_competitor_strengths(posts):
-    """Identify competitor strengths"""
-    strengths = []
+    # Analyze posting times
+    time_analysis = analyze_posting_times(posts)
     
-    if not posts:
-        return strengths
-    
-    avg_engagement = statistics.mean([calculate_engagement(post) for post in posts])
-    consistency = calculate_engagement_consistency(posts)
-    posting_frequency = len(posts)
-    
-    if avg_engagement > 1000:
-        strengths.append("High engagement rates")
-    
-    if consistency > 0.7:
-        strengths.append("Consistent performance")
-    
-    if posting_frequency > 20:
-        strengths.append("Active posting schedule")
-    
-    # Analyze content themes
-    themes = analyze_content_themes(posts)
-    if themes.get('community', 0) > 20:
-        strengths.append("Strong community engagement")
-    
-    if themes.get('culture', 0) > 15:
-        strengths.append("Cultural authenticity focus")
-    
-    return strengths
-
-def identify_competitor_weaknesses(posts):
-    """Identify competitor weaknesses"""
-    weaknesses = []
-    
-    if not posts:
-        return ["No data available"]
-    
-    avg_engagement = statistics.mean([calculate_engagement(post) for post in posts])
-    consistency = calculate_engagement_consistency(posts)
-    posting_frequency = len(posts)
-    
-    if avg_engagement < 500:
-        weaknesses.append("Low engagement rates")
-    
-    if consistency < 0.4:
-        weaknesses.append("Inconsistent performance")
-    
-    if posting_frequency < 10:
-        weaknesses.append("Infrequent posting")
-    
-    # Analyze content diversity
-    themes = analyze_content_themes(posts)
-    if len(themes) < 3:
-        weaknesses.append("Limited content diversity")
-    
-    return weaknesses
-
-def generate_market_insights(instagram_data, tiktok_data=None):
-    """Generate market insights from data analysis"""
-    insights = {
-        'trending_hashtags': analyze_hashtags(instagram_data, min_frequency=3),
-        'content_trends': identify_content_trends(instagram_data),
-        'engagement_patterns': analyze_engagement_patterns(instagram_data),
-        'cultural_moments': identify_cultural_moments(instagram_data),
-        'market_gaps': identify_market_gaps(instagram_data)
-    }
-    
-    if tiktok_data:
-        insights['tiktok_trends'] = analyze_tiktok_trends(tiktok_data)
-    
-    return insights
-
-def identify_content_trends(data):
-    """Identify trending content types and formats"""
-    content_types = defaultdict(lambda: {'count': 0, 'total_engagement': 0})
-    
-    for post in data:
-        # Determine content type from caption or other indicators
-        caption = post.get('caption', '').lower()
-        
-        if any(word in caption for word in ['video', 'watch', 'clip']):
-            content_type = 'video'
-        elif any(word in caption for word in ['carousel', 'swipe', 'slide']):
-            content_type = 'carousel'
-        elif any(word in caption for word in ['story', 'behind', 'bts']):
-            content_type = 'story'
-        else:
-            content_type = 'single_image'
-        
-        content_types[content_type]['count'] += 1
-        content_types[content_type]['total_engagement'] += calculate_engagement(post)
-    
-    # Calculate average engagement per content type
-    trends = {}
-    for content_type, data in content_types.items():
-        if data['count'] > 0:
-            trends[content_type] = {
-                'count': data['count'],
-                'avg_engagement': round(data['total_engagement'] / data['count'], 2),
-                'total_engagement': data['total_engagement']
+    return {
+        'avg_engagement': round(avg_engagement, 2),
+        'median_engagement': round(median_engagement, 2),
+        'max_engagement': max_engagement,
+        'engagement_distribution': categorize_engagement_levels(engagement_scores),
+        'top_performing_posts': [
+            {
+                'caption': post[0].get('caption', '')[:100] + '...' if len(post[0].get('caption', '')) > 100 else post[0].get('caption', ''),
+                'engagement_score': post[1],
+                'username': post[0].get('ownerUsername', 'unknown')
             }
-    
-    return dict(sorted(trends.items(), key=lambda x: x[1]['avg_engagement'], reverse=True))
+            for post in top_posts
+        ],
+        'posting_time_insights': time_analysis
+    }
 
-def analyze_engagement_patterns(data):
-    """Analyze engagement patterns over time"""
-    if not data:
-        return {}
-    
-    # Group by hour of day and day of week
+def analyze_posting_times(posts):
+    """Analyze optimal posting times"""
     hourly_engagement = defaultdict(list)
     daily_engagement = defaultdict(list)
     
-    for post in data:
+    for post in posts:
         timestamp = post.get('timestamp', '')
         if timestamp:
             try:
@@ -516,385 +283,268 @@ def analyze_engagement_patterns(data):
     
     # Calculate averages
     hourly_avg = {hour: round(statistics.mean(engagements), 2) 
-                  for hour, engagements in hourly_engagement.items()}
+                  for hour, engagements in hourly_engagement.items() if engagements}
     daily_avg = {day: round(statistics.mean(engagements), 2) 
-                 for day, engagements in daily_engagement.items()}
+                 for day, engagements in daily_engagement.items() if engagements}
+    
+    # Find best times
+    best_hours = sorted(hourly_avg.items(), key=lambda x: x[1], reverse=True)[:3]
+    best_days = sorted(daily_avg.items(), key=lambda x: x[1], reverse=True)[:3]
     
     return {
-        'best_posting_hours': dict(sorted(hourly_avg.items(), key=lambda x: x[1], reverse=True)[:3]),
-        'best_posting_days': dict(sorted(daily_avg.items(), key=lambda x: x[1], reverse=True)[:3]),
-        'hourly_patterns': hourly_avg,
-        'daily_patterns': daily_avg
+        'best_posting_hours': [f"{hour}:00" for hour, _ in best_hours],
+        'best_posting_days': [day for day, _ in best_days],
+        'hourly_performance': hourly_avg,
+        'daily_performance': daily_avg
     }
 
-def identify_cultural_moments(data):
-    """Identify cultural moments and events from content"""
-    cultural_keywords = {
-        'hispanic_heritage': ['hispanic', 'latino', 'heritage', 'cultura'],
-        'black_history': ['black', 'history', 'african', 'heritage'],
-        'hip_hop': ['hiphop', 'rap', 'hip-hop', 'anniversary'],
-        'pride': ['pride', 'lgbtq', 'rainbow', 'love'],
-        'holidays': ['christmas', 'thanksgiving', 'halloween', 'valentine'],
-        'fashion_weeks': ['fashion', 'week', 'runway', 'show'],
-        'music_events': ['coachella', 'festival', 'concert', 'music']
+def categorize_engagement_levels(engagement_scores):
+    """Categorize engagement into levels"""
+    if not engagement_scores:
+        return {}
+    
+    # Define thresholds based on data distribution
+    sorted_scores = sorted(engagement_scores)
+    q1 = sorted_scores[len(sorted_scores)//4]
+    q3 = sorted_scores[3*len(sorted_scores)//4]
+    
+    low_count = sum(1 for score in engagement_scores if score <= q1)
+    medium_count = sum(1 for score in engagement_scores if q1 < score <= q3)
+    high_count = sum(1 for score in engagement_scores if score > q3)
+    
+    total = len(engagement_scores)
+    
+    return {
+        'low_engagement': {'count': low_count, 'percentage': round(low_count/total*100, 1)},
+        'medium_engagement': {'count': medium_count, 'percentage': round(medium_count/total*100, 1)},
+        'high_engagement': {'count': high_count, 'percentage': round(high_count/total*100, 1)}
+    }
+
+def analyze_competitors(posts):
+    """Analyze competitor performance and strategies"""
+    # Group posts by username
+    competitor_data = defaultdict(list)
+    
+    for post in posts:
+        username = post.get('ownerUsername', 'unknown')
+        if username != 'unknown':
+            competitor_data[username].append(post)
+    
+    # Analyze each competitor
+    competitor_analysis = {}
+    
+    for username, user_posts in competitor_data.items():
+        if len(user_posts) >= 3:  # Only analyze users with sufficient data
+            engagement_scores = [calculate_engagement(post) for post in user_posts]
+            
+            competitor_analysis[username] = {
+                'post_count': len(user_posts),
+                'avg_engagement': round(statistics.mean(engagement_scores), 2),
+                'total_engagement': sum(engagement_scores),
+                'consistency_score': calculate_consistency_score(engagement_scores),
+                'top_hashtags': get_top_hashtags_for_user(user_posts),
+                'content_themes': analyze_content_themes(user_posts),
+                'performance_tier': categorize_performance(statistics.mean(engagement_scores))
+            }
+    
+    # Sort by average engagement
+    sorted_competitors = dict(sorted(competitor_analysis.items(), 
+                                   key=lambda x: x[1]['avg_engagement'], reverse=True))
+    
+    return sorted_competitors
+
+def calculate_consistency_score(engagement_scores):
+    """Calculate consistency score based on standard deviation"""
+    if len(engagement_scores) < 2:
+        return 1.0
+    
+    mean_val = statistics.mean(engagement_scores)
+    std_dev = statistics.stdev(engagement_scores)
+    
+    if mean_val == 0:
+        return 1.0
+    
+    coefficient_of_variation = std_dev / mean_val
+    consistency_score = max(0, 1 - coefficient_of_variation)
+    
+    return round(consistency_score, 2)
+
+def get_top_hashtags_for_user(posts):
+    """Get top hashtags for a specific user"""
+    hashtag_counts = Counter()
+    
+    for post in posts:
+        hashtags = extract_hashtags(post.get('caption', ''))
+        hashtag_counts.update(hashtags)
+    
+    return dict(hashtag_counts.most_common(5))
+
+def analyze_content_themes(posts):
+    """Analyze content themes for posts"""
+    theme_keywords = {
+        'product': ['new', 'drop', 'release', 'collection', 'available', 'shop'],
+        'lifestyle': ['lifestyle', 'mood', 'vibes', 'aesthetic', 'style', 'look'],
+        'community': ['community', 'family', 'crew', 'squad', 'team', 'together'],
+        'culture': ['culture', 'heritage', 'authentic', 'tradition', 'legacy', 'history'],
+        'fashion': ['fashion', 'outfit', 'style', 'wear', 'clothing', 'apparel']
     }
     
-    cultural_moments = defaultdict(lambda: {'count': 0, 'posts': [], 'engagement': 0})
+    theme_counts = defaultdict(int)
     
-    for post in data:
+    for post in posts:
+        caption = post.get('caption', '').lower()
+        for theme, keywords in theme_keywords.items():
+            if any(keyword in caption for keyword in keywords):
+                theme_counts[theme] += 1
+    
+    total_posts = len(posts)
+    theme_percentages = {theme: round((count / total_posts) * 100, 1) 
+                        for theme, count in theme_counts.items()}
+    
+    return theme_percentages
+
+def categorize_performance(avg_engagement):
+    """Categorize performance level"""
+    if avg_engagement > 5000:
+        return 'high'
+    elif avg_engagement > 1000:
+        return 'medium'
+    else:
+        return 'low'
+
+def identify_cultural_moments(posts):
+    """Identify cultural moments and trends"""
+    cultural_keywords = {
+        'hispanic_heritage': ['hispanic', 'latino', 'heritage', 'cultura', 'latinx'],
+        'black_history': ['black', 'history', 'african', 'heritage', 'blm'],
+        'hip_hop': ['hiphop', 'rap', 'hip-hop', 'anniversary', 'culture'],
+        'pride': ['pride', 'lgbtq', 'rainbow', 'love', 'equality'],
+        'holidays': ['christmas', 'thanksgiving', 'halloween', 'valentine'],
+        'fashion_events': ['fashion', 'week', 'runway', 'show', 'nyfw'],
+        'music_festivals': ['coachella', 'festival', 'concert', 'music', 'lollapalooza']
+    }
+    
+    cultural_moments = defaultdict(lambda: {'count': 0, 'engagement': 0, 'posts': []})
+    
+    for post in posts:
         caption = post.get('caption', '').lower()
         engagement = calculate_engagement(post)
         
         for moment, keywords in cultural_keywords.items():
             if any(keyword in caption for keyword in keywords):
                 cultural_moments[moment]['count'] += 1
-                cultural_moments[moment]['posts'].append(post.get('id', ''))
                 cultural_moments[moment]['engagement'] += engagement
+                cultural_moments[moment]['posts'].append({
+                    'username': post.get('ownerUsername', ''),
+                    'caption_preview': post.get('caption', '')[:100] + '...',
+                    'engagement': engagement
+                })
     
-    # Calculate averages and sort by relevance
-    moments = {}
+    # Calculate averages and relevance scores
+    moments_analysis = {}
     for moment, data in cultural_moments.items():
         if data['count'] > 0:
-            moments[moment] = {
-                'count': data['count'],
-                'avg_engagement': round(data['engagement'] / data['count'], 2),
+            avg_engagement = data['engagement'] / data['count']
+            relevance_score = data['count'] * avg_engagement / 1000  # Normalize
+            
+            moments_analysis[moment] = {
+                'post_count': data['count'],
+                'avg_engagement': round(avg_engagement, 2),
                 'total_engagement': data['engagement'],
-                'relevance_score': data['count'] * (data['engagement'] / data['count'])
+                'relevance_score': round(relevance_score, 2),
+                'sample_posts': data['posts'][:3]  # Top 3 posts
             }
     
-    return dict(sorted(moments.items(), key=lambda x: x[1]['relevance_score'], reverse=True))
+    return dict(sorted(moments_analysis.items(), 
+                      key=lambda x: x[1]['relevance_score'], reverse=True))
 
-def identify_market_gaps(data):
-    """Identify potential market gaps and opportunities"""
-    gaps = []
-    
-    # Analyze content themes to find underrepresented areas
-    all_themes = analyze_content_themes(data)
-    
-    # Define important themes for streetwear
-    important_themes = ['sustainability', 'diversity', 'community', 'culture', 'collaboration']
-    
-    for theme in important_themes:
-        if theme not in all_themes or all_themes[theme] < 10:
-            gaps.append({
-                'gap': theme,
-                'opportunity': f"Underrepresented {theme} content",
-                'current_coverage': all_themes.get(theme, 0),
-                'recommendation': f"Increase {theme}-focused content"
-            })
-    
-    return gaps
-
-def analyze_tiktok_trends(tiktok_data):
-    """Analyze TikTok specific trends"""
-    if not tiktok_data:
-        return {}
-    
-    return {
-        'total_videos': len(tiktok_data),
-        'avg_views': round(statistics.mean([post.get('viewsCount', 0) for post in tiktok_data]), 2),
-        'trending_sounds': extract_trending_sounds(tiktok_data),
-        'video_lengths': analyze_video_lengths(tiktok_data)
-    }
-
-def extract_trending_sounds(tiktok_data):
-    """Extract trending sounds from TikTok data"""
-    sounds = defaultdict(int)
-    
-    for video in tiktok_data:
-        sound = video.get('musicMeta', {}).get('musicName', '')
-        if sound:
-            sounds[sound] += 1
-    
-    return dict(sorted(sounds.items(), key=lambda x: x[1], reverse=True)[:10])
-
-def analyze_video_lengths(tiktok_data):
-    """Analyze video length patterns"""
-    lengths = []
-    
-    for video in tiktok_data:
-        duration = video.get('videoMeta', {}).get('duration', 0)
-        if duration:
-            lengths.append(duration)
-    
-    if not lengths:
-        return {}
-    
-    return {
-        'avg_length': round(statistics.mean(lengths), 2),
-        'median_length': statistics.median(lengths),
-        'most_common_range': categorize_video_lengths(lengths)
-    }
-
-def categorize_video_lengths(lengths):
-    """Categorize video lengths into ranges"""
-    ranges = {'short (0-15s)': 0, 'medium (16-30s)': 0, 'long (31s+)': 0}
-    
-    for length in lengths:
-        if length <= 15:
-            ranges['short (0-15s)'] += 1
-        elif length <= 30:
-            ranges['medium (16-30s)'] += 1
-        else:
-            ranges['long (31s+)'] += 1
-    
-    return max(ranges, key=ranges.get)
-
-def identify_opportunities(competitors_analysis, market_insights):
-    """Identify strategic opportunities based on analysis"""
-    opportunities = []
-    
-    # Content opportunities
-    trending_hashtags = market_insights.get('trending_hashtags', {})
-    top_hashtags = list(trending_hashtags.keys())[:5]
-    
-    if top_hashtags:
-        opportunities.append({
-            'type': 'content',
-            'opportunity': 'Leverage trending hashtags',
-            'details': f"Top trending: {', '.join(top_hashtags)}",
-            'priority': 'high',
-            'estimated_impact': 'Increase reach by 25-40%'
-        })
-    
-    # Cultural moments
-    cultural_moments = market_insights.get('cultural_moments', {})
-    if cultural_moments:
-        top_moment = list(cultural_moments.keys())[0]
-        opportunities.append({
-            'type': 'cultural',
-            'opportunity': f'Capitalize on {top_moment} trend',
-            'details': f"High engagement potential: {cultural_moments[top_moment]['avg_engagement']} avg engagement",
-            'priority': 'high',
-            'estimated_impact': 'Strengthen cultural positioning'
-        })
-    
-    # Competitor gaps
-    for competitor, analysis in competitors_analysis.items():
-        weaknesses = analysis.get('weaknesses', [])
-        if 'Limited content diversity' in weaknesses:
-            opportunities.append({
-                'type': 'competitive',
-                'opportunity': f'Outperform {competitor} with diverse content',
-                'details': 'Competitor has limited content variety',
-                'priority': 'medium',
-                'estimated_impact': 'Gain market share through better content strategy'
-            })
-    
-    return opportunities
-
-def identify_threats(competitors_analysis, market_insights):
-    """Identify potential threats from competitive analysis"""
-    threats = []
-    
-    # High-performing competitors
-    for competitor, analysis in competitors_analysis.items():
-        performance_score = analysis.get('performance_score', 0)
-        if performance_score > 1000:
-            threats.append({
-                'type': 'competitive',
-                'threat': f'{competitor} high performance',
-                'details': f'Performance score: {performance_score}, Strong engagement',
-                'severity': 'medium',
-                'mitigation': 'Improve content quality and consistency'
-            })
-    
-    # Market saturation
-    total_competitors = len(competitors_analysis)
-    if total_competitors > 5:
-        threats.append({
-            'type': 'market',
-            'threat': 'High market competition',
-            'details': f'{total_competitors} active competitors identified',
-            'severity': 'high',
-            'mitigation': 'Focus on unique brand positioning and cultural authenticity'
-        })
-    
-    return threats
-
-def generate_recommendations(analysis):
-    """Generate actionable recommendations based on complete analysis"""
+def generate_recommendations(posts):
+    """Generate actionable recommendations based on analysis"""
     recommendations = []
     
-    # Content recommendations
-    market_insights = analysis.get('market_insights', {})
-    trending_hashtags = market_insights.get('trending_hashtags', {})
-    
-    if trending_hashtags:
-        top_hashtag = list(trending_hashtags.keys())[0]
+    # Analyze hashtags for recommendations
+    hashtag_analysis = analyze_hashtags(posts, min_frequency=5)
+    if hashtag_analysis:
+        top_hashtag = list(hashtag_analysis.keys())[0]
         recommendations.append({
-            'category': 'content_strategy',
-            'recommendation': f'Incorporate trending hashtag {top_hashtag}',
-            'rationale': f'High trend score: {trending_hashtags[top_hashtag]["trend_score"]}',
-            'implementation': 'Include in next 3-5 posts with relevant content',
-            'expected_outcome': 'Increased reach and engagement',
-            'priority': 'high'
+            'category': 'hashtag_strategy',
+            'priority': 'high',
+            'recommendation': f'Leverage trending hashtag: {top_hashtag}',
+            'rationale': f'High engagement potential with {hashtag_analysis[top_hashtag]["count"]} uses and {hashtag_analysis[top_hashtag]["avg_engagement"]} avg engagement',
+            'implementation': f'Include {top_hashtag} in next 3-5 posts with relevant content',
+            'expected_impact': 'Increase reach by 15-25%'
         })
     
-    # Posting optimization
-    engagement_patterns = market_insights.get('engagement_patterns', {})
-    if engagement_patterns.get('best_posting_hours'):
-        best_hour = list(engagement_patterns['best_posting_hours'].keys())[0]
+    # Posting time recommendations
+    time_analysis = analyze_posting_times(posts)
+    if time_analysis.get('best_posting_hours'):
+        best_hour = time_analysis['best_posting_hours'][0]
         recommendations.append({
             'category': 'posting_optimization',
-            'recommendation': f'Post during peak engagement hour: {best_hour}:00',
-            'rationale': f'Highest average engagement: {engagement_patterns["best_posting_hours"][str(best_hour)]}',
-            'implementation': 'Schedule posts for this time zone',
-            'expected_outcome': 'Improved organic reach and engagement',
-            'priority': 'medium'
+            'priority': 'medium',
+            'recommendation': f'Optimize posting time to {best_hour}',
+            'rationale': 'Data shows higher engagement during this time',
+            'implementation': 'Schedule posts for peak engagement hours',
+            'expected_impact': 'Improve organic reach by 10-20%'
         })
     
-    # Cultural opportunities
-    cultural_moments = market_insights.get('cultural_moments', {})
+    # Cultural moment recommendations
+    cultural_moments = identify_cultural_moments(posts)
     if cultural_moments:
         top_moment = list(cultural_moments.keys())[0]
         recommendations.append({
             'category': 'cultural_marketing',
-            'recommendation': f'Create content around {top_moment}',
-            'rationale': f'High cultural relevance and engagement potential',
+            'priority': 'high',
+            'recommendation': f'Create content around {top_moment.replace("_", " ").title()}',
+            'rationale': f'High cultural relevance with {cultural_moments[top_moment]["post_count"]} related posts showing strong engagement',
             'implementation': 'Develop authentic content series celebrating this cultural moment',
-            'expected_outcome': 'Strengthened brand cultural positioning',
-            'priority': 'high'
+            'expected_impact': 'Strengthen brand cultural positioning and community engagement'
         })
     
-    # Competitive positioning
-    competitors = analysis.get('competitors', {})
-    if competitors:
-        # Find competitor with highest performance
-        top_competitor = max(competitors.items(), key=lambda x: x[1].get('performance_score', 0))
-        recommendations.append({
-            'category': 'competitive_strategy',
-            'recommendation': f'Study and differentiate from {top_competitor[0]} strategy',
-            'rationale': f'Top performing competitor with score: {top_competitor[1]["performance_score"]}',
-            'implementation': 'Analyze their content themes and develop unique positioning',
-            'expected_outcome': 'Improved competitive positioning',
-            'priority': 'medium'
-        })
+    # Competitor analysis recommendations
+    competitor_analysis = analyze_competitors(posts)
+    if competitor_analysis:
+        top_performers = [comp for comp, data in competitor_analysis.items() 
+                         if data['performance_tier'] == 'high']
+        if top_performers:
+            recommendations.append({
+                'category': 'competitive_strategy',
+                'priority': 'medium',
+                'recommendation': f'Study high-performing competitors: {", ".join(top_performers[:3])}',
+                'rationale': 'These accounts show consistently high engagement rates',
+                'implementation': 'Analyze their content themes and posting strategies for insights',
+                'expected_impact': 'Improve content strategy and competitive positioning'
+            })
     
     return recommendations
 
-def generate_intelligence_report(instagram_file=None, tiktok_file=None, competitive_file=None):
-    """Generate comprehensive intelligence report from uploaded data files"""
-    report = {
-        'report_id': str(uuid.uuid4()),
-        'generated_at': datetime.now().isoformat(),
-        'data_sources': [],
-        'executive_summary': {},
-        'detailed_analysis': {},
-        'recommendations': [],
-        'data_quality': {},
-        'trustworthiness_score': 0
-    }
-    
-    # Load and validate data
-    instagram_data = []
-    tiktok_data = []
-    competitive_data = []
-    
-    if instagram_file and os.path.exists(instagram_file):
-        ig_result = load_jsonl_data(instagram_file)
-        if ig_result['status'] == 'success':
-            instagram_data = ig_result['data']
-            report['data_sources'].append({
-                'source': 'Instagram',
-                'file': os.path.basename(instagram_file),
-                'records': len(instagram_data),
-                'errors': len(ig_result['errors']),
-                'quality_score': calculate_data_quality_score(ig_result)
-            })
-    
-    if tiktok_file and os.path.exists(tiktok_file):
-        tt_result = load_jsonl_data(tiktok_file)
-        if tt_result['status'] == 'success':
-            tiktok_data = tt_result['data']
-            report['data_sources'].append({
-                'source': 'TikTok',
-                'file': os.path.basename(tiktok_file),
-                'records': len(tiktok_data),
-                'errors': len(tt_result['errors']),
-                'quality_score': calculate_data_quality_score(tt_result)
-            })
-    
-    if competitive_file and os.path.exists(competitive_file):
-        comp_result = load_jsonl_data(competitive_file)
-        if comp_result['status'] == 'success':
-            competitive_data = comp_result['data']
-            report['data_sources'].append({
-                'source': 'Competitive Intelligence',
-                'file': os.path.basename(competitive_file),
-                'records': len(competitive_data),
-                'errors': len(comp_result['errors']),
-                'quality_score': calculate_data_quality_score(comp_result)
-            })
-    
-    # Perform analysis if data is available
-    if instagram_data or competitive_data:
-        all_data = instagram_data + competitive_data
-        
-        # Competitive analysis
-        competitive_analysis = competitive_analysis(all_data, tiktok_data)
-        
-        # Generate executive summary
-        report['executive_summary'] = generate_executive_summary(
-            len(all_data), competitive_analysis, len(tiktok_data)
-        )
-        
-        # Detailed analysis
-        report['detailed_analysis'] = {
-            'hashtag_analysis': analyze_hashtags(all_data),
-            'competitive_landscape': competitive_analysis,
-            'market_insights': competitive_analysis['market_insights'],
-            'cultural_intelligence': identify_cultural_moments(all_data)
-        }
-        
-        # Recommendations
-        report['recommendations'] = competitive_analysis['recommendations']
-        
-        # Calculate trustworthiness score
-        report['trustworthiness_score'] = calculate_trustworthiness_score(report)
-    
-    # Save processed report
-    save_processed_intelligence(report)
-    
-    return report
-
-def calculate_data_quality_score(data_result):
-    """Calculate data quality score based on errors and completeness"""
-    total_records = data_result.get('total_records', 0)
-    error_count = data_result.get('error_count', 0)
-    
-    if total_records == 0:
-        return 0
-    
-    error_rate = error_count / total_records
-    quality_score = max(0, 1 - error_rate) * 100
-    
-    return round(quality_score, 1)
-
-def calculate_trustworthiness_score(report):
-    """Calculate overall trustworthiness score for the intelligence report"""
+def calculate_trustworthiness_score(intelligence_data):
+    """Calculate trustworthiness score for the analysis"""
     factors = []
     
-    # Data quality factor
-    data_sources = report.get('data_sources', [])
-    if data_sources:
-        avg_quality = statistics.mean([source['quality_score'] for source in data_sources])
-        factors.append(avg_quality / 100)
-    
     # Data volume factor
-    total_records = sum(source['records'] for source in data_sources)
+    total_records = (len(intelligence_data['instagram_data']) + 
+                    len(intelligence_data['tiktok_data']) + 
+                    len(intelligence_data['competitive_data']))
     volume_score = min(total_records / 1000, 1)  # Normalize to 1000 records
     factors.append(volume_score)
     
-    # Analysis completeness factor
-    detailed_analysis = report.get('detailed_analysis', {})
-    completeness_score = len(detailed_analysis) / 4  # 4 expected analysis types
-    factors.append(completeness_score)
+    # Data quality factor (based on processing errors)
+    processing_summary = intelligence_data.get('processing_summary', {})
+    if processing_summary:
+        error_rates = []
+        for filename, summary in processing_summary.items():
+            if summary['records'] > 0:
+                error_rate = summary['errors'] / summary['records']
+                error_rates.append(1 - error_rate)  # Convert to quality score
+        
+        if error_rates:
+            quality_score = statistics.mean(error_rates)
+            factors.append(quality_score)
     
-    # Recommendation quality factor
-    recommendations = report.get('recommendations', [])
-    rec_score = min(len(recommendations) / 5, 1)  # Normalize to 5 recommendations
-    factors.append(rec_score)
+    # Data recency factor
+    recency_score = 0.9  # Assume recent data for now
+    factors.append(recency_score)
     
     # Calculate weighted average
     if factors:
@@ -902,65 +552,3 @@ def calculate_trustworthiness_score(report):
         return round(trustworthiness, 1)
     
     return 0
-
-def generate_executive_summary(total_posts, competitive_analysis, tiktok_count):
-    """Generate executive summary for the intelligence report"""
-    return {
-        'total_posts_analyzed': total_posts,
-        'tiktok_videos_analyzed': tiktok_count,
-        'competitors_identified': len(competitive_analysis.get('competitors', {})),
-        'key_opportunities': len(competitive_analysis.get('opportunities', [])),
-        'market_threats': len(competitive_analysis.get('threats', [])),
-        'actionable_recommendations': len(competitive_analysis.get('recommendations', [])),
-        'analysis_confidence': 'High' if total_posts > 100 else 'Medium' if total_posts > 50 else 'Low'
-    }
-
-def save_processed_intelligence(report_data):
-    """Save processed intelligence report"""
-    try:
-        with open(PROCESSED_DATA_FILE, 'w') as f:
-            json.dump(report_data, f, indent=2)
-        return True
-    except Exception as e:
-        print(f"Error saving processed intelligence: {e}")
-        return False
-
-def load_processed_intelligence():
-    """Load processed intelligence report"""
-    try:
-        if os.path.exists(PROCESSED_DATA_FILE):
-            with open(PROCESSED_DATA_FILE, 'r') as f:
-                return json.load(f)
-        return {}
-    except Exception as e:
-        print(f"Error loading processed intelligence: {e}")
-        return {}
-
-# Auto-scan for data files on import
-def auto_scan_intel_files():
-    """Automatically scan for intelligence files in uploads/intel directory"""
-    intel_files = {
-        'instagram': None,
-        'tiktok': None,
-        'competitive': None
-    }
-    
-    if os.path.exists(INTEL_FOLDER):
-        for filename in os.listdir(INTEL_FOLDER):
-            if filename.endswith('.jsonl'):
-                filepath = os.path.join(INTEL_FOLDER, filename)
-                
-                if 'instagram' in filename.lower():
-                    intel_files['instagram'] = filepath
-                elif 'tiktok' in filename.lower():
-                    intel_files['tiktok'] = filepath
-                elif 'competitive' in filename.lower():
-                    intel_files['competitive'] = filepath
-    
-    return intel_files
-
-# Import required modules
-import uuid
-
-# Initialize on import
-auto_scan_intel_files()
