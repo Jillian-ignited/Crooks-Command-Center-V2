@@ -888,7 +888,11 @@ def export_analytics():
         return jsonify({'error': 'No data to export'}), 400
 
 # Initialize data processing
-@app.before_first_request
+# Remove the @app.before_first_request decorator entirely
+# Move the initialization code to run when the app starts:
+
+with app.app_context():
+    # Your initialization code here (whatever was in the before_first_request function)
 def initialize_app():
     """Initialize the application with real data"""
     success = data_processor.load_social_data()
