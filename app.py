@@ -9,7 +9,7 @@ import re
 import io
 import base64
 
-# Import enhanced modules
+# Import ONLY functions that actually exist in the modules
 from data_processor import (
     generate_competitive_analysis, 
     process_intelligence_data,
@@ -37,7 +37,6 @@ from calendar_engine import (
 )
 from agency_tracker import (
     get_agency_status,
-    add_project,
     update_project_status,
     get_project_timeline
 )
@@ -753,7 +752,7 @@ def api_overview():
         overview_data = {
             'intelligence_status': {
                 'data_sources': intelligence_data.get('total_data_sources', 3),
-                'last_updated': intelligence_data.get('analysis_timestamp', 'Unknown'),
+                'last_updated': intelligence_data.get('analysis_timestamp', datetime.now().isoformat()),
                 'trustworthiness_score': trustworthiness
             },
             'assets': {
