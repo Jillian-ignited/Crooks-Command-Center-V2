@@ -5,44 +5,67 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
 import uuid
-from PIL import Image
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 import io
 import base64
+import re
+from collections import defaultdict, Counter
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+app.secret_key = 'crooks-castles-secret-key-2025'
 
 # Configuration
 UPLOAD_FOLDER = 'assets'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'psd', 'ai', 'sketch', 'fig'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'psd', 'ai', 'sketch', 'fig', 'jsonl', 'json', 'csv'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
-# Ensure directories exist
+# Competitive Intelligence Configuration
+COMPETITORS = {
+    'stussy': {'name': 'Stussy', 'tier': 'premium', 'founded': 1980},
+    'supreme': {'name': 'Supreme', 'tier': 'luxury', 'founded': 1994}, 
+    'hellstar': {'name': 'Hellstar', 'tier': 'emerging', 'founded': 2020},
+    'godspeed': {'name': 'Godspeed', 'tier': 'emerging', 'founded': 2019},
+    'fear_of_god_essentials': {'name': 'Fear of God Essentials', 'tier': 'luxury', 'founded': 2018},
+    'smoke_rise': {'name': 'Smoke Rise', 'tier': 'mid-tier', 'founded': 2012},
+    'reason_clothing': {'name': 'Reason Clothing', 'tier': 'mid-tier', 'founded': 2006},
+    'lrg': {'name': 'LRG', 'tier': 'established', 'founded': 1999},
+    'diamond_supply': {'name': 'Diamond Supply Co.', 'tier': 'established', 'founded': 1998},
+    'ed_hardy': {'name': 'Ed Hardy', 'tier': 'legacy', 'founded': 2004},
+    'von_dutch': {'name': 'Von Dutch', 'tier': 'legacy', 'founded': 1999}
+}
+
 def ensure_directories():
     """Create necessary directories if they don't exist"""
     directories = [
-        'assets',
-        'team_data',
-        'content_library', 
-        'calendar_data'
+        'assets', 'team_data', 'content_library', 'calendar_data',
+        'competitive_data', 'competitive_data/social_scrapes',
+        'competitive_data/price_monitoring', 'competitive_data/seo_data',
+        'competitive_data/brand_mentions', 'competitive_data/product_launches'
     ]
     
     for directory in directories:
         if not os.path.exists(directory):
-            os.makedirs(directory)
-            print(f"Created directory: {directory}")
-
-# Initialize directories when app starts
-ensure_directories()
+            try:
+                os.makedirs(directory)
+                print(f"Created directory: {directory}")
+            except Exception as e:
+                print(f"Error creating directory {directory}: {e}")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def generate_thumbnail(filepath):
     """Generate thumbnail for image files"""
+    if not PIL_AVAILABLE:
+        return None
+        
     try:
         if filepath.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
             with Image.open(filepath) as img:
@@ -55,7 +78,7 @@ def generate_thumbnail(filepath):
     return None
 
 def load_social_data():
-    """Load and process social media data from JSONL files"""
+    """Load and process Crooks & Castles social media data"""
     instagram_data = []
     tiktok_data = []
     
@@ -82,6 +105,41 @@ def load_social_data():
                         continue
     except FileNotFoundError:
         pass
+    
+    return instagram_data, tiktok_data
+
+def load_competitor_social_data(competitor_key):
+    """Load social media data for a specific competitor"""
+    instagram_data = []
+    tiktok_data = []
+    
+    # Load Instagram scrape data
+    instagram_file = f'competitive_data/social_scrapes/{competitor_key}_instagram.jsonl'
+    if os.path.exists(instagram_file):
+        try:
+            with open(instagram_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            instagram_data.append(json.loads(line.strip()))
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as e:
+            print(f"Error loading {instagram_file}: {e}")
+    
+    # Load TikTok scrape data
+    tiktok_file = f'competitive_data/social_scrapes/{competitor_key}_tiktok.jsonl'
+    if os.path.exists(tiktok_file):
+        try:
+            with open(tiktok_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            tiktok_data.append(json.loads(line.strip()))
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as e:
+            print(f"Error loading {tiktok_file}: {e}")
     
     return instagram_data, tiktok_data
 
@@ -306,6 +364,46 @@ def load_hvd_deliverables():
     except FileNotFoundError:
         return get_hvd_deliverables()
 
+def calculate_avg_engagement(posts):
+    """Calculate average engagement rate"""
+    if not posts:
+        return 0
+    
+    total_engagement = 0
+    valid_posts = 0
+    
+    for post in posts:
+        likes = post.get('likes', 0) or 0
+        comments = post.get('comments', 0) or 0
+        shares = post.get('shares', 0) or 0
+        
+        try:
+            if isinstance(likes, str) and likes.isdigit():
+                likes = int(likes)
+            elif not isinstance(likes, int):
+                likes = 0
+                
+            if isinstance(comments, str) and comments.isdigit():
+                comments = int(comments)
+            elif not isinstance(comments, int):
+                comments = 0
+                
+            if isinstance(shares, str) and shares.isdigit():
+                shares = int(shares)
+            elif not isinstance(shares, int):
+                shares = 0
+                
+            engagement = likes + comments + shares
+            total_engagement += engagement
+            valid_posts += 1
+        except:
+            continue
+    
+    return round(total_engagement / valid_posts, 2) if valid_posts > 0 else 0
+
+# Initialize directories when app starts
+ensure_directories()
+
 @app.route('/')
 def dashboard():
     """Main dashboard route"""
@@ -319,13 +417,13 @@ def get_analytics():
     analytics = {
         'instagram': {
             'total_posts': len(instagram_data),
-            'avg_engagement': 0,
+            'avg_engagement': calculate_avg_engagement(instagram_data),
             'top_hashtags': [],
             'recent_performance': []
         },
         'tiktok': {
             'total_posts': len(tiktok_data),
-            'avg_engagement': 0,
+            'avg_engagement': calculate_avg_engagement(tiktok_data),
             'top_hashtags': [],
             'recent_performance': []
         },
@@ -335,45 +433,75 @@ def get_analytics():
         }
     }
     
-    # Process Instagram data
-    if instagram_data:
-        total_engagement = 0
-        hashtag_counts = {}
-        
-        for post in instagram_data:
-            # Calculate engagement if available
-            if 'likes' in post and 'comments' in post:
-                engagement = int(post.get('likes', 0)) + int(post.get('comments', 0))
-                total_engagement += engagement
-            
-            # Count hashtags
-            if 'hashtags' in post:
-                for hashtag in post['hashtags']:
-                    hashtag_counts[hashtag] = hashtag_counts.get(hashtag, 0) + 1
-        
-        analytics['instagram']['avg_engagement'] = round(total_engagement / len(instagram_data), 2) if instagram_data else 0
-        analytics['instagram']['top_hashtags'] = sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    # Process hashtags
+    def extract_hashtags(posts):
+        hashtag_counts = Counter()
+        for post in posts:
+            text = post.get('caption', '') or post.get('text', '') or ''
+            hashtags = re.findall(r'#(\w+)', text)
+            if 'hashtags' in post and isinstance(post['hashtags'], list):
+                hashtags.extend(post['hashtags'])
+            hashtag_counts.update(hashtags)
+        return hashtag_counts.most_common(10)
     
-    # Process TikTok data
-    if tiktok_data:
-        total_engagement = 0
-        hashtag_counts = {}
-        
-        for post in tiktok_data:
-            # Calculate engagement if available  
-            if 'likes' in post and 'comments' in post:
-                engagement = int(post.get('likes', 0)) + int(post.get('comments', 0))
-                total_engagement += engagement
-            
-            # Count hashtags
-            if 'hashtags' in post:
-                for hashtag in post['hashtags']:
-                    hashtag_counts[hashtag] = hashtag_counts.get(hashtag, 0) + 1
-        
-        analytics['tiktok']['avg_engagement'] = round(total_engagement / len(tiktok_data), 2) if tiktok_data else 0
-        analytics['tiktok']['top_hashtags'] = sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    analytics['instagram']['top_hashtags'] = extract_hashtags(instagram_data)
+    analytics['tiktok']['top_hashtags'] = extract_hashtags(tiktok_data)
     
     return jsonify(analytics)
+
+@app.route('/api/competitive-analysis')
+def get_competitive_analysis():
+    """Comprehensive competitive analysis endpoint"""
+    analysis = {
+        'competitor_analysis': {
+            'social_metrics': {},
+            'content_strategy': {},
+            'posting_frequency': {}
+        },
+        'benchmarks': {
+            'engagement_leaders': [],
+            'content_volume_leaders': [],
+            'market_tier_analysis': {}
+        },
+        'opportunities': {
+            'hashtag_opportunities': [],
+            'underserved_themes': []
+        },
+        'last_updated': datetime.now().isoformat()
+    }
+    
+    # Analyze each competitor
+    for competitor_key, competitor_info in COMPETITORS.items():
+        instagram_data, tiktok_data = load_competitor_social_data(competitor_key)
+        
+        # Social Metrics
+        analysis['competitor_analysis']['social_metrics'][competitor_key] = {
+            'instagram_posts': len(instagram_data),
+            'tiktok_posts': len(tiktok_data),
+            'total_content': len(instagram_data) + len(tiktok_data),
+            'avg_ig_engagement': calculate_avg_engagement(instagram_data),
+            'avg_tiktok_engagement': calculate_avg_engagement(tiktok_data),
+            'engagement_rate_trend': 'stable'
+        }
+        
+        # Content Strategy
+        all_posts = instagram_data + tiktok_data
+        hashtag_counts = Counter()
+        
+        for post in all_posts:
+            text = post.get('caption', '') or post.get('text', '') or ''
+            hashtags = re.findall(r'#(\w+)', text)
+            if 'hashtags' in post and isinstance(post['hashtags'], list):
+                hashtags.extend(post['hashtags'])
+            hashtag_counts.update(hashtags)
+        
+        analysis['competitor_analysis']['content_strategy'][competitor_key] = {
+            'primary_hashtags': hashtag_counts.most_common(10),
+            'content_themes': {},
+            'brand_voice': {}
+        }
+    
+    return jsonify(analysis)
 
 @app.route('/api/assets')
 def get_assets():
@@ -384,63 +512,65 @@ def get_assets():
         for filename in os.listdir(UPLOAD_FOLDER):
             if allowed_file(filename):
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
-                file_stat = os.stat(filepath)
-                
-                asset = {
-                    'id': str(uuid.uuid4()),
-                    'name': filename,
-                    'type': filename.rsplit('.', 1)[1].lower() if '.' in filename else 'unknown',
-                    'size': file_stat.st_size,
-                    'uploaded': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
-                    'uploader': 'Team',
-                    'downloads': 0,
-                    'thumbnail': None
-                }
-                
-                # Check for thumbnail
-                thumb_path = filepath.rsplit('.', 1)[0] + '_thumb.' + filepath.rsplit('.', 1)[1]
-                if os.path.exists(thumb_path):
-                    asset['thumbnail'] = thumb_path
-                
-                assets.append(asset)
+                try:
+                    file_stat = os.stat(filepath)
+                    
+                    asset = {
+                        'id': str(uuid.uuid4()),
+                        'name': filename,
+                        'type': filename.rsplit('.', 1)[1].lower() if '.' in filename else 'unknown',
+                        'size': file_stat.st_size,
+                        'uploaded': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+                        'uploader': 'Team',
+                        'downloads': 0,
+                        'thumbnail': None
+                    }
+                    
+                    assets.append(asset)
+                except Exception as e:
+                    print(f"Error processing file {filename}: {e}")
     
     return jsonify(assets)
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """Handle file uploads"""
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file selected'}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file selected'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            
+            # Handle filename conflicts
+            counter = 1
+            while os.path.exists(filepath):
+                name, ext = filename.rsplit('.', 1)
+                new_filename = f"{name}_{counter}.{ext}"
+                filepath = os.path.join(UPLOAD_FOLDER, new_filename)
+                filename = new_filename
+                counter += 1
+            
+            file.save(filepath)
+            
+            # Generate thumbnail for images
+            thumbnail = generate_thumbnail(filepath)
+            
+            return jsonify({
+                'success': True,
+                'filename': filename,
+                'message': 'File uploaded successfully'
+            })
+        
+        return jsonify({'error': 'File type not allowed'}), 400
     
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-    
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        
-        # Handle filename conflicts
-        counter = 1
-        while os.path.exists(filepath):
-            name, ext = filename.rsplit('.', 1)
-            new_filename = f"{name}_{counter}.{ext}"
-            filepath = os.path.join(UPLOAD_FOLDER, new_filename)
-            filename = new_filename
-            counter += 1
-        
-        file.save(filepath)
-        
-        # Generate thumbnail for images
-        thumbnail = generate_thumbnail(filepath)
-        
-        return jsonify({
-            'success': True,
-            'filename': filename,
-            'message': 'File uploaded successfully'
-        })
-    
-    return jsonify({'error': 'File type not allowed'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/download/<filename>')
 def download_file(filename):
@@ -619,7 +749,7 @@ def get_cultural_insights():
                 'confidence': 'High'
             }
         ],
-        'cultural_moments': get_cultural_moments()[:5],  # Next 5 cultural moments
+        'cultural_moments': get_cultural_moments()[:5],
         'consumer_behavior': [
             {
                 'behavior': 'Micro-Influencer Trust',
@@ -630,11 +760,6 @@ def get_cultural_insights():
                 'behavior': 'Music x Fashion Connection',
                 'insight': 'Hip-hop and alternative music artists heavily influence streetwear purchasing decisions',
                 'action': 'Identify rising artists for collaboration opportunities and playlist partnerships'
-            },
-            {
-                'behavior': 'Limited Drop FOMO',
-                'insight': 'Scarcity marketing drives immediate purchase decisions in streetwear community',
-                'action': 'Implement limited edition drops with clear quantity limits and countdown timers'
             }
         ]
     }
@@ -650,8 +775,8 @@ def export_analytics():
         # Create CSV data
         csv_data = []
         csv_data.append(['Platform', 'Total Posts', 'Avg Engagement', 'Date Exported'])
-        csv_data.append(['Instagram', len(instagram_data), 'N/A', datetime.now().strftime('%Y-%m-%d')])
-        csv_data.append(['TikTok', len(tiktok_data), 'N/A', datetime.now().strftime('%Y-%m-%d')])
+        csv_data.append(['Instagram', len(instagram_data), calculate_avg_engagement(instagram_data), datetime.now().strftime('%Y-%m-%d')])
+        csv_data.append(['TikTok', len(tiktok_data), calculate_avg_engagement(tiktok_data), datetime.now().strftime('%Y-%m-%d')])
         
         # Convert to CSV string
         output = io.StringIO()
