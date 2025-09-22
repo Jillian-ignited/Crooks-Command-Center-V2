@@ -57,6 +57,7 @@
         <div class="calendar-head">
           <h2>Strategic Calendar</h2>
           <div class="view-switch">
+            <a id="btn-cal-export" class="btn small" href="/api/calendar/export.csv"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
             <button data-view="7_day_view" class="btn small">7 Day</button>
             <button data-view="30_day_view" class="btn small">30 Day</button>
             <button data-view="60_day_view" class="btn small">60 Day</button>
@@ -69,7 +70,7 @@
 
     <section id="agency" class="panel">
       <div class="card">
-        <h2>Agency Tracking — High Voltage Digital</h2>
+        <h2>Agency Tracking — High Voltage Digital <a id="btn-agency-export" class="btn small" href="/api/agency/export.csv"><i class="fa-solid fa-file-csv"></i> Export</a></h2>
         <pre id="agency-data" class="mono"></pre>
       </div>
     </section>
