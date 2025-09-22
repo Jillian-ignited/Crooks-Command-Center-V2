@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CROOKS & CASTLES — COMMAND CENTER V2</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <span class="logo">CROOKS & CASTLES</span>
+      <span class="badge">COMMAND CENTER</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="intelligence"><i class="fa-solid fa-chart-line"></i> Intelligence</button>
+      <button class="tab" data-tab="assets"><i class="fa-solid fa-folder-open"></i> Assets</button>
+      <button class="tab" data-tab="calendar"><i class="fa-solid fa-calendar"></i> Calendar</button>
+      <button class="tab" data-tab="agency"><i class="fa-solid fa-briefcase"></i> Agency</button>
+      <button class="tab" data-tab="upload"><i class="fa-solid fa-upload"></i> Upload</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="intelligence" class="panel active">
+      <div class="card">
+        <h2>Engagement Overview</h2>
+        <pre id="intel-metrics" class="mono"></pre>
+      </div>
+      <div class="card">
+        <h2>Top Hashtags</h2>
+        <div id="hashtags" class="grid"></div>
+      </div>
+      <div class="card">
+        <h2>Cultural Moments</h2>
+        <div id="moments" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Competitive Mentions</h2>
+        <div id="competitors" class="list"></div>
+      </div>
+      <div class="card actions">
+        <button id="btn-generate-report" class="btn primary"><i class="fa-solid fa-file-export"></i> Generate Intelligence Report</button>
+      </div>
+    </section>
+
+    <section id="assets" class="panel">
+      <div class="card">
+        <h2>Asset Library</h2>
+        <div id="asset-grid" class="asset-grid"></div>
+      </div>
+    </section>
+
+    <section id="calendar" class="panel">
+      <div class="card">
+        <div class="calendar-head">
+          <h2>Strategic Calendar</h2>
+          <div class="view-switch">
+            <button data-view="7_day_view" class="btn small">7 Day</button>
+            <button data-view="30_day_view" class="btn small">30 Day</button>
+            <button data-view="60_day_view" class="btn small">60 Day</button>
+            <button data-view="90_day_view" class="btn small">90 Day</button>
+          </div>
+        </div>
+        <div id="calendar-events" class="list"></div>
+      </div>
+    </section>
+
+    <section id="agency" class="panel">
+      <div class="card">
+        <h2>Agency Tracking — High Voltage Digital</h2>
+        <pre id="agency-data" class="mono"></pre>
+      </div>
+    </section>
+
+    <section id="upload" class="panel">
+      <div class="card">
+        <h2>Upload Files</h2>
+        <div id="drop" class="dropzone">Drag & drop files here, or click to select</div>
+        <input id="file-input" type="file" multiple hidden>
+        <div id="upload-results" class="list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Built for CROOKS — Discipline × Disruption.</span>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
