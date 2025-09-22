@@ -1,7 +1,13 @@
 import os, json, glob
-from flask import Flask, jsonify, render_template, request, send_file, abort
-from asset_manager import scan_upload_directory, categorize_assets, generate_thumbnails, handle_file_upload, serve_file_download, _load_catalog
-from data_processor import load_jsonl_data, analyze_hashtags, calculate_engagement_metrics, identify_cultural_moments, competitive_analysis, generate_intelligence_report
+from flask import Flask, jsonify, render_template, request, send_file, abort, Response
+from asset_manager import (
+    scan_upload_directory, categorize_assets, generate_thumbnails,
+    handle_file_upload, serve_file_download, _load_catalog
+)
+from data_processor import (
+    load_jsonl_data, analyze_hashtags, calculate_engagement_metrics,
+    identify_cultural_moments, competitive_analysis, generate_intelligence_report
+)
 from calendar_engine import get_calendar
 from agency_tracker import get_agencies
 
@@ -13,17 +19,30 @@ def dashboard():
     return render_template('index.html')
 
 def _collect_posts():
-    # Gather JSONL in uploads/intel + any .jsonl directly under uploads
+    # Gather JSONL/JSON in uploads/intel and uploads/*
+    patterns = [
+        os.path.join('uploads', 'intel', '*.jsonl'),
+        os.path.join('uploads', 'intel', '*.json'),
+        os.path.join('uploads', '*.jsonl'),
+        os.path.join('uploads', '*.json'),
+    ]
     paths = []
-    for p in glob.glob(os.path.join('uploads', 'intel', '*.jsonl')):
-        paths.append(p)
-    for p in glob.glob(os.path.join('uploads', '*.jsonl')):
-        paths.append(p)
+    for pat in patterns:
+        paths.extend(glob.glob(pat))
 
     all_posts = []
     for p in paths:
-        rows = load_jsonl_data(p)
-        all_posts.extend(rows)
+        if p.endswith('.jsonl'):
+            rows = load_jsonl_data(p)
+        else:
+            try:
+                rows = json.load(open(p, 'r', encoding='utf-8', errors='ignore'))
+                if isinstance(rows, dict):
+                    rows = [rows]
+            except Exception:
+                rows = []
+        if isinstance(rows, list):
+            all_posts.extend(rows)
     return all_posts
 
 @app.route('/api/intelligence')
@@ -61,6 +80,16 @@ def download_asset(asset_id):
         abort(404)
     return send_file(path, as_attachment=True, download_name=name)
 
+@app.route('/api/assets/search')
+def api_assets_search():
+    q = (request.args.get('q') or '').lower().strip()
+    cat = _load_catalog()
+    results = []
+    for a in cat.get('assets', []):
+        if q in a.get('filename', '').lower():
+            results.append(a)
+    return jsonify({'query': q, 'results': results})
+
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
     files = request.files.getlist('files')
@@ -73,16 +102,64 @@ def api_upload():
 def api_calendar(view):
     cal = get_calendar()
     if view not in cal:
-        return jsonify({'error':'invalid view'}), 400
+        return jsonify({'error': 'invalid view'}), 400
     # Map assets to events
     cat = _load_catalog()
     from asset_manager import map_assets_to_campaigns
     mapping = map_assets_to_campaigns(cat.get('assets', []), cal)
     return jsonify({'view': view, 'events': cal[view], 'mapping': mapping})
 
+# Full calendar (all views)
+@app.route('/api/calendar')
+def api_calendar_root():
+    cal = get_calendar()
+    return jsonify(cal)
+
+# Calendar export (CSV for ops handoff)
+@app.route('/api/calendar/export.csv')
+def api_calendar_export():
+    import csv, io
+    cal = get_calendar()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['date','title','description','budget_allocation','deliverables','assets_mapped','cultural_context','target_kpis','status'])
+    for view in ['7_day_view','30_day_view','60_day_view','90_day_view']:
+        for ev in cal.get(view, []):
+            writer.writerow([
+                ev.get('date',''),
+                ev.get('title',''),
+                ev.get('description',''),
+                ev.get('budget_allocation',''),
+                '; '.join(ev.get('deliverables',[])),
+                '; '.join(ev.get('assets_mapped',[])),
+                ev.get('cultural_context',''),
+                json.dumps(ev.get('target_kpis',{})),
+                ev.get('status','')
+            ])
+    return Response(buf.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition':'attachment; filename=calendar_export.csv'})
+
 @app.route('/api/agency')
 def api_agency():
     return jsonify(get_agencies())
+
+# Agency export (CSV)
+@app.route('/api/agency/export.csv')
+def api_agency_export():
+    import csv, io
+    data = get_agencies()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['name','phase','monthly_budget','budget_used','on_time_delivery','quality_score','project','status','due_date'])
+    for ag in data.get('agencies', []):
+        for pr in ag.get('current_projects', []):
+            writer.writerow([
+                ag['name'], ag['phase'], ag['monthly_budget'], ag['budget_used'],
+                ag['on_time_delivery'], ag['quality_score'],
+                pr['name'], pr['status'], pr['due_date']
+            ])
+    return Response(buf.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition':'attachment; filename=agency_export.csv'})
 
 @app.route('/api/reports/generate')
 def generate_report():
