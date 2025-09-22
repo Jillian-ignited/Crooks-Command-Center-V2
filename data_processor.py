@@ -70,68 +70,29 @@ def process_intelligence_data():
     
     return processed_data
 
-def generate_competitive_analysis():
-    """Generate comprehensive competitive analysis from all data sources"""
+def analyze_hashtags(data=None):
+    """Analyze hashtag performance across all posts - REQUIRED BY APP.PY"""
     
-    # Process intelligence data
-    intelligence_data = process_intelligence_data()
+    if data is None:
+        # Load data if not provided
+        instagram_data = []
+        instagram_files = [
+            'uploads/intel/dataset_instagram-hashtag-scraper_2025-09-22_11-58-57-668.jsonl',
+            'uploads/intel/dataset_instagram-scraper_2025-09-22_11-59-24-765.jsonl',
+        ]
+        
+        for filename in instagram_files:
+            if os.path.exists(filename):
+                instagram_data.extend(load_jsonl_data(filename))
+        
+        tiktok_data = []
+        tiktok_files = ['uploads/intel/dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl']
+        for filename in tiktok_files:
+            if os.path.exists(filename):
+                tiktok_data.extend(load_jsonl_data(filename))
+        
+        data = instagram_data + tiktok_data
     
-    # Load Instagram data for detailed analysis
-    instagram_data = []
-    instagram_files = [
-        'uploads/intel/dataset_instagram-hashtag-scraper_2025-09-22_11-58-57-668.jsonl',
-        'uploads/intel/dataset_instagram-scraper_2025-09-22_11-59-24-765.jsonl',
-    ]
-    
-    for filename in instagram_files:
-        if os.path.exists(filename):
-            data = load_jsonl_data(filename)
-            instagram_data.extend(data)
-    
-    # Load TikTok data for detailed analysis
-    tiktok_data = []
-    tiktok_files = [
-        'uploads/intel/dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl'
-    ]
-    
-    for filename in tiktok_files:
-        if os.path.exists(filename):
-            data = load_jsonl_data(filename)
-            tiktok_data.extend(data)
-    
-    # Analyze hashtags from Instagram data
-    hashtag_analysis = analyze_hashtag_performance(instagram_data + tiktok_data)
-    
-    # Analyze engagement patterns
-    engagement_analysis = analyze_engagement_patterns(instagram_data, tiktok_data)
-    
-    # Detect cultural trends
-    cultural_trends = detect_cultural_trends(instagram_data + tiktok_data)
-    
-    # Generate competitive insights
-    competitive_insights = generate_competitive_insights(instagram_data, tiktok_data)
-    
-    # Calculate trustworthiness score
-    trustworthiness = calculate_trustworthiness_score(instagram_data + tiktok_data)
-    
-    return {
-        'analysis_timestamp': datetime.now().isoformat(),
-        'trustworthiness_score': trustworthiness,
-        'data_summary': {
-            'instagram_posts': len(instagram_data),
-            'tiktok_videos': len(tiktok_data),
-            'total_analyzed': len(instagram_data) + len(tiktok_data),
-            'data_quality': 'High' if trustworthiness > 80 else 'Medium' if trustworthiness > 60 else 'Low'
-        },
-        'hashtag_analysis': hashtag_analysis,
-        'engagement_analysis': engagement_analysis,
-        'cultural_trends': cultural_trends,
-        'competitive_insights': competitive_insights,
-        'recommendations': generate_actionable_recommendations(hashtag_analysis, engagement_analysis, cultural_trends)
-    }
-
-def analyze_hashtag_performance(data):
-    """Analyze hashtag performance across all posts"""
     hashtag_stats = defaultdict(lambda: {'count': 0, 'total_engagement': 0, 'posts': []})
     
     for post in data:
@@ -169,42 +130,28 @@ def analyze_hashtag_performance(data):
     
     return dict(list(sorted_hashtags.items())[:20])  # Top 20 hashtags
 
-def analyze_engagement_patterns(instagram_data, tiktok_data):
-    """Analyze engagement patterns across platforms"""
+def identify_cultural_moments(data=None):
+    """Detect cultural moments and trends from content - REQUIRED BY APP.PY"""
     
-    instagram_engagement = []
-    for post in instagram_data:
-        likes = post.get('likesCount', 0)
-        comments = post.get('commentsCount', 0)
-        engagement_rate = (likes + comments)
-        instagram_engagement.append(engagement_rate)
-    
-    tiktok_engagement = []
-    for video in tiktok_data:
-        likes = video.get('diggCount', 0)
-        shares = video.get('shareCount', 0)
-        comments = video.get('commentCount', 0)
-        engagement_rate = (likes + shares + comments)
-        tiktok_engagement.append(engagement_rate)
-    
-    return {
-        'instagram': {
-            'avg_engagement': round(sum(instagram_engagement) / len(instagram_engagement), 2) if instagram_engagement else 0,
-            'total_posts': len(instagram_engagement),
-            'top_performing': max(instagram_engagement) if instagram_engagement else 0
-        },
-        'tiktok': {
-            'avg_engagement': round(sum(tiktok_engagement) / len(tiktok_engagement), 2) if tiktok_engagement else 0,
-            'total_videos': len(tiktok_engagement),
-            'top_performing': max(tiktok_engagement) if tiktok_engagement else 0
-        },
-        'platform_comparison': {
-            'instagram_vs_tiktok': 'Instagram higher' if (sum(instagram_engagement) / len(instagram_engagement) if instagram_engagement else 0) > (sum(tiktok_engagement) / len(tiktok_engagement) if tiktok_engagement else 0) else 'TikTok higher'
-        }
-    }
-
-def detect_cultural_trends(data):
-    """Detect cultural moments and trends from content"""
+    if data is None:
+        # Load data if not provided
+        instagram_data = []
+        instagram_files = [
+            'uploads/intel/dataset_instagram-hashtag-scraper_2025-09-22_11-58-57-668.jsonl',
+            'uploads/intel/dataset_instagram-scraper_2025-09-22_11-59-24-765.jsonl',
+        ]
+        
+        for filename in instagram_files:
+            if os.path.exists(filename):
+                instagram_data.extend(load_jsonl_data(filename))
+        
+        tiktok_data = []
+        tiktok_files = ['uploads/intel/dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl']
+        for filename in tiktok_files:
+            if os.path.exists(filename):
+                tiktok_data.extend(load_jsonl_data(filename))
+        
+        data = instagram_data + tiktok_data
     
     cultural_keywords = {
         'hispanic_heritage': ['hispanic', 'latino', 'latina', 'heritage', 'cultura', 'tradition'],
@@ -245,6 +192,195 @@ def detect_cultural_trends(data):
             }
     
     return cultural_analysis
+
+def generate_recommendations(hashtag_analysis=None, engagement_analysis=None, cultural_trends=None):
+    """Generate actionable recommendations based on analysis - REQUIRED BY APP.PY"""
+    
+    if hashtag_analysis is None:
+        hashtag_analysis = analyze_hashtags()
+    if cultural_trends is None:
+        cultural_trends = identify_cultural_moments()
+    
+    recommendations = []
+    
+    # Hashtag recommendations
+    if hashtag_analysis:
+        top_hashtag = list(hashtag_analysis.keys())[0]
+        recommendations.append({
+            'recommendation': f'Increase usage of {top_hashtag} hashtag',
+            'category': 'hashtag_optimization',
+            'priority': 'high',
+            'expected_impact': '15-20% engagement increase',
+            'rationale': f'Analysis shows {hashtag_analysis[top_hashtag]["count"]} uses with {hashtag_analysis[top_hashtag]["avg_engagement"]} avg engagement',
+            'implementation': 'Use in next 5 posts with relevant content'
+        })
+    
+    # Cultural trend recommendations
+    if cultural_trends:
+        for trend, data in cultural_trends.items():
+            if data['opportunity'] == 'High':
+                recommendations.append({
+                    'recommendation': f'Capitalize on {trend.replace("_", " ")} trend',
+                    'category': 'cultural_marketing',
+                    'priority': 'high',
+                    'expected_impact': f'{data["relevance_score"]}% cultural relevance increase',
+                    'rationale': f'{data["post_count"]} posts detected with {data["avg_engagement"]} avg engagement',
+                    'implementation': f'Create 3-5 posts weekly focusing on {trend.replace("_", " ")} themes'
+                })
+    
+    return recommendations
+
+def calculate_trustworthiness_score(data=None):
+    """Calculate trustworthiness score based on data quality"""
+    
+    if data is None:
+        # Load data if not provided
+        instagram_data = []
+        instagram_files = [
+            'uploads/intel/dataset_instagram-hashtag-scraper_2025-09-22_11-58-57-668.jsonl',
+            'uploads/intel/dataset_instagram-scraper_2025-09-22_11-59-24-765.jsonl',
+        ]
+        
+        for filename in instagram_files:
+            if os.path.exists(filename):
+                instagram_data.extend(load_jsonl_data(filename))
+        
+        tiktok_data = []
+        tiktok_files = ['uploads/intel/dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl']
+        for filename in tiktok_files:
+            if os.path.exists(filename):
+                tiktok_data.extend(load_jsonl_data(filename))
+        
+        data = instagram_data + tiktok_data
+    
+    if not data:
+        return 0
+    
+    score = 100
+    
+    # Check data completeness
+    missing_engagement = sum(1 for post in data if not any(key in post for key in ['likesCount', 'diggCount', 'viewCount']))
+    if missing_engagement > len(data) * 0.1:  # More than 10% missing engagement data
+        score -= 15
+    
+    # Check for valid timestamps
+    missing_timestamps = sum(1 for post in data if not post.get('timestamp') and not post.get('createTime'))
+    if missing_timestamps > len(data) * 0.05:  # More than 5% missing timestamps
+        score -= 10
+    
+    # Check for content quality
+    missing_content = sum(1 for post in data if not post.get('caption') and not post.get('text') and not post.get('description'))
+    if missing_content > len(data) * 0.02:  # More than 2% missing content
+        score -= 5
+    
+    # Bonus for data richness
+    if len(data) > 100:
+        score += 5
+    
+    rich_data = sum(1 for post in data if len(str(post.get('caption', '') or post.get('text', '') or post.get('description', ''))) > 50)
+    if rich_data > len(data) * 0.8:  # More than 80% have rich content
+        score += 10
+    
+    return max(0, min(100, score))
+
+def generate_competitive_analysis():
+    """Generate comprehensive competitive analysis from all data sources"""
+    
+    # Process intelligence data
+    intelligence_data = process_intelligence_data()
+    
+    # Load Instagram data for detailed analysis
+    instagram_data = []
+    instagram_files = [
+        'uploads/intel/dataset_instagram-hashtag-scraper_2025-09-22_11-58-57-668.jsonl',
+        'uploads/intel/dataset_instagram-scraper_2025-09-22_11-59-24-765.jsonl',
+    ]
+    
+    for filename in instagram_files:
+        if os.path.exists(filename):
+            data = load_jsonl_data(filename)
+            instagram_data.extend(data)
+    
+    # Load TikTok data for detailed analysis
+    tiktok_data = []
+    tiktok_files = [
+        'uploads/intel/dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl'
+    ]
+    
+    for filename in tiktok_files:
+        if os.path.exists(filename):
+            data = load_jsonl_data(filename)
+            tiktok_data.extend(data)
+    
+    all_data = instagram_data + tiktok_data
+    
+    # Analyze hashtags from Instagram data
+    hashtag_analysis = analyze_hashtags(all_data)
+    
+    # Analyze engagement patterns
+    engagement_analysis = analyze_engagement_patterns(instagram_data, tiktok_data)
+    
+    # Detect cultural trends
+    cultural_trends = identify_cultural_moments(all_data)
+    
+    # Generate competitive insights
+    competitive_insights = generate_competitive_insights(instagram_data, tiktok_data)
+    
+    # Calculate trustworthiness score
+    trustworthiness = calculate_trustworthiness_score(all_data)
+    
+    # Generate recommendations
+    recommendations = generate_recommendations(hashtag_analysis, engagement_analysis, cultural_trends)
+    
+    return {
+        'analysis_timestamp': datetime.now().isoformat(),
+        'trustworthiness_score': trustworthiness,
+        'data_summary': {
+            'instagram_posts': len(instagram_data),
+            'tiktok_videos': len(tiktok_data),
+            'total_analyzed': len(instagram_data) + len(tiktok_data),
+            'data_quality': 'High' if trustworthiness > 80 else 'Medium' if trustworthiness > 60 else 'Low'
+        },
+        'hashtag_analysis': hashtag_analysis,
+        'engagement_analysis': engagement_analysis,
+        'cultural_trends': cultural_trends,
+        'competitive_insights': competitive_insights,
+        'recommendations': recommendations
+    }
+
+def analyze_engagement_patterns(instagram_data, tiktok_data):
+    """Analyze engagement patterns across platforms"""
+    
+    instagram_engagement = []
+    for post in instagram_data:
+        likes = post.get('likesCount', 0)
+        comments = post.get('commentsCount', 0)
+        engagement_rate = (likes + comments)
+        instagram_engagement.append(engagement_rate)
+    
+    tiktok_engagement = []
+    for video in tiktok_data:
+        likes = video.get('diggCount', 0)
+        shares = video.get('shareCount', 0)
+        comments = video.get('commentCount', 0)
+        engagement_rate = (likes + shares + comments)
+        tiktok_engagement.append(engagement_rate)
+    
+    return {
+        'instagram': {
+            'avg_engagement': round(sum(instagram_engagement) / len(instagram_engagement), 2) if instagram_engagement else 0,
+            'total_posts': len(instagram_engagement),
+            'top_performing': max(instagram_engagement) if instagram_engagement else 0
+        },
+        'tiktok': {
+            'avg_engagement': round(sum(tiktok_engagement) / len(tiktok_engagement), 2) if tiktok_engagement else 0,
+            'total_videos': len(tiktok_engagement),
+            'top_performing': max(tiktok_engagement) if tiktok_engagement else 0
+        },
+        'platform_comparison': {
+            'instagram_vs_tiktok': 'Instagram higher' if (sum(instagram_engagement) / len(instagram_engagement) if instagram_engagement else 0) > (sum(tiktok_engagement) / len(tiktok_engagement) if tiktok_engagement else 0) else 'TikTok higher'
+        }
+    }
 
 def generate_competitive_insights(instagram_data, tiktok_data):
     """Generate competitive insights and market positioning"""
@@ -294,85 +430,6 @@ def generate_competitive_insights(instagram_data, tiktok_data):
             'Cultural moment awareness'
         ]
     }
-
-def generate_actionable_recommendations(hashtag_analysis, engagement_analysis, cultural_trends):
-    """Generate actionable recommendations based on analysis"""
-    
-    recommendations = []
-    
-    # Hashtag recommendations
-    if hashtag_analysis:
-        top_hashtag = list(hashtag_analysis.keys())[0]
-        recommendations.append({
-            'recommendation': f'Increase usage of {top_hashtag} hashtag',
-            'category': 'hashtag_optimization',
-            'priority': 'high',
-            'expected_impact': '15-20% engagement increase',
-            'rationale': f'Analysis shows {hashtag_analysis[top_hashtag]["count"]} uses with {hashtag_analysis[top_hashtag]["avg_engagement"]} avg engagement',
-            'implementation': 'Use in next 5 posts with relevant content'
-        })
-    
-    # Cultural trend recommendations
-    if cultural_trends:
-        for trend, data in cultural_trends.items():
-            if data['opportunity'] == 'High':
-                recommendations.append({
-                    'recommendation': f'Capitalize on {trend.replace("_", " ")} trend',
-                    'category': 'cultural_marketing',
-                    'priority': 'high',
-                    'expected_impact': f'{data["relevance_score"]}% cultural relevance increase',
-                    'rationale': f'{data["post_count"]} posts detected with {data["avg_engagement"]} avg engagement',
-                    'implementation': f'Create 3-5 posts weekly focusing on {trend.replace("_", " ")} themes'
-                })
-    
-    # Platform optimization
-    instagram_avg = engagement_analysis.get('instagram', {}).get('avg_engagement', 0)
-    tiktok_avg = engagement_analysis.get('tiktok', {}).get('avg_engagement', 0)
-    
-    if tiktok_avg > instagram_avg:
-        recommendations.append({
-            'recommendation': 'Increase TikTok content production',
-            'category': 'platform_optimization',
-            'priority': 'medium',
-            'expected_impact': '25-35% overall engagement increase',
-            'rationale': f'TikTok shows {tiktok_avg} avg engagement vs Instagram {instagram_avg}',
-            'implementation': 'Shift 30% of content budget to TikTok production'
-        })
-    
-    return recommendations
-
-def calculate_trustworthiness_score(data):
-    """Calculate trustworthiness score based on data quality"""
-    
-    if not data:
-        return 0
-    
-    score = 100
-    
-    # Check data completeness
-    missing_engagement = sum(1 for post in data if not any(key in post for key in ['likesCount', 'diggCount', 'viewCount']))
-    if missing_engagement > len(data) * 0.1:  # More than 10% missing engagement data
-        score -= 15
-    
-    # Check for valid timestamps
-    missing_timestamps = sum(1 for post in data if not post.get('timestamp') and not post.get('createTime'))
-    if missing_timestamps > len(data) * 0.05:  # More than 5% missing timestamps
-        score -= 10
-    
-    # Check for content quality
-    missing_content = sum(1 for post in data if not post.get('caption') and not post.get('text') and not post.get('description'))
-    if missing_content > len(data) * 0.02:  # More than 2% missing content
-        score -= 5
-    
-    # Bonus for data richness
-    if len(data) > 100:
-        score += 5
-    
-    rich_data = sum(1 for post in data if len(str(post.get('caption', '') or post.get('text', '') or post.get('description', ''))) > 50)
-    if rich_data > len(data) * 0.8:  # More than 80% have rich content
-        score += 10
-    
-    return max(0, min(100, score))
 
 def generate_weekly_report():
     """Generate comprehensive weekly intelligence report"""
