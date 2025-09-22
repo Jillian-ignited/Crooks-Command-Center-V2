@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏰 Crooks & Castles Command Center V2</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/command_center.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="crown-icon">👑</span>
+                <span class="logo-text">Crooks & Castles Command Center V2</span>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-value" id="total-brands">12</span>
+                    <span class="stat-label">Brands Monitored</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="data-sources">3</span>
+                    <span class="stat-label">Data Sources</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="last-update">Live</span>
+                    <span class="stat-label">Status</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" data-section="intelligence">
+            <i class="fas fa-chart-line"></i>
+            Brand Intelligence
+            <span class="tab-badge">9</span>
+        </button>
+        <button class="nav-tab" data-section="cultural-radar">
+            <i class="fas fa-radar-chart"></i>
+            Cultural Radar
+            <span class="tab-badge">6</span>
+        </button>
+        <button class="nav-tab" data-section="competitive">
+            <i class="fas fa-trophy"></i>
+            Competitive Analysis
+            <span class="tab-badge">3</span>
+        </button>
+        <button class="nav-tab" data-section="upload">
+            <i class="fas fa-upload"></i>
+            Data Upload
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Brand Intelligence Section -->
+        <section id="intelligence" class="content-section active">
+            <div class="section-grid">
+                
+                <!-- Upload Card -->
+                <div class="card upload-card">
+                    <div class="card-header">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        Upload Intelligence Data
+                    </div>
+                    <div class="card-content">
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-icon">
+                                <i class="fas fa-file-upload"></i>
+                            </div>
+                            <div class="upload-text">
+                                <h4>Drop JSONL files here</h4>
+                                <p>Instagram, Hashtag, or TikTok data from Apify scrapers</p>
+                            </div>
+                            <div class="upload-note">
+                                Supported formats: .jsonl, .json, .csv
+                            </div>
+                        </div>
+                        <input type="file" id="file-input" accept=".jsonl,.json,.csv" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- Competitive Rankings -->
+                <div class="card rankings-card">
+                    <div class="card-header">
+                        <i class="fas fa-ranking-star"></i>
+                        Competitive Rankings
+                    </div>
+                    <div class="card-content">
+                        <div class="rankings-list" id="competitive-rankings">
+                            <!-- Rankings will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="card metrics-card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i>
+                        Crooks & Castles Metrics
+                    </div>
+                    <div class="card-content">
+                        <div class="metric-display">
+                            <div class="metric-value" id="crooks-rank">#9</div>
+                            <div class="metric-label">Current Ranking</div>
+                        </div>
+                        <div class="metric-display">
+                            <div class="metric-value" id="crooks-engagement">1,200</div>
+                            <div class="metric-label">Avg Engagement</div>
+                        </div>
+                        <div class="metric-display">
+                            <div class="metric-value" id="engagement-gap">10x</div>
+                            <div class="metric-label">Gap to Leader</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategic Insights -->
+                <div class="card insights-card">
+                    <div class="card-header">
+                        <i class="fas fa-lightbulb"></i>
+                        Strategic Insights
+                    </div>
+                    <div class="card-content">
+                        <div class="insights-list" id="strategic-insights">
+                            <div class="insight-card priority-high">
+                                <div class="insight-header">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span class="priority-label">High Priority</span>
+                                </div>
+                                <div class="insight-content">
+                                    <h4>Engagement Gap Critical</h4>
+                                    <p>Crooks ranks #9/12 with 10x lower engagement than Supreme. Immediate action required.</p>
+                                    <button class="action-btn">Review Strategy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Cultural Radar Section -->
+        <section id="cultural-radar" class="content-section">
+            <div class="section-grid">
+                
+                <!-- Trending Themes -->
+                <div class="card trends-card">
+                    <div class="card-header">
+                        <i class="fas fa-fire"></i>
+                        Trending Themes
+                    </div>
+                    <div class="card-content">
+                        <div class="trends-list" id="cultural-trends">
+                            <!-- Trends will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cultural Moments -->
+                <div class="card moments-card">
+                    <div class="card-header">
+                        <i class="fas fa-star"></i>
+                        Cultural Moments
+                    </div>
+                    <div class="card-content">
+                        <div class="moments-list" id="cultural-moments">
+                            <div class="moment-item">
+                                <div class="moment-content">Sean Paul collaboration generating authentic cultural buzz</div>
+                                <div class="moment-engagement">2.3k engagement</div>
+                            </div>
+                            <div class="moment-item">
+                                <div class="moment-content">Archive Medusa pieces trending on resale platforms</div>
+                                <div class="moment-engagement">1.8k engagement</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TikTok Intelligence -->
+                <div class="card tiktok-card">
+                    <div class="card-header">
+                        <i class="fab fa-tiktok"></i>
+                        TikTok Cultural Intelligence
+                    </div>
+                    <div class="card-content">
+                        <div class="tiktok-insights" id="tiktok-insights">
+                            <div class="insight-item">
+                                <div class="insight-text">"Streetwear drop" content up 2.3x this week</div>
+                                <div class="insight-metric">340 videos</div>
+                            </div>
+                            <div class="insight-item">
+                                <div class="insight-text">Y2K fashion trend gaining momentum</div>
+                                <div class="insight-metric">+180%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hashtag Velocity -->
+                <div class="card velocity-card">
+                    <div class="card-header">
+                        <i class="fas fa-hashtag"></i>
+                        Hashtag Velocity Tracking
+                    </div>
+                    <div class="card-content">
+                        <div class="velocity-list">
+                            <div class="velocity-item">
+                                <span class="hashtag-name">#y2kfashion</span>
+                                <span class="velocity-value">+340%</span>
+                            </div>
+                            <div class="velocity-item">
+                                <span class="hashtag-name">#streetweararchive</span>
+                                <span class="velocity-value">+280%</span>
+                            </div>
+                            <div class="velocity-item">
+                                <span class="hashtag-name">#vintagestreetwear</span>
+                                <span class="velocity-value">+220%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Competitive Analysis Section -->
+        <section id="competitive" class="content-section">
+            <div class="section-grid">
+                
+                <!-- Competitor Activity -->
+                <div class="card activity-card">
+                    <div class="card-header">
+                        <i class="fas fa-activity"></i>
+                        Competitor Activity (7 Days)
+                    </div>
+                    <div class="card-content">
+                        <div class="activity-list" id="competitor-activity">
+                            <div class="activity-item">
+                                <span class="activity-brand">Supreme</span>
+                                <span class="activity-status active">8 posts</span>
+                            </div>
+                            <div class="activity-item">
+                                <span class="activity-brand">Hellstar</span>
+                                <span class="activity-status active">15 posts</span>
+                            </div>
+                            <div class="activity-item">
+                                <span class="activity-brand">Crooks & Castles</span>
+                                <span class="activity-status inactive">0 posts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Opportunities -->
+                <div class="card opportunities-card">
+                    <div class="card-header">
+                        <i class="fas fa-bullseye"></i>
+                        Market Opportunities
+                    </div>
+                    <div class="card-content">
+                        <div class="opportunities-list">
+                            <div class="opportunity-item">
+                                <h4>Archive Remastered Collection</h4>
+                                <p>Y2K revival trend + strong Medusa heritage = perfect timing for archive drop</p>
+                                <div class="opportunity-metrics">
+                                    <span class="metric">+340% trend velocity</span>
+                                    <span class="metric">$25-35 sweet spot</span>
+                                </div>
+                            </div>
+                            <div class="opportunity-item">
+                                <h4>TikTok Platform Entry</h4>
+                                <p>Zero presence while competitors gain Gen Z mindshare. Immediate opportunity.</p>
+                                <div class="opportunity-metrics">
+                                    <span class="metric">2.3x content growth</span>
+                                    <span class="metric">Gen Z focus</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Competitive Gaps -->
+                <div class="card gaps-card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-gap"></i>
+                        Strategic Gaps
+                    </div>
+                    <div class="card-content">
+                        <div class="gaps-list">
+                            <div class="gap-item critical">
+                                <div class="gap-title">Content Frequency</div>
+                                <div class="gap-description">0 posts vs competitor average of 8.5 posts/week</div>
+                                <div class="gap-action">Implement daily posting schedule</div>
+                            </div>
+                            <div class="gap-item medium">
+                                <div class="gap-title">Platform Presence</div>
+                                <div class="gap-description">Missing TikTok while competitors gain cultural relevance</div>
+                                <div class="gap-action">Launch TikTok strategy</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Data Upload Section -->
+        <section id="upload" class="content-section">
+            <div class="section-grid">
+                
+                <!-- Upload Instructions -->
+                <div class="card instructions-card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle"></i>
+                        Apify Data Integration
+                    </div>
+                    <div class="card-content">
+                        <h3>Automated Intelligence Pipeline</h3>
+                        <div class="pipeline-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Instagram Scraper</h4>
+                                    <p>Daily at 7:00 AM CST - 12 competitor brands</p>
+                                    <div class="step-status">✅ Active</div>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Hashtag Monitor</h4>
+                                    <p>M/W/F at 9:00 AM CST - 15 strategic hashtags</p>
+                                    <div class="step-status">✅ Active</div>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>TikTok Intelligence</h4>
+                                    <p>Sun/Wed at 10:00 AM CST - Cultural moments</p>
+                                    <div class="step-status">✅ Active</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Processing Status -->
+                <div class="card processing-card">
+                    <div class="card-header">
+                        <i class="fas fa-cogs"></i>
+                        Processing Status
+                    </div>
+                    <div class="card-content">
+                        <div class="processing-stats">
+                            <div class="stat-row">
+                                <span class="stat-label">Last Instagram Update:</span>
+                                <span class="stat-value">Today 7:00 AM</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Last Hashtag Scan:</span>
+                                <span class="stat-value">Today 9:00 AM</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Last TikTok Analysis:</span>
+                                <span class="stat-value">Yesterday 10:00 AM</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Total Records Processed:</span>
+                                <span class="stat-value">3,247</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Processing intelligence data...</p>
+        </div>
+    </div>
+
+    <!-- Notifications Container -->
+    <div id="notifications" class="notifications-container"></div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/command_center.js') }}"></script>
+    <script>
+        // Initialize with Crooks & Castles configuration
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🏰 Crooks & Castles Command Center V2 Initialized');
+            
+            // Brand-specific initialization
+            const brandConfig = {
+                name: 'Crooks & Castles',
+                industry: 'Streetwear Fashion',
+                competitors: {{ brand_config.competitors | tojsonhtml }},
+                hashtags: {{ brand_config.strategic_hashtags | tojsonhtml }},
+                tiktok_searches: {{ brand_config.tiktok_searches | tojsonhtml }}
+            };
+            
+            // Initialize dashboard with brand config
+            if (window.initializeCommandCenter) {
+                window.initializeCommandCenter(brandConfig);
+            }
+        });
+    </script>
+</body>
+</html>
