@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
 import uuid
+import re
+from collections import defaultdict, Counter
 try:
     from PIL import Image
     PIL_AVAILABLE = True
@@ -12,15 +14,47 @@ except ImportError:
     PIL_AVAILABLE = False
 import io
 import base64
-import re
-from collections import defaultdict, Counter
+
+# Import enhanced modules
+from data_processor import (
+    generate_competitive_analysis, 
+    process_intelligence_data,
+    analyze_hashtags,
+    identify_cultural_moments,
+    generate_recommendations,
+    calculate_trustworthiness_score
+)
+from asset_manager import (
+    scan_assets,
+    add_asset,
+    remove_asset,
+    get_assets_by_category,
+    get_asset_categories,
+    search_assets,
+    get_asset_stats,
+    generate_thumbnail
+)
+from calendar_engine import (
+    get_enhanced_calendar,
+    add_calendar_event,
+    remove_calendar_event,
+    get_calendar_view,
+    get_cultural_intelligence,
+    get_budget_allocation
+)
+from agency_tracker import (
+    get_agency_status,
+    update_project_status,
+    get_deliverables,
+    track_budget_usage
+)
 
 app = Flask(__name__)
 app.secret_key = 'crooks-castles-secret-key-2025'
 
 # Configuration
-UPLOAD_FOLDER = 'assets'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'psd', 'ai', 'sketch', 'fig', 'jsonl', 'json', 'csv'}
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'psd', 'ai', 'sketch', 'fig', 'json', 'jsonl'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -29,7 +63,7 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 # Competitive Intelligence Configuration
 COMPETITORS = {
     'stussy': {'name': 'Stussy', 'tier': 'premium', 'founded': 1980},
-    'supreme': {'name': 'Supreme', 'tier': 'luxury', 'founded': 1994}, 
+    'supreme': {'name': 'Supreme', 'tier': 'luxury', 'founded': 1994},
     'hellstar': {'name': 'Hellstar', 'tier': 'emerging', 'founded': 2020},
     'godspeed': {'name': 'Godspeed', 'tier': 'emerging', 'founded': 2019},
     'fear_of_god_essentials': {'name': 'Fear of God Essentials', 'tier': 'luxury', 'founded': 2018},
@@ -44,7 +78,7 @@ COMPETITORS = {
 def ensure_directories():
     """Create necessary directories if they don't exist"""
     directories = [
-        'assets', 'team_data', 'content_library', 'calendar_data',
+        'uploads', 'static/thumbnails', 'data', 'content_library', 'calendar_data',
         'competitive_data', 'competitive_data/social_scrapes',
         'competitive_data/price_monitoring', 'competitive_data/seo_data',
         'competitive_data/brand_mentions', 'competitive_data/product_launches'
@@ -61,736 +95,599 @@ def ensure_directories():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def generate_thumbnail(filepath):
-    """Generate thumbnail for image files"""
-    if not PIL_AVAILABLE:
-        return None
-        
-    try:
-        if filepath.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-            with Image.open(filepath) as img:
-                img.thumbnail((200, 200))
-                thumb_path = filepath.rsplit('.', 1)[0] + '_thumb.' + filepath.rsplit('.', 1)[1]
-                img.save(thumb_path)
-                return thumb_path
-    except Exception as e:
-        print(f"Error generating thumbnail: {e}")
-    return None
-
-def load_social_data():
-    """Load and process Crooks & Castles social media data"""
-    instagram_data = []
-    tiktok_data = []
-    
-    # Load Instagram data
-    try:
-        with open('instagram_data.jsonl', 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        instagram_data.append(json.loads(line.strip()))
-                    except json.JSONDecodeError:
-                        continue
-    except FileNotFoundError:
-        pass
-    
-    # Load TikTok data  
-    try:
-        with open('tiktok_data.jsonl', 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        tiktok_data.append(json.loads(line.strip()))
-                    except json.JSONDecodeError:
-                        continue
-    except FileNotFoundError:
-        pass
-    
-    return instagram_data, tiktok_data
-
-def load_competitor_social_data(competitor_key):
-    """Load social media data for a specific competitor"""
-    instagram_data = []
-    tiktok_data = []
-    
-    # Load Instagram scrape data
-    instagram_file = f'competitive_data/social_scrapes/{competitor_key}_instagram.jsonl'
-    if os.path.exists(instagram_file):
-        try:
-            with open(instagram_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.strip():
-                        try:
-                            instagram_data.append(json.loads(line.strip()))
-                        except json.JSONDecodeError:
-                            continue
-        except Exception as e:
-            print(f"Error loading {instagram_file}: {e}")
-    
-    # Load TikTok scrape data
-    tiktok_file = f'competitive_data/social_scrapes/{competitor_key}_tiktok.jsonl'
-    if os.path.exists(tiktok_file):
-        try:
-            with open(tiktok_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.strip():
-                        try:
-                            tiktok_data.append(json.loads(line.strip()))
-                        except json.JSONDecodeError:
-                            continue
-        except Exception as e:
-            print(f"Error loading {tiktok_file}: {e}")
-    
-    return instagram_data, tiktok_data
-
-def get_cultural_moments():
-    """Return streetwear cultural moments and seasonal events"""
-    cultural_moments = [
-        {
-            'date': '2025-01-01',
-            'event': 'New Year Collections Launch',
-            'category': 'seasonal',
-            'description': 'Fresh starts, new year drops, resolution-themed content',
-            'opportunity': 'Launch limited edition "New Year, New Fit" collection'
-        },
-        {
-            'date': '2025-02-14',
-            'event': 'Valentine\'s Day',
-            'category': 'seasonal',
-            'description': 'Couple streetwear, gift-worthy accessories',
-            'opportunity': 'Partner pieces, gift guides for streetwear couples'
-        },
-        {
-            'date': '2025-03-20',
-            'event': 'Spring Equinox',
-            'category': 'seasonal',
-            'description': 'Layering transition, lighter colors',
-            'opportunity': 'Spring transition collection, lighter fabrics'
-        },
-        {
-            'date': '2025-04-11',
-            'event': 'Coachella Weekend 1',
-            'category': 'cultural',
-            'description': 'Peak festival fashion, influencer collabs, desert aesthetics',
-            'opportunity': 'Festival capsule collection, influencer partnerships'
-        },
-        {
-            'date': '2025-04-18',
-            'event': 'Coachella Weekend 2',
-            'category': 'cultural', 
-            'description': 'Extended festival content, FOMO marketing',
-            'opportunity': 'Weekend 2 exclusive drops, social content push'
-        },
-        {
-            'date': '2025-05-15',
-            'event': 'High School Graduation Season',
-            'category': 'demographic',
-            'description': 'Gen Z milestone moments, celebratory fits',
-            'opportunity': 'Graduation collection, milestone marketing'
-        },
-        {
-            'date': '2025-06-21',
-            'event': 'Summer Solstice',
-            'category': 'seasonal',
-            'description': 'Peak summer vibes, vacation fits',
-            'opportunity': 'Summer essentials, vacation-ready streetwear'
-        },
-        {
-            'date': '2025-07-04',
-            'event': 'Independence Day',
-            'category': 'cultural',
-            'description': 'American streetwear pride, patriotic aesthetics',
-            'opportunity': 'USA-themed limited drops, patriotic colorways'
-        },
-        {
-            'date': '2025-08-15',
-            'event': 'Back-to-School Season',
-            'category': 'demographic',
-            'description': 'Student streetwear, campus culture, fresh semester energy',
-            'opportunity': 'Student discounts, campus ambassador program'
-        },
-        {
-            'date': '2025-09-10',
-            'event': 'New York Fashion Week',
-            'category': 'cultural',
-            'description': 'High fashion meets street, trend forecasting',
-            'opportunity': 'NYFW influence pieces, runway-to-street translations'
-        },
-        {
-            'date': '2025-10-31',
-            'event': 'Halloween',
-            'category': 'seasonal',
-            'description': 'Costume streetwear, spooky aesthetics',
-            'opportunity': 'Halloween-themed drops, costume-ready pieces'
-        },
-        {
-            'date': '2025-11-28',
-            'event': 'Black Friday',
-            'category': 'commercial',
-            'description': 'Biggest streetwear shopping day, limited drops',
-            'opportunity': 'Major discounts, exclusive BFCM releases'
-        },
-        {
-            'date': '2025-11-30',
-            'event': 'Cyber Monday',
-            'category': 'commercial',
-            'description': 'Online streetwear sales peak',
-            'opportunity': 'Digital-exclusive drops, online-only colorways'
-        },
-        {
-            'date': '2025-12-25',
-            'event': 'Holiday Season',
-            'category': 'seasonal',
-            'description': 'Gift-giving, holiday parties, winter layering',
-            'opportunity': 'Holiday gift guides, winter essentials, party fits'
-        }
-    ]
-    
-    return cultural_moments
-
-def get_hvd_deliverables():
-    """Return High Voltage Digital deliverables structure from agreement"""
-    deliverables = {
-        'phase1': {
-            'budget': 4000,
-            'duration': 'Months 1-3',
-            'focus': 'Foundation & Awareness',
-            'deliverables': [
-                {
-                    'item': 'Social Media Content',
-                    'quantity': '3-4 creatives per month',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'Email Marketing Setup',
-                    'quantity': '2 campaigns per month',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'SMS Marketing Setup',
-                    'quantity': '1 campaign per month', 
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'Brand Strategy Development',
-                    'quantity': '1 comprehensive strategy',
-                    'status': 'pending',
-                    'notes': ''
-                }
-            ]
-        },
-        'phase2': {
-            'budget': 7500,
-            'duration': 'Months 4-6 (Q4 Push)',
-            'focus': 'BFCM Campaign & Growth',
-            'deliverables': [
-                {
-                    'item': 'BFCM Campaign Development',
-                    'quantity': 'Complete campaign package',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'Increased Social Content',
-                    'quantity': '5-6 creatives per month',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'Email Automation Flows',
-                    'quantity': '3-4 flows per month',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'SMS Campaign Scale',
-                    'quantity': '2 campaigns per month',
-                    'status': 'pending', 
-                    'notes': ''
-                }
-            ]
-        },
-        'phase3': {
-            'budget': 10000,
-            'duration': 'Months 7+ (Full Retainer)',
-            'focus': 'Full Service Marketing',
-            'deliverables': [
-                {
-                    'item': 'SEO Optimization',
-                    'quantity': 'Ongoing optimization',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'CRO Implementation', 
-                    'quantity': 'Conversion rate optimization',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'Advanced Email Flows',
-                    'quantity': '4-5 complex flows per month',
-                    'status': 'pending',
-                    'notes': ''
-                },
-                {
-                    'item': 'Premium Social Content',
-                    'quantity': '6-8 creatives per month',
-                    'status': 'pending',
-                    'notes': ''
-                }
-            ]
-        }
-    }
-    
-    return deliverables
-
-def save_hvd_deliverables(deliverables_data):
-    """Save updated HVD deliverables to file"""
-    try:
-        with open('team_data/hvd_deliverables.json', 'w') as f:
-            json.dump(deliverables_data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving deliverables: {e}")
-
-def load_hvd_deliverables():
-    """Load HVD deliverables from file or return defaults"""
-    try:
-        with open('team_data/hvd_deliverables.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return get_hvd_deliverables()
-
-def calculate_avg_engagement(posts):
-    """Calculate average engagement rate"""
-    if not posts:
-        return 0
-    
-    total_engagement = 0
-    valid_posts = 0
-    
-    for post in posts:
-        likes = post.get('likes', 0) or 0
-        comments = post.get('comments', 0) or 0
-        shares = post.get('shares', 0) or 0
-        
-        try:
-            if isinstance(likes, str) and likes.isdigit():
-                likes = int(likes)
-            elif not isinstance(likes, int):
-                likes = 0
-                
-            if isinstance(comments, str) and comments.isdigit():
-                comments = int(comments)
-            elif not isinstance(comments, int):
-                comments = 0
-                
-            if isinstance(shares, str) and shares.isdigit():
-                shares = int(shares)
-            elif not isinstance(shares, int):
-                shares = 0
-                
-            engagement = likes + comments + shares
-            total_engagement += engagement
-            valid_posts += 1
-        except:
-            continue
-    
-    return round(total_engagement / valid_posts, 2) if valid_posts > 0 else 0
-
-# Initialize directories when app starts
+# Initialize directories on startup
 ensure_directories()
+
+# ==================== MAIN ROUTES ====================
 
 @app.route('/')
 def dashboard():
     """Main dashboard route"""
-    return render_template('dashboard.html')
-
-@app.route('/api/analytics')
-def get_analytics():
-    """API endpoint for analytics data"""
-    instagram_data, tiktok_data = load_social_data()
-    
-    analytics = {
-        'instagram': {
-            'total_posts': len(instagram_data),
-            'avg_engagement': calculate_avg_engagement(instagram_data),
-            'top_hashtags': [],
-            'recent_performance': []
-        },
-        'tiktok': {
-            'total_posts': len(tiktok_data),
-            'avg_engagement': calculate_avg_engagement(tiktok_data),
-            'top_hashtags': [],
-            'recent_performance': []
-        },
-        'combined': {
-            'total_posts': len(instagram_data) + len(tiktok_data),
-            'platforms': 2 if (instagram_data and tiktok_data) else 1 if (instagram_data or tiktok_data) else 0
-        }
-    }
-    
-    # Process hashtags
-    def extract_hashtags(posts):
-        hashtag_counts = Counter()
-        for post in posts:
-            text = post.get('caption', '') or post.get('text', '') or ''
-            hashtags = re.findall(r'#(\w+)', text)
-            if 'hashtags' in post and isinstance(post['hashtags'], list):
-                hashtags.extend(post['hashtags'])
-            hashtag_counts.update(hashtags)
-        return hashtag_counts.most_common(10)
-    
-    analytics['instagram']['top_hashtags'] = extract_hashtags(instagram_data)
-    analytics['tiktok']['top_hashtags'] = extract_hashtags(tiktok_data)
-    
-    return jsonify(analytics)
-
-@app.route('/api/competitive-analysis')
-def get_competitive_analysis():
-    """Comprehensive competitive analysis endpoint"""
-    analysis = {
-        'competitor_analysis': {
-            'social_metrics': {},
-            'content_strategy': {},
-            'posting_frequency': {}
-        },
-        'benchmarks': {
-            'engagement_leaders': [],
-            'content_volume_leaders': [],
-            'market_tier_analysis': {}
-        },
-        'opportunities': {
-            'hashtag_opportunities': [],
-            'underserved_themes': []
-        },
-        'last_updated': datetime.now().isoformat()
-    }
-    
-    # Analyze each competitor
-    for competitor_key, competitor_info in COMPETITORS.items():
-        instagram_data, tiktok_data = load_competitor_social_data(competitor_key)
-        
-        # Social Metrics
-        analysis['competitor_analysis']['social_metrics'][competitor_key] = {
-            'instagram_posts': len(instagram_data),
-            'tiktok_posts': len(tiktok_data),
-            'total_content': len(instagram_data) + len(tiktok_data),
-            'avg_ig_engagement': calculate_avg_engagement(instagram_data),
-            'avg_tiktok_engagement': calculate_avg_engagement(tiktok_data),
-            'engagement_rate_trend': 'stable'
-        }
-        
-        # Content Strategy
-        all_posts = instagram_data + tiktok_data
-        hashtag_counts = Counter()
-        
-        for post in all_posts:
-            text = post.get('caption', '') or post.get('text', '') or ''
-            hashtags = re.findall(r'#(\w+)', text)
-            if 'hashtags' in post and isinstance(post['hashtags'], list):
-                hashtags.extend(post['hashtags'])
-            hashtag_counts.update(hashtags)
-        
-        analysis['competitor_analysis']['content_strategy'][competitor_key] = {
-            'primary_hashtags': hashtag_counts.most_common(10),
-            'content_themes': {},
-            'brand_voice': {}
-        }
-    
-    return jsonify(analysis)
-
-@app.route('/api/assets')
-def get_assets():
-    """API endpoint for asset library"""
-    assets = []
-    
-    if os.path.exists(UPLOAD_FOLDER):
-        for filename in os.listdir(UPLOAD_FOLDER):
-            if allowed_file(filename):
-                filepath = os.path.join(UPLOAD_FOLDER, filename)
-                try:
-                    file_stat = os.stat(filepath)
+    try:
+        return render_template('dashboard.html')
+    except Exception as e:
+        print(f"Error rendering dashboard: {e}")
+        # Fallback to basic HTML if template fails
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Crooks & Castles Command Center V2</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #1a1a1a; color: #fff; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .tabs { display: flex; justify-content: center; margin-bottom: 20px; }
+                .tab { padding: 10px 20px; margin: 0 5px; background: #333; color: #fff; cursor: pointer; border-radius: 5px; }
+                .tab.active { background: #ff6b35; }
+                .content { max-width: 1200px; margin: 0 auto; }
+                .loading { text-align: center; padding: 50px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🏰 Crooks & Castles Command Center V2</h1>
+                <p>Competitive Intelligence & Strategic Planning Platform</p>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('overview')">Overview</div>
+                <div class="tab" onclick="showTab('intelligence')">Intelligence</div>
+                <div class="tab" onclick="showTab('assets')">Assets</div>
+                <div class="tab" onclick="showTab('calendar')">Calendar</div>
+                <div class="tab" onclick="showTab('agency')">Agency</div>
+            </div>
+            
+            <div class="content">
+                <div id="overview" class="tab-content">
+                    <div class="loading">Loading dashboard data...</div>
+                </div>
+                <div id="intelligence" class="tab-content" style="display:none;">
+                    <div class="loading">Loading intelligence data...</div>
+                </div>
+                <div id="assets" class="tab-content" style="display:none;">
+                    <div class="loading">Loading asset library...</div>
+                </div>
+                <div id="calendar" class="tab-content" style="display:none;">
+                    <div class="loading">Loading calendar...</div>
+                </div>
+                <div id="agency" class="tab-content" style="display:none;">
+                    <div class="loading">Loading agency tracking...</div>
+                </div>
+            </div>
+            
+            <script>
+                function showTab(tabName) {
+                    // Hide all tabs
+                    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+                    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
                     
-                    asset = {
-                        'id': str(uuid.uuid4()),
-                        'name': filename,
-                        'type': filename.rsplit('.', 1)[1].lower() if '.' in filename else 'unknown',
-                        'size': file_stat.st_size,
-                        'uploaded': datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
-                        'uploader': 'Team',
-                        'downloads': 0,
-                        'thumbnail': None
+                    // Show selected tab
+                    document.getElementById(tabName).style.display = 'block';
+                    event.target.classList.add('active');
+                    
+                    // Load data for the tab
+                    loadTabData(tabName);
+                }
+                
+                function loadTabData(tabName) {
+                    const content = document.getElementById(tabName);
+                    
+                    switch(tabName) {
+                        case 'overview':
+                            loadOverview(content);
+                            break;
+                        case 'intelligence':
+                            loadIntelligence(content);
+                            break;
+                        case 'assets':
+                            loadAssets(content);
+                            break;
+                        case 'calendar':
+                            loadCalendar(content);
+                            break;
+                        case 'agency':
+                            loadAgency(content);
+                            break;
+                    }
+                }
+                
+                function loadOverview(container) {
+                    fetch('/api/overview')
+                        .then(response => response.json())
+                        .then(data => {
+                            container.innerHTML = `
+                                <h2>📊 Dashboard Overview</h2>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                                    <div style="background: #333; padding: 20px; border-radius: 8px;">
+                                        <h3>Intelligence Status</h3>
+                                        <p>Data Sources: ${data.intelligence.sources}</p>
+                                        <p>Last Updated: ${data.intelligence.last_updated}</p>
+                                        <p>Trustworthiness: ${data.intelligence.trustworthiness_score}%</p>
+                                    </div>
+                                    <div style="background: #333; padding: 20px; border-radius: 8px;">
+                                        <h3>Asset Library</h3>
+                                        <p>Total Assets: ${data.assets.total}</p>
+                                        <p>Categories: ${data.assets.categories}</p>
+                                        <p>Storage Used: ${data.assets.storage_mb}MB</p>
+                                    </div>
+                                    <div style="background: #333; padding: 20px; border-radius: 8px;">
+                                        <h3>Calendar Planning</h3>
+                                        <p>Upcoming Events: ${data.calendar.upcoming_events}</p>
+                                        <p>Active Campaigns: ${data.calendar.active_campaigns}</p>
+                                        <p>Budget Allocated: $${data.calendar.budget_allocated}</p>
+                                    </div>
+                                    <div style="background: #333; padding: 20px; border-radius: 8px;">
+                                        <h3>Agency Status</h3>
+                                        <p>Active Projects: ${data.agency.active_projects}</p>
+                                        <p>Monthly Budget: $${data.agency.monthly_budget}</p>
+                                        <p>Completion Rate: ${data.agency.completion_rate}%</p>
+                                    </div>
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            container.innerHTML = '<p>Error loading overview data</p>';
+                        });
+                }
+                
+                function loadIntelligence(container) {
+                    fetch('/api/intelligence')
+                        .then(response => response.json())
+                        .then(data => {
+                            container.innerHTML = `
+                                <h2>🎯 Competitive Intelligence</h2>
+                                <div style="margin-bottom: 20px;">
+                                    <strong>Analysis Timestamp:</strong> ${data.analysis_timestamp}<br>
+                                    <strong>Trustworthiness Score:</strong> ${data.trustworthiness_score}%<br>
+                                    <strong>Total Posts Analyzed:</strong> ${data.data_summary.total_analyzed}
+                                </div>
+                                
+                                <h3>📈 Top Trending Hashtags</h3>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                                    ${Object.entries(data.hashtag_analysis).slice(0, 6).map(([hashtag, info]) => `
+                                        <div style="background: #333; padding: 15px; border-radius: 5px;">
+                                            <strong>${hashtag}</strong><br>
+                                            <small>Uses: ${info.count} | Engagement: ${info.avg_engagement}</small><br>
+                                            <small>Relevance: ${info.relevance}</small>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                
+                                <h3>🏆 Top Recommendations</h3>
+                                <div>
+                                    ${data.recommendations.slice(0, 3).map(rec => `
+                                        <div style="background: #333; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #ff6b35;">
+                                            <strong>${rec.recommendation}</strong><br>
+                                            <small>Priority: ${rec.priority} | Expected Impact: ${rec.expected_impact}</small><br>
+                                            <p style="margin: 10px 0 0 0; font-size: 0.9em;">${rec.rationale}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            container.innerHTML = '<p>Error loading intelligence data</p>';
+                        });
+                }
+                
+                function loadAssets(container) {
+                    fetch('/api/assets')
+                        .then(response => response.json())
+                        .then(data => {
+                            container.innerHTML = `
+                                <h2>📁 Asset Library</h2>
+                                <div style="margin-bottom: 20px;">
+                                    <button onclick="document.getElementById('fileInput').click()" style="background: #ff6b35; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                                        📤 Upload Assets
+                                    </button>
+                                    <input type="file" id="fileInput" multiple style="display: none;" onchange="uploadFiles(this.files)">
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                    ${data.assets.map(asset => `
+                                        <div style="background: #333; padding: 15px; border-radius: 8px; text-align: center;">
+                                            ${asset.thumbnail_path ? 
+                                                `<img src="${asset.thumbnail_path}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;">` :
+                                                `<div style="width: 100%; height: 120px; background: #555; border-radius: 5px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;">📄</div>`
+                                            }
+                                            <strong>${asset.filename}</strong><br>
+                                            <small>${asset.file_size_mb}MB | ${asset.category}</small><br>
+                                            <a href="${asset.download_url}" style="color: #ff6b35; text-decoration: none; font-size: 0.9em;">⬇️ Download</a>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            container.innerHTML = '<p>Error loading asset data</p>';
+                        });
+                }
+                
+                function loadCalendar(container) {
+                    fetch('/api/calendar/30')
+                        .then(response => response.json())
+                        .then(data => {
+                            container.innerHTML = `
+                                <h2>📅 Strategic Calendar</h2>
+                                <div style="margin-bottom: 20px;">
+                                    <button onclick="loadCalendarView('7')" style="background: #333; color: white; padding: 8px 16px; border: none; border-radius: 3px; margin: 0 5px; cursor: pointer;">7 Days</button>
+                                    <button onclick="loadCalendarView('30')" style="background: #ff6b35; color: white; padding: 8px 16px; border: none; border-radius: 3px; margin: 0 5px; cursor: pointer;">30 Days</button>
+                                    <button onclick="loadCalendarView('60')" style="background: #333; color: white; padding: 8px 16px; border: none; border-radius: 3px; margin: 0 5px; cursor: pointer;">60 Days</button>
+                                    <button onclick="loadCalendarView('90')" style="background: #333; color: white; padding: 8px 16px; border: none; border-radius: 3px; margin: 0 5px; cursor: pointer;">90 Days</button>
+                                </div>
+                                
+                                <div id="calendar-events">
+                                    ${data.events.map(event => `
+                                        <div style="background: #333; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #ff6b35;">
+                                            <strong>${event.title}</strong> - ${event.date}<br>
+                                            <small>Category: ${event.category} | Budget: $${event.budget}</small><br>
+                                            <p style="margin: 10px 0 0 0; font-size: 0.9em;">${event.description}</p>
+                                            ${event.assets ? `<small>Assets: ${event.assets.join(', ')}</small>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            container.innerHTML = '<p>Error loading calendar data</p>';
+                        });
+                }
+                
+                function loadAgency(container) {
+                    fetch('/api/agency')
+                        .then(response => response.json())
+                        .then(data => {
+                            container.innerHTML = `
+                                <h2>🏢 Agency Tracking</h2>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                                    <div style="background: #333; padding: 20px; border-radius: 8px;">
+                                        <h3>High Voltage Digital</h3>
+                                        <p><strong>Current Phase:</strong> ${data.current_phase}</p>
+                                        <p><strong>Monthly Budget:</strong> $${data.monthly_budget}</p>
+                                        <p><strong>Completion Rate:</strong> ${data.completion_rate}%</p>
+                                        <p><strong>Next Milestone:</strong> ${data.next_milestone}</p>
+                                    </div>
+                                    <div style="background: #333; padding: 20px; border-radius: 8px;">
+                                        <h3>Recent Deliverables</h3>
+                                        ${data.recent_deliverables.map(deliverable => `
+                                            <div style="margin: 10px 0; padding: 10px; background: #444; border-radius: 5px;">
+                                                <strong>${deliverable.title}</strong><br>
+                                                <small>Due: ${deliverable.due_date} | Status: ${deliverable.status}</small>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            container.innerHTML = '<p>Error loading agency data</p>';
+                        });
+                }
+                
+                function loadCalendarView(days) {
+                    fetch(`/api/calendar/${days}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('calendar-events').innerHTML = data.events.map(event => `
+                                <div style="background: #333; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #ff6b35;">
+                                    <strong>${event.title}</strong> - ${event.date}<br>
+                                    <small>Category: ${event.category} | Budget: $${event.budget}</small><br>
+                                    <p style="margin: 10px 0 0 0; font-size: 0.9em;">${event.description}</p>
+                                    ${event.assets ? `<small>Assets: ${event.assets.join(', ')}</small>` : ''}
+                                </div>
+                            `).join('');
+                            
+                            // Update button styles
+                            document.querySelectorAll('button').forEach(btn => btn.style.background = '#333');
+                            event.target.style.background = '#ff6b35';
+                        });
+                }
+                
+                function uploadFiles(files) {
+                    const formData = new FormData();
+                    for (let file of files) {
+                        formData.append('files', file);
                     }
                     
-                    assets.append(asset)
-                except Exception as e:
-                    print(f"Error processing file {filename}: {e}")
-    
-    return jsonify(assets)
+                    fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert('Files uploaded successfully!');
+                        loadAssets(document.getElementById('assets'));
+                    })
+                    .catch(error => {
+                        alert('Upload failed: ' + error);
+                    });
+                }
+                
+                // Load overview on page load
+                loadOverview(document.getElementById('overview'));
+            </script>
+        </body>
+        </html>
+        """
 
-@app.route('/api/upload', methods=['POST'])
-def upload_file():
-    """Handle file uploads"""
+# ==================== API ENDPOINTS ====================
+
+@app.route('/api/overview')
+def api_overview():
+    """Dashboard overview data"""
     try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file selected'}), 400
+        # Get intelligence status
+        intelligence_data = process_intelligence_data()
+        trustworthiness = calculate_trustworthiness_score(intelligence_data)
         
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
+        # Get asset stats
+        asset_stats = get_asset_stats()
         
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            
-            # Handle filename conflicts
-            counter = 1
-            while os.path.exists(filepath):
-                name, ext = filename.rsplit('.', 1)
-                new_filename = f"{name}_{counter}.{ext}"
-                filepath = os.path.join(UPLOAD_FOLDER, new_filename)
-                filename = new_filename
-                counter += 1
-            
-            file.save(filepath)
-            
-            # Generate thumbnail for images
-            thumbnail = generate_thumbnail(filepath)
-            
-            return jsonify({
-                'success': True,
-                'filename': filename,
-                'message': 'File uploaded successfully'
-            })
+        # Get calendar data
+        calendar_data = get_enhanced_calendar('30')
         
-        return jsonify({'error': 'File type not allowed'}), 400
-    
+        # Get agency status
+        agency_data = get_agency_status()
+        
+        return jsonify({
+            'intelligence': {
+                'sources': len(intelligence_data.get('processing_summary', {})),
+                'last_updated': intelligence_data.get('analysis_timestamp', 'Unknown'),
+                'trustworthiness_score': trustworthiness
+            },
+            'assets': {
+                'total': asset_stats.get('total_assets', 0),
+                'categories': len(asset_stats.get('categories', {})),
+                'storage_mb': asset_stats.get('total_size_mb', 0)
+            },
+            'calendar': {
+                'upcoming_events': len(calendar_data.get('events', [])),
+                'active_campaigns': len([e for e in calendar_data.get('events', []) if e.get('status') == 'active']),
+                'budget_allocated': sum(e.get('budget', 0) for e in calendar_data.get('events', []))
+            },
+            'agency': {
+                'active_projects': agency_data.get('active_projects', 0),
+                'monthly_budget': agency_data.get('monthly_budget', 0),
+                'completion_rate': agency_data.get('completion_rate', 0)
+            }
+        })
     except Exception as e:
+        print(f"Error in api_overview: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/download/<filename>')
-def download_file(filename):
-    """Handle file downloads"""
+@app.route('/api/intelligence')
+def api_intelligence():
+    """Competitive intelligence analysis"""
+    try:
+        analysis = generate_competitive_analysis()
+        return jsonify(analysis)
+    except Exception as e:
+        print(f"Error in api_intelligence: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/assets')
+def api_assets():
+    """Asset library data"""
+    try:
+        assets = scan_assets()
+        categories = get_asset_categories()
+        
+        return jsonify({
+            'assets': assets,
+            'categories': categories,
+            'total_assets': len(assets),
+            'total_size_mb': sum(asset.get('file_size_mb', 0) for asset in assets)
+        })
+    except Exception as e:
+        print(f"Error in api_assets: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/assets/download/<filename>')
+def download_asset(filename):
+    """Download asset file"""
     try:
         return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
-    except FileNotFoundError:
+    except Exception as e:
+        print(f"Error downloading {filename}: {e}")
         return jsonify({'error': 'File not found'}), 404
 
-@app.route('/api/content')
-def get_content():
-    """API endpoint for content library"""
-    content = []
-    
+@app.route('/api/calendar/<view>')
+def api_calendar(view):
+    """Calendar data for different views"""
     try:
-        if os.path.exists('content_library/content.json'):
-            with open('content_library/content.json', 'r') as f:
-                content = json.load(f)
+        calendar_data = get_enhanced_calendar(view)
+        return jsonify(calendar_data)
     except Exception as e:
-        print(f"Error loading content: {e}")
-    
-    return jsonify(content)
+        print(f"Error in api_calendar: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/content', methods=['POST'])
-def create_content():
-    """Create new content piece"""
+@app.route('/api/agency')
+def api_agency():
+    """Agency tracking data"""
     try:
-        data = request.json
-        content_piece = {
-            'id': str(uuid.uuid4()),
-            'title': data.get('title', ''),
-            'description': data.get('description', ''),
-            'platform': data.get('platform', 'instagram'),
-            'status': data.get('status', 'draft'),
-            'scheduled_date': data.get('scheduled_date', ''),
-            'hashtags': data.get('hashtags', []),
-            'created': datetime.now().isoformat(),
-            'creator': 'Team'
+        agency_data = get_agency_status()
+        return jsonify(agency_data)
+    except Exception as e:
+        print(f"Error in api_agency: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/weekly')
+def api_weekly_report():
+    """Weekly intelligence report"""
+    try:
+        analysis = generate_competitive_analysis()
+        
+        report = {
+            'report_type': 'weekly',
+            'generated_at': datetime.now().isoformat(),
+            'period': f"{(datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')} to {datetime.now().strftime('%Y-%m-%d')}",
+            'executive_summary': {
+                'total_posts_analyzed': analysis.get('data_summary', {}).get('total_analyzed', 0),
+                'trending_hashtags': len(analysis.get('hashtag_analysis', {})),
+                'cultural_moments': len(analysis.get('cultural_moments', {})),
+                'recommendations': len(analysis.get('recommendations', [])),
+                'trustworthiness_score': analysis.get('trustworthiness_score', 0)
+            },
+            'key_insights': analysis.get('recommendations', [])[:5],
+            'competitive_landscape': analysis.get('competitor_insights', {}),
+            'cultural_intelligence': analysis.get('cultural_moments', {}),
+            'next_actions': [rec.get('implementation', '') for rec in analysis.get('recommendations', [])[:3]]
         }
         
-        # Load existing content
-        content = []
-        if os.path.exists('content_library/content.json'):
-            with open('content_library/content.json', 'r') as f:
-                content = json.load(f)
-        
-        content.append(content_piece)
-        
-        # Save updated content
-        with open('content_library/content.json', 'w') as f:
-            json.dump(content, f, indent=2)
-        
-        return jsonify({'success': True, 'content': content_piece})
-    
+        return jsonify(report)
     except Exception as e:
+        print(f"Error in api_weekly_report: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/calendar')
-def get_calendar():
-    """API endpoint for calendar events"""
-    events = []
-    
-    # Load cultural moments
-    cultural_moments = get_cultural_moments()
-    for moment in cultural_moments:
-        events.append({
-            'id': str(uuid.uuid4()),
-            'title': moment['event'],
-            'date': moment['date'],
-            'category': moment['category'],
-            'description': moment['description'],
-            'type': 'cultural',
-            'editable': False
-        })
-    
-    # Load custom events
+@app.route('/api/reports/competitive')
+def api_competitive_report():
+    """Competitive analysis report"""
     try:
-        if os.path.exists('calendar_data/events.json'):
-            with open('calendar_data/events.json', 'r') as f:
-                custom_events = json.load(f)
-                events.extend(custom_events)
-    except Exception as e:
-        print(f"Error loading custom events: {e}")
-    
-    return jsonify(events)
-
-@app.route('/api/calendar', methods=['POST'])
-def create_event():
-    """Create calendar event"""
-    try:
-        data = request.json
-        event = {
-            'id': str(uuid.uuid4()),
-            'title': data.get('title', ''),
-            'date': data.get('date', ''),
-            'category': data.get('category', 'campaign'),
-            'description': data.get('description', ''),
-            'assignee': data.get('assignee', ''),
-            'type': 'custom',
-            'editable': True,
-            'created': datetime.now().isoformat()
+        analysis = generate_competitive_analysis()
+        
+        report = {
+            'report_type': 'competitive',
+            'generated_at': datetime.now().isoformat(),
+            'competitor_analysis': analysis.get('competitor_insights', {}),
+            'market_positioning': {
+                'strengths': ['Authentic streetwear heritage', 'Strong cultural connections', 'Established brand recognition'],
+                'opportunities': ['Digital engagement growth', 'Cultural moment activation', 'Community building'],
+                'threats': ['Emerging brand competition', 'Fast fashion imitation', 'Cultural appropriation risks']
+            },
+            'recommendations': analysis.get('recommendations', [])
         }
         
-        # Load existing events
-        events = []
-        if os.path.exists('calendar_data/events.json'):
-            with open('calendar_data/events.json', 'r') as f:
-                events = json.load(f)
-        
-        events.append(event)
-        
-        # Save updated events
-        with open('calendar_data/events.json', 'w') as f:
-            json.dump(events, f, indent=2)
-        
-        return jsonify({'success': True, 'event': event})
-    
+        return jsonify(report)
     except Exception as e:
+        print(f"Error in api_competitive_report: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/deliverables')
-def get_deliverables():
-    """API endpoint for HVD deliverables"""
-    deliverables = load_hvd_deliverables()
-    return jsonify(deliverables)
-
-@app.route('/api/deliverables', methods=['POST'])
-def update_deliverables():
-    """Update deliverable status"""
+@app.route('/api/reports/export')
+def api_export_report():
+    """Export report data"""
     try:
-        data = request.json
-        deliverables = load_hvd_deliverables()
+        analysis = generate_competitive_analysis()
         
-        phase = data.get('phase')
-        item_index = data.get('item_index')
-        status = data.get('status')
-        notes = data.get('notes', '')
+        export_data = {
+            'export_timestamp': datetime.now().isoformat(),
+            'data_summary': analysis.get('data_summary', {}),
+            'hashtag_analysis': analysis.get('hashtag_analysis', {}),
+            'competitor_insights': analysis.get('competitor_insights', {}),
+            'cultural_moments': analysis.get('cultural_moments', {}),
+            'recommendations': analysis.get('recommendations', []),
+            'trustworthiness_score': analysis.get('trustworthiness_score', 0)
+        }
         
-        if phase in deliverables and 0 <= item_index < len(deliverables[phase]['deliverables']):
-            deliverables[phase]['deliverables'][item_index]['status'] = status
-            deliverables[phase]['deliverables'][item_index]['notes'] = notes
-            deliverables[phase]['deliverables'][item_index]['updated'] = datetime.now().isoformat()
-            
-            save_hvd_deliverables(deliverables)
-            return jsonify({'success': True})
-        
-        return jsonify({'error': 'Invalid deliverable reference'}), 400
-    
+        return jsonify(export_data)
     except Exception as e:
+        print(f"Error in api_export_report: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/cultural-insights')
-def get_cultural_insights():
-    """API endpoint for cultural intelligence insights"""
-    insights = {
-        'current_trends': [
-            {
-                'trend': 'Y2K Streetwear Revival',
-                'description': 'Baggy jeans, oversized fits, and tech-wear aesthetics returning strongly',
-                'opportunity': 'Launch Y2K-inspired capsule collection with authentic early 2000s silhouettes',
-                'timeframe': 'Q1-Q2 2025',
-                'confidence': 'High'
-            },
-            {
-                'trend': 'Sustainable Streetwear Movement',
-                'description': 'Gen Z driving demand for eco-conscious materials and ethical production',
-                'opportunity': 'Develop sustainable line using recycled materials and transparent supply chain',
-                'timeframe': 'Ongoing',
-                'confidence': 'Very High'
-            },
-            {
-                'trend': 'Gender-Neutral Fashion',
-                'description': 'Increasing demand for unisex sizing and inclusive marketing approaches',
-                'opportunity': 'Create gender-neutral core collection with inclusive sizing and marketing',
-                'timeframe': 'Q2 2025',
-                'confidence': 'High'
-            }
-        ],
-        'cultural_moments': get_cultural_moments()[:5],
-        'consumer_behavior': [
-            {
-                'behavior': 'Micro-Influencer Trust',
-                'insight': 'Consumers trust smaller creators (10K-100K followers) more than mega-influencers',
-                'action': 'Partner with streetwear micro-influencers for authentic product showcases'
-            },
-            {
-                'behavior': 'Music x Fashion Connection',
-                'insight': 'Hip-hop and alternative music artists heavily influence streetwear purchasing decisions',
-                'action': 'Identify rising artists for collaboration opportunities and playlist partnerships'
-            }
-        ]
-    }
-    
-    return jsonify(insights)
-
-@app.route('/api/export/analytics')
-def export_analytics():
-    """Export analytics data as CSV"""
+@app.route('/api/upload', methods=['POST'])
+def api_upload():
+    """Handle file uploads"""
     try:
-        instagram_data, tiktok_data = load_social_data()
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
         
-        # Create CSV data
-        csv_data = []
-        csv_data.append(['Platform', 'Total Posts', 'Avg Engagement', 'Date Exported'])
-        csv_data.append(['Instagram', len(instagram_data), calculate_avg_engagement(instagram_data), datetime.now().strftime('%Y-%m-%d')])
-        csv_data.append(['TikTok', len(tiktok_data), calculate_avg_engagement(tiktok_data), datetime.now().strftime('%Y-%m-%d')])
+        files = request.files.getlist('files')
+        uploaded_files = []
         
-        # Convert to CSV string
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerows(csv_data)
+        for file in files:
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                
+                # Add timestamp to avoid conflicts
+                name, ext = os.path.splitext(filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"{name}_{timestamp}{ext}"
+                
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                file.save(filepath)
+                
+                # Add to asset management system
+                result = add_asset(filepath, filename, category="uploaded", metadata={
+                    'upload_timestamp': datetime.now().isoformat(),
+                    'original_filename': file.filename
+                })
+                
+                if result.get('success'):
+                    uploaded_files.append(result.get('asset'))
+                else:
+                    print(f"Error adding asset {filename}: {result.get('error')}")
         
         return jsonify({
             'success': True,
-            'filename': f'analytics_export_{datetime.now().strftime("%Y%m%d")}.csv',
-            'data': output.getvalue()
+            'uploaded_files': uploaded_files,
+            'count': len(uploaded_files)
         })
-    
+        
     except Exception as e:
+        print(f"Error in api_upload: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/calendar/add', methods=['POST'])
+def api_add_calendar_event():
+    """Add calendar event"""
+    try:
+        data = request.get_json()
+        result = add_calendar_event(
+            title=data.get('title'),
+            date=data.get('date'),
+            category=data.get('category'),
+            description=data.get('description'),
+            budget=data.get('budget', 0),
+            assets=data.get('assets', [])
+        )
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in api_add_calendar_event: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/calendar/remove/<event_id>', methods=['DELETE'])
+def api_remove_calendar_event(event_id):
+    """Remove calendar event"""
+    try:
+        result = remove_calendar_event(event_id)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in api_remove_calendar_event: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/assets/remove/<asset_id>', methods=['DELETE'])
+def api_remove_asset(asset_id):
+    """Remove asset"""
+    try:
+        result = remove_asset(asset_id)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in api_remove_asset: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ==================== ERROR HANDLERS ====================
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
+
+@app.errorhandler(413)
+def too_large(error):
+    return jsonify({'error': 'File too large'}), 413
+
+# ==================== STARTUP ====================
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    print("🏰 Starting Crooks & Castles Command Center V2...")
+    print("📊 Initializing competitive intelligence...")
+    print("📁 Setting up asset management...")
+    print("📅 Loading calendar engine...")
+    print("🏢 Connecting agency tracking...")
+    
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
