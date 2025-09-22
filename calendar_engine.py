@@ -1,11 +1,10 @@
-import json
-import os
+import json, os
 from datetime import datetime, timedelta
 
 DATA_PATH = os.path.join('data', 'calendar.json')
 
 # Enhanced streetwear cultural calendar with detailed campaign planning
-ENHANCED_STREETWEAR_CALENDAR = {
+DEFAULT_CAL = {
     "7_day_view": [
         {
             "date": "2025-09-23",
@@ -54,7 +53,7 @@ ENHANCED_STREETWEAR_CALENDAR = {
             "description": "Authentic celebration of Hispanic heritage in streetwear with community partnerships, featuring Latino artists and cultural elements in Crooks & Castles designs",
             "budget_allocation": 2000,
             "deliverables": ["Campaign hero creative (multiple formats)", "Community partnership content", "Educational heritage content", "Artist collaboration posts"],
-            "assets_mapped": ["sept_15_hispanic_heritage_launch(3).png", "wordmark_story(1).png", "410f528c-980e-497b-bcf0-a6294a39631b.mp4"],
+            "assets_mapped": ["sept_15_hispanic_heritage_launch(3).png", "wordmark_story(1).png"],
             "cultural_context": "Hispanic Heritage Month with authentic community representation and cultural sensitivity",
             "target_kpis": {"engagement_rate": "6.8%", "reach": "100K", "community_mentions": "50", "cultural_sentiment": "90%+"},
             "status": "community_outreach",
@@ -80,7 +79,7 @@ ENHANCED_STREETWEAR_CALENDAR = {
             "description": "Behind-the-scenes documentation of street culture and fashion with authentic community voices and Crooks & Castles cultural impact",
             "budget_allocation": 1200,
             "deliverables": ["Documentary series (3 episodes)", "Community interviews", "Street photography collection", "Cultural impact stories"],
-            "assets_mapped": ["model2_story.png", "9dd8a1ec-8b07-460b-884d-8e0d8a0260d9.mov"],
+            "assets_mapped": ["model2_story.png"],
             "cultural_context": "Authentic street culture documentation with community focus",
             "target_kpis": {"series_views": "50K", "community_engagement": "80%", "cultural_authenticity_score": "95%"},
             "status": "pre_production",
@@ -136,7 +135,7 @@ ENHANCED_STREETWEAR_CALENDAR = {
             "description": "Comprehensive report on Crooks & Castles cultural impact and community engagement throughout the year with strategic insights",
             "budget_allocation": 1500,
             "deliverables": ["Cultural impact report", "Community engagement analysis", "Brand cultural positioning assessment", "Strategic recommendations"],
-            "assets_mapped": ["dataset_instagram-hashtag-scraper_2025-09-21_13-10-57-668.jsonl", "instagram_competitive_data.jsonl"],
+            "assets_mapped": ["dataset_instagram-hashtag-scraper_2025-09-21_13-10-57-668.jsonl"],
             "cultural_context": "Year-end cultural assessment and strategic planning",
             "target_kpis": {"report_distribution": "500+", "industry_recognition": "5+ mentions", "strategic_insights": "20+"},
             "status": "data_collection",
@@ -169,42 +168,26 @@ ENHANCED_STREETWEAR_CALENDAR = {
             "priority": "high",
             "campaign_type": "partnerships"
         }
-    ],
-    "120_day_view": [
-        {
-            "date": "2026-02-14",
-            "title": "Valentine's Day Street Love Campaign",
-            "description": "Authentic street culture take on Valentine's Day with community love stories and relationship representation in streetwear",
-            "budget_allocation": 1800,
-            "deliverables": ["Community love stories", "Couple streetwear styling", "Valentine's street photography", "Love in the streets content"],
-            "assets_mapped": ["real_instagram_story_rebel_rooftop(1).png", "sept_16_cultural_fusion(3).png"],
-            "cultural_context": "Street culture authenticity in mainstream holiday with community focus",
-            "target_kpis": {"engagement_rate": "6.5%", "reach": "80K", "community_stories": "25+"},
-            "status": "concept_development",
-            "priority": "medium",
-            "campaign_type": "holiday_street"
-        },
-        {
-            "date": "2026-03-01",
-            "title": "Women's History Month in Streetwear",
-            "description": "Celebrating women's contributions to street culture and hip-hop with female artist collaborations and historical recognition",
-            "budget_allocation": 3500,
-            "deliverables": ["Female artist spotlights", "Women in hip-hop timeline", "Female streetwear pioneers", "Community women leaders"],
-            "assets_mapped": ["model2_story.png", "castle_story.png"],
-            "cultural_context": "Women's empowerment in street culture with historical context and modern representation",
-            "target_kpis": {"female_engagement": "+40%", "reach": "120K", "artist_collaborations": "8+"},
-            "status": "research_phase",
-            "priority": "high",
-            "campaign_type": "empowerment"
-        }
     ]
 }
 
 def get_calendar(view="7_day_view"):
     """Get calendar data for specified view with enhanced streetwear cultural intelligence"""
-    if view in ENHANCED_STREETWEAR_CALENDAR:
-        return ENHANCED_STREETWEAR_CALENDAR[view]
-    return []
+    try:
+        # Try to load from file first
+        if os.path.exists(DATA_PATH):
+            with open(DATA_PATH, 'r') as f:
+                calendar_data = json.load(f)
+                if view in calendar_data:
+                    return calendar_data[view]
+        
+        # Return default data if file doesn't exist or view not found
+        if view in DEFAULT_CAL:
+            return DEFAULT_CAL[view]
+        return []
+    except Exception as e:
+        print(f"Error loading calendar: {e}")
+        return DEFAULT_CAL.get(view, [])
 
 def add_calendar_event(event_data, view="7_day_view"):
     """Add new event to calendar with validation"""
@@ -215,111 +198,65 @@ def add_calendar_event(event_data, view="7_day_view"):
         if field not in event_data:
             return {"success": False, "error": f"Missing required field: {field}"}
     
+    # Load existing calendar
+    try:
+        if os.path.exists(DATA_PATH):
+            with open(DATA_PATH, 'r') as f:
+                calendar_data = json.load(f)
+        else:
+            calendar_data = DEFAULT_CAL.copy()
+    except:
+        calendar_data = DEFAULT_CAL.copy()
+    
     # Add to calendar
-    if view not in ENHANCED_STREETWEAR_CALENDAR:
-        ENHANCED_STREETWEAR_CALENDAR[view] = []
+    if view not in calendar_data:
+        calendar_data[view] = []
     
     # Add unique ID and timestamp
-    event_data["id"] = f"event_{len(ENHANCED_STREETWEAR_CALENDAR[view]) + 1}_{view}"
+    event_data["id"] = f"event_{len(calendar_data[view]) + 1}_{view}"
     event_data["created_at"] = datetime.now().isoformat()
     event_data["assets_mapped"] = event_data.get("assets_mapped", [])
     
-    ENHANCED_STREETWEAR_CALENDAR[view].append(event_data)
+    calendar_data[view].append(event_data)
     
     # Save to file
-    save_calendar_data()
+    try:
+        os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
+        with open(DATA_PATH, 'w') as f:
+            json.dump(calendar_data, f, indent=2)
+    except Exception as e:
+        print(f"Error saving calendar: {e}")
+        return {"success": False, "error": "Failed to save calendar"}
     
     return {"success": True, "event_id": event_data["id"]}
 
 def remove_calendar_event(event_id, view="7_day_view"):
     """Remove event from calendar"""
-    if view not in ENHANCED_STREETWEAR_CALENDAR:
-        return {"success": False, "error": "View not found"}
-    
-    events = ENHANCED_STREETWEAR_CALENDAR[view]
-    for i, event in enumerate(events):
-        if event.get("id") == event_id:
-            removed_event = events.pop(i)
-            save_calendar_data()
-            return {"success": True, "removed_event": removed_event}
-    
-    return {"success": False, "error": "Event not found"}
-
-def update_calendar_event(event_id, updated_data, view="7_day_view"):
-    """Update existing calendar event"""
-    if view not in ENHANCED_STREETWEAR_CALENDAR:
-        return {"success": False, "error": "View not found"}
-    
-    events = ENHANCED_STREETWEAR_CALENDAR[view]
-    for event in events:
-        if event.get("id") == event_id:
-            event.update(updated_data)
-            event["updated_at"] = datetime.now().isoformat()
-            save_calendar_data()
-            return {"success": True, "updated_event": event}
-    
-    return {"success": False, "error": "Event not found"}
-
-def map_asset_to_event(event_id, asset_filename, view="7_day_view"):
-    """Map asset to calendar event"""
-    if view not in ENHANCED_STREETWEAR_CALENDAR:
-        return {"success": False, "error": "View not found"}
-    
-    events = ENHANCED_STREETWEAR_CALENDAR[view]
-    for event in events:
-        if event.get("id") == event_id:
-            if "assets_mapped" not in event:
-                event["assets_mapped"] = []
-            
-            if asset_filename not in event["assets_mapped"]:
-                event["assets_mapped"].append(asset_filename)
-                event["updated_at"] = datetime.now().isoformat()
-                save_calendar_data()
-                return {"success": True, "message": f"Asset {asset_filename} mapped to event {event_id}"}
-            else:
-                return {"success": False, "error": "Asset already mapped to this event"}
-    
-    return {"success": False, "error": "Event not found"}
-
-def unmap_asset_from_event(event_id, asset_filename, view="7_day_view"):
-    """Remove asset mapping from calendar event"""
-    if view not in ENHANCED_STREETWEAR_CALENDAR:
-        return {"success": False, "error": "View not found"}
-    
-    events = ENHANCED_STREETWEAR_CALENDAR[view]
-    for event in events:
-        if event.get("id") == event_id:
-            if "assets_mapped" in event and asset_filename in event["assets_mapped"]:
-                event["assets_mapped"].remove(asset_filename)
-                event["updated_at"] = datetime.now().isoformat()
-                save_calendar_data()
-                return {"success": True, "message": f"Asset {asset_filename} unmapped from event {event_id}"}
-            else:
-                return {"success": False, "error": "Asset not mapped to this event"}
-    
-    return {"success": False, "error": "Event not found"}
-
-def get_events_by_priority(priority="high"):
-    """Get events filtered by priority across all views"""
-    priority_events = []
-    for view, events in ENHANCED_STREETWEAR_CALENDAR.items():
-        for event in events:
-            if event.get("priority") == priority:
-                event["view"] = view
-                priority_events.append(event)
-    
-    return priority_events
-
-def get_events_by_campaign_type(campaign_type):
-    """Get events filtered by campaign type across all views"""
-    campaign_events = []
-    for view, events in ENHANCED_STREETWEAR_CALENDAR.items():
-        for event in events:
-            if event.get("campaign_type") == campaign_type:
-                event["view"] = view
-                campaign_events.append(event)
-    
-    return campaign_events
+    try:
+        if os.path.exists(DATA_PATH):
+            with open(DATA_PATH, 'r') as f:
+                calendar_data = json.load(f)
+        else:
+            return {"success": False, "error": "Calendar not found"}
+        
+        if view not in calendar_data:
+            return {"success": False, "error": "View not found"}
+        
+        events = calendar_data[view]
+        for i, event in enumerate(events):
+            if event.get("id") == event_id:
+                removed_event = events.pop(i)
+                
+                # Save updated calendar
+                with open(DATA_PATH, 'w') as f:
+                    json.dump(calendar_data, f, indent=2)
+                
+                return {"success": True, "removed_event": removed_event}
+        
+        return {"success": False, "error": "Event not found"}
+    except Exception as e:
+        print(f"Error removing event: {e}")
+        return {"success": False, "error": "Failed to remove event"}
 
 def get_budget_summary():
     """Get budget allocation summary across all calendar views"""
@@ -330,49 +267,34 @@ def get_budget_summary():
         "by_campaign_type": {}
     }
     
-    for view, events in ENHANCED_STREETWEAR_CALENDAR.items():
-        view_budget = 0
-        for event in events:
-            budget = event.get("budget_allocation", 0)
-            view_budget += budget
-            budget_summary["total_budget"] += budget
-            
-            # By priority
-            priority = event.get("priority", "medium")
-            budget_summary["by_priority"][priority] += budget
-            
-            # By campaign type
-            campaign_type = event.get("campaign_type", "other")
-            if campaign_type not in budget_summary["by_campaign_type"]:
-                budget_summary["by_campaign_type"][campaign_type] = 0
-            budget_summary["by_campaign_type"][campaign_type] += budget
-        
-        budget_summary["by_view"][view] = view_budget
-    
-    return budget_summary
-
-def save_calendar_data():
-    """Save calendar data to file"""
-    try:
-        os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
-        with open(DATA_PATH, 'w') as f:
-            json.dump(ENHANCED_STREETWEAR_CALENDAR, f, indent=2)
-        return True
-    except Exception as e:
-        print(f"Error saving calendar data: {e}")
-        return False
-
-def load_calendar_data():
-    """Load calendar data from file"""
     try:
         if os.path.exists(DATA_PATH):
             with open(DATA_PATH, 'r') as f:
-                loaded_data = json.load(f)
-                ENHANCED_STREETWEAR_CALENDAR.update(loaded_data)
-        return True
+                calendar_data = json.load(f)
+        else:
+            calendar_data = DEFAULT_CAL
+        
+        for view, events in calendar_data.items():
+            view_budget = 0
+            for event in events:
+                budget = event.get("budget_allocation", 0)
+                view_budget += budget
+                budget_summary["total_budget"] += budget
+                
+                # By priority
+                priority = event.get("priority", "medium")
+                if priority in budget_summary["by_priority"]:
+                    budget_summary["by_priority"][priority] += budget
+                
+                # By campaign type
+                campaign_type = event.get("campaign_type", "other")
+                if campaign_type not in budget_summary["by_campaign_type"]:
+                    budget_summary["by_campaign_type"][campaign_type] = 0
+                budget_summary["by_campaign_type"][campaign_type] += budget
+            
+            budget_summary["by_view"][view] = view_budget
+        
+        return budget_summary
     except Exception as e:
-        print(f"Error loading calendar data: {e}")
-        return False
-
-# Load calendar data on import
-load_calendar_data()
+        print(f"Error calculating budget summary: {e}")
+        return budget_summary
