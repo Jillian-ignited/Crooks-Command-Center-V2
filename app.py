@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Crooks & Castles Command Center V2 - Complete Functional Version
-Strategic Intelligence Dashboard with Asset Management
+Crooks & Castles Command Center V2 - Complete Self-Contained Version
+All HTML, CSS, JavaScript, and functionality embedded in this single file
 """
 
 import os
@@ -21,10 +21,6 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 
 # Configuration
 UPLOAD_FOLDER = 'upload'
-STATIC_FOLDER = 'static'
-THUMBNAILS_FOLDER = os.path.join(STATIC_FOLDER, 'thumbnails')
-ASSETS_FOLDER = os.path.join(STATIC_FOLDER, 'assets')
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Allowed file extensions
@@ -42,14 +38,7 @@ for ext_list in ALLOWED_EXTENSIONS.values():
 
 def ensure_directories():
     """Ensure all required directories exist"""
-    directories = [
-        UPLOAD_FOLDER,
-        STATIC_FOLDER,
-        THUMBNAILS_FOLDER,
-        ASSETS_FOLDER,
-        os.path.join(STATIC_FOLDER, 'css'),
-        os.path.join(STATIC_FOLDER, 'js')
-    ]
+    directories = [UPLOAD_FOLDER]
     
     for directory in directories:
         try:
@@ -79,28 +68,6 @@ def get_file_type(filename):
             return category
     return 'unknown'
 
-def generate_thumbnail(file_path, thumbnail_path, size=(150, 150)):
-    """Generate thumbnail for image files"""
-    try:
-        if not os.path.exists(file_path):
-            return False
-            
-        with Image.open(file_path) as img:
-            # Convert RGBA to RGB if necessary
-            if img.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                img = background
-            
-            img.thumbnail(size, Image.Resampling.LANCZOS)
-            img.save(thumbnail_path, 'JPEG', quality=85, optimize=True)
-            return True
-    except Exception as e:
-        print(f"Thumbnail generation error: {e}")
-        return False
-
 def scan_and_catalog_assets():
     """Scan upload folder and catalog all assets"""
     assets = {}
@@ -122,20 +89,11 @@ def scan_and_catalog_assets():
                 # Generate unique asset ID
                 asset_id = str(uuid.uuid4())
                 
-                # Generate thumbnail for images
-                thumbnail_path = None
-                if file_type == 'images':
-                    thumbnail_filename = f"thumb_{asset_id}.jpg"
-                    thumbnail_path = os.path.join(THUMBNAILS_FOLDER, thumbnail_filename)
-                    if generate_thumbnail(file_path, thumbnail_path):
-                        thumbnail_path = f"/static/thumbnails/{thumbnail_filename}"
-                
                 assets[asset_id] = {
                     'filename': filename,
                     'type': file_type,
                     'size': file_size,
                     'path': file_path,
-                    'thumbnail_path': thumbnail_path,
                     'upload_date': datetime.fromtimestamp(os.path.getctime(file_path)).isoformat(),
                     'last_modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
                 }
@@ -168,17 +126,18 @@ def analyze_intelligence_data():
     competitive_data = []
     
     # Load data from files
-    for filename in os.listdir(UPLOAD_FOLDER) if os.path.exists(UPLOAD_FOLDER) else []:
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        if filename.endswith('.jsonl'):
-            data = load_jsonl_data(file_path)
-            
-            if 'instagram-hashtag-scraper' in filename:
-                instagram_data.extend(data)
-            elif 'tiktok-scraper' in filename:
-                tiktok_data.extend(data)
-            elif 'competitive_data' in filename:
-                competitive_data.extend(data)
+    if os.path.exists(UPLOAD_FOLDER):
+        for filename in os.listdir(UPLOAD_FOLDER):
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            if filename.endswith('.jsonl'):
+                data = load_jsonl_data(file_path)
+                
+                if 'instagram-hashtag-scraper' in filename:
+                    instagram_data.extend(data)
+                elif 'tiktok-scraper' in filename:
+                    tiktok_data.extend(data)
+                elif 'competitive_data' in filename:
+                    competitive_data.extend(data)
     
     # Analyze hashtags
     hashtag_counts = {}
@@ -218,10 +177,6 @@ def generate_calendar_data():
                 'category': 'cultural',
                 'priority': 'high',
                 'budget_allocation': 500,
-                'assets_required': [
-                    {'type': 'hero_image', 'status': 'available', 'filename': 'sept_19_hiphop_anniversary.png'},
-                    {'type': 'story_template', 'status': 'available', 'filename': 'model1_story.png'}
-                ],
                 'deliverables': ['Instagram post', 'Instagram story', 'TikTok video'],
                 'kpis': {'engagement_rate': '4.5%', 'reach': '25K', 'saves': '500'}
             },
@@ -232,10 +187,6 @@ def generate_calendar_data():
                 'category': 'cultural',
                 'priority': 'high',
                 'budget_allocation': 750,
-                'assets_required': [
-                    {'type': 'lifestyle_image', 'status': 'available', 'filename': 'sept_16_cultural_fusion(3).png'},
-                    {'type': 'carousel_images', 'status': 'available', 'filename': 'real_instagram_story_rebel_rooftop(1).png'}
-                ],
                 'deliverables': ['Instagram carousel', 'Story series', 'TikTok trend'],
                 'kpis': {'engagement_rate': '5.2%', 'reach': '35K', 'shares': '200'}
             },
@@ -246,10 +197,6 @@ def generate_calendar_data():
                 'category': 'intelligence',
                 'priority': 'medium',
                 'budget_allocation': 300,
-                'assets_required': [
-                    {'type': 'data_visualization', 'status': 'needs_creation'},
-                    {'type': 'report_template', 'status': 'available'}
-                ],
                 'deliverables': ['Weekly report', 'Dashboard update', 'Trend briefing'],
                 'kpis': {'report_views': '150', 'insights_generated': '12', 'actionable_items': '8'}
             }
@@ -262,11 +209,6 @@ def generate_calendar_data():
                 'category': 'cultural',
                 'priority': 'high',
                 'budget_allocation': 2000,
-                'assets_required': [
-                    {'type': 'campaign_hero', 'status': 'available', 'filename': 'sept_15_hispanic_heritage_launch(3).png'},
-                    {'type': 'story_series', 'status': 'available', 'filename': 'wordmark_story(1).png'},
-                    {'type': 'community_video', 'status': 'available', 'filename': '410f528c-980e-497b-bcf0-a6294a39631b.mp4'}
-                ],
                 'deliverables': ['Campaign launch', 'Educational content', 'Community spotlights'],
                 'kpis': {'engagement_rate': '6.8%', 'reach': '100K', 'community_mentions': '50'}
             },
@@ -277,10 +219,6 @@ def generate_calendar_data():
                 'category': 'cultural',
                 'priority': 'high',
                 'budget_allocation': 1500,
-                'assets_required': [
-                    {'type': 'documentary_style', 'status': 'available', 'filename': 'sept_19_hiphop_anniversary.png'},
-                    {'type': 'timeline_graphics', 'status': 'needs_creation'}
-                ],
                 'deliverables': ['Anniversary post', 'Story timeline', 'Long-form video'],
                 'kpis': {'engagement_rate': '7.2%', 'reach': '75K', 'video_completion': '65%'}
             }
@@ -293,11 +231,6 @@ def generate_calendar_data():
                 'category': 'commercial',
                 'priority': 'high',
                 'budget_allocation': 5000,
-                'assets_required': [
-                    {'type': 'campaign_creative_suite', 'status': 'needs_creation'},
-                    {'type': 'email_templates', 'status': 'needs_creation'},
-                    {'type': 'social_ads', 'status': 'needs_creation'}
-                ],
                 'deliverables': ['Campaign creative suite', 'Email templates', 'Social ads'],
                 'kpis': {'conversion_rate': '3.5%', 'roas': '4.2x', 'email_ctr': '8.5%'}
             }
@@ -310,11 +243,6 @@ def generate_calendar_data():
                 'category': 'brand',
                 'priority': 'high',
                 'budget_allocation': 8000,
-                'assets_required': [
-                    {'type': 'brand_film', 'status': 'needs_creation'},
-                    {'type': 'manifesto_content', 'status': 'needs_creation'},
-                    {'type': 'pr_package', 'status': 'needs_creation'}
-                ],
                 'deliverables': ['Brand film', 'Manifesto content', 'PR package'],
                 'kpis': {'brand_awareness': '+15%', 'sentiment_score': '85%', 'pr_mentions': '100+'}
             }
@@ -357,7 +285,7 @@ def generate_agency_data():
         'avg_quality_score': 95
     }
 
-# Main dashboard template
+# Complete embedded HTML template with CSS and JavaScript
 DASHBOARD_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -615,8 +543,6 @@ DASHBOARD_TEMPLATE = '''
             color: white;
             position: relative;
             overflow: hidden;
-            background-size: cover;
-            background-position: center;
         }
 
         .asset-name {
@@ -624,6 +550,7 @@ DASHBOARD_TEMPLATE = '''
             margin-bottom: 0.5rem;
             color: var(--crooks-light);
             font-weight: 500;
+            word-break: break-word;
         }
 
         .asset-type {
@@ -874,6 +801,50 @@ DASHBOARD_TEMPLATE = '''
             color: white;
         }
 
+        .hashtag-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .hashtag-item {
+            background: rgba(255, 107, 53, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--crooks-light);
+        }
+
+        .competitive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .competitive-item {
+            background: rgba(26, 26, 26, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .competitive-brand {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .competitive-position {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .competitive-category {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -982,9 +953,9 @@ DASHBOARD_TEMPLATE = '''
                             Top Hashtags
                         </h2>
                     </div>
-                    <div id="top-hashtags">
+                    <div class="hashtag-grid">
                         {% for hashtag in intelligence_data.top_hashtags[:8] %}
-                        <span style="background: rgba(255, 107, 53, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.25rem;">{{ hashtag.hashtag }}</span>
+                        <div class="hashtag-item">{{ hashtag.hashtag }}</div>
                         {% endfor %}
                     </div>
                 </div>
@@ -996,26 +967,26 @@ DASHBOARD_TEMPLATE = '''
                             Competitive Rankings
                         </h2>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                        <div style="background: rgba(26, 26, 26, 0.5); padding: 1rem; border-radius: 8px;">
-                            <div style="font-weight: 600; color: var(--crooks-primary); margin-bottom: 0.5rem;">Crooks & Castles</div>
-                            <div style="font-size: 1.5rem; color: var(--crooks-accent);">#47</div>
-                            <div style="font-size: 0.8rem; color: #ccc;">Heritage Streetwear</div>
+                    <div class="competitive-grid">
+                        <div class="competitive-item">
+                            <div class="competitive-brand" style="color: var(--crooks-primary);">Crooks & Castles</div>
+                            <div class="competitive-position" style="color: var(--crooks-accent);">#47</div>
+                            <div class="competitive-category">Heritage Streetwear</div>
                         </div>
-                        <div style="background: rgba(26, 26, 26, 0.5); padding: 1rem; border-radius: 8px;">
-                            <div style="font-weight: 600; color: #ccc; margin-bottom: 0.5rem;">Supreme</div>
-                            <div style="font-size: 1.5rem; color: #999;">#1</div>
-                            <div style="font-size: 0.8rem; color: #ccc;">Streetwear Leader</div>
+                        <div class="competitive-item">
+                            <div class="competitive-brand" style="color: #ccc;">Supreme</div>
+                            <div class="competitive-position" style="color: #999;">#1</div>
+                            <div class="competitive-category">Streetwear Leader</div>
                         </div>
-                        <div style="background: rgba(26, 26, 26, 0.5); padding: 1rem; border-radius: 8px;">
-                            <div style="font-weight: 600; color: #ccc; margin-bottom: 0.5rem;">Off-White</div>
-                            <div style="font-size: 1.5rem; color: #999;">#3</div>
-                            <div style="font-size: 0.8rem; color: #ccc;">Luxury Streetwear</div>
+                        <div class="competitive-item">
+                            <div class="competitive-brand" style="color: #ccc;">Off-White</div>
+                            <div class="competitive-position" style="color: #999;">#3</div>
+                            <div class="competitive-category">Luxury Streetwear</div>
                         </div>
-                        <div style="background: rgba(26, 26, 26, 0.5); padding: 1rem; border-radius: 8px;">
-                            <div style="font-weight: 600; color: #ccc; margin-bottom: 0.5rem;">Stussy</div>
-                            <div style="font-size: 1.5rem; color: #999;">#12</div>
-                            <div style="font-size: 0.8rem; color: #ccc;">Classic Streetwear</div>
+                        <div class="competitive-item">
+                            <div class="competitive-brand" style="color: #ccc;">Stussy</div>
+                            <div class="competitive-position" style="color: #999;">#12</div>
+                            <div class="competitive-category">Classic Streetwear</div>
                         </div>
                     </div>
                 </div>
@@ -1034,14 +1005,12 @@ DASHBOARD_TEMPLATE = '''
                 <div class="asset-grid" id="asset-grid">
                     {% for asset_id, asset in assets.items() %}
                     <div class="asset-item">
-                        <div class="asset-thumbnail" {% if asset.thumbnail_path %}style="background-image: url('{{ asset.thumbnail_path }}');"{% endif %}>
-                            {% if not asset.thumbnail_path %}
+                        <div class="asset-thumbnail">
                             <i class="fas fa-{{ 'image' if asset.type == 'images' else 'video' if asset.type == 'videos' else 'file-alt' if asset.type == 'documents' else 'chart-bar' if asset.type == 'data' else 'music' if asset.type == 'audio' else 'file' }}"></i>
-                            {% endif %}
                         </div>
                         <div class="asset-name">{{ asset.filename }}</div>
                         <div class="asset-type">{{ asset.type.replace('_', ' ') }}</div>
-                        <div class="asset-size">{{ (asset.size / 1024 / 1024) | round(2) }} MB</div>
+                        <div class="asset-size">{{ "%.2f"|format(asset.size / 1024 / 1024) }} MB</div>
                         <button class="download-btn" onclick="downloadAsset('{{ asset_id }}')">
                             <i class="fas fa-download"></i> Download
                         </button>
@@ -1061,10 +1030,10 @@ DASHBOARD_TEMPLATE = '''
                     </h2>
                 </div>
                 <div class="calendar-tabs">
-                    <button class="calendar-tab active" onclick="showCalendarView('7day')">7 Days</button>
-                    <button class="calendar-tab" onclick="showCalendarView('30day')">30 Days</button>
-                    <button class="calendar-tab" onclick="showCalendarView('60day')">60 Days</button>
-                    <button class="calendar-tab" onclick="showCalendarView('90day')">90 Days</button>
+                    <button class="calendar-tab active" onclick="showCalendarView('7day', this)">7 Days</button>
+                    <button class="calendar-tab" onclick="showCalendarView('30day', this)">30 Days</button>
+                    <button class="calendar-tab" onclick="showCalendarView('60day', this)">60 Days</button>
+                    <button class="calendar-tab" onclick="showCalendarView('90day', this)">90 Days</button>
                 </div>
                 <div id="calendar-content" class="calendar-view">
                     {% for event in calendar_data['7_day_view'] %}
@@ -1075,11 +1044,6 @@ DASHBOARD_TEMPLATE = '''
                         <div class="event-title">{{ event.title }}</div>
                         <div class="event-description">{{ event.description }}</div>
                         <div class="event-budget">💰 Budget: ${{ "{:,}".format(event.budget_allocation) }}</div>
-                        {% if event.assets_required %}
-                        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #ccc;">
-                            📁 Assets Required: {{ event.assets_required | length }}
-                        </div>
-                        {% endif %}
                         {% if event.deliverables %}
                         <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #ccc;">
                             📋 Deliverables: {{ event.deliverables | length }}
@@ -1184,12 +1148,12 @@ DASHBOARD_TEMPLATE = '''
             currentTab = tabName;
         }
 
-        function showCalendarView(view) {
+        function showCalendarView(view, element) {
             // Update calendar view tabs
             document.querySelectorAll('.calendar-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            event.target.classList.add('active');
+            element.classList.add('active');
             
             currentCalendarView = view;
             
@@ -1201,7 +1165,9 @@ DASHBOARD_TEMPLATE = '''
             fetch(`/api/calendar/${view}`)
                 .then(response => response.json())
                 .then(data => {
-                    updateCalendarDisplay(data);
+                    if (data.success) {
+                        updateCalendarDisplay(data.events);
+                    }
                 })
                 .catch(error => {
                     console.log('Using default calendar data');
@@ -1222,7 +1188,6 @@ DASHBOARD_TEMPLATE = '''
                     <div class="event-title">${event.title}</div>
                     <div class="event-description">${event.description}</div>
                     <div class="event-budget">💰 Budget: $${event.budget_allocation.toLocaleString()}</div>
-                    ${event.assets_required ? `<div style="margin-top: 0.5rem; font-size: 0.8rem; color: #ccc;">📁 Assets Required: ${event.assets_required.length}</div>` : ''}
                     ${event.deliverables ? `<div style="margin-top: 0.5rem; font-size: 0.8rem; color: #ccc;">📋 Deliverables: ${event.deliverables.length}</div>` : ''}
                 `;
                 calendarContent.appendChild(eventElement);
@@ -1296,7 +1261,7 @@ DASHBOARD_TEMPLATE = '''
                 .then(data => {
                     if (data.success) {
                         progressDiv.innerHTML = `<i class="fas fa-check" style="color: var(--crooks-success);"></i> ${file.name} uploaded successfully`;
-                        // Refresh the current tab data
+                        // Refresh the page after successful upload
                         setTimeout(() => {
                             location.reload();
                         }, 1000);
@@ -1309,11 +1274,6 @@ DASHBOARD_TEMPLATE = '''
                 });
             });
         }
-
-        // Initialize calendar data on load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadCalendarData('7day');
-        });
     </script>
 </body>
 </html>
@@ -1407,12 +1367,6 @@ def api_upload():
         # Save file
         file.save(file_path)
         
-        # Generate thumbnail if it's an image
-        if get_file_type(filename) == 'images':
-            thumbnail_filename = f"thumb_{uuid.uuid4()}.jpg"
-            thumbnail_path = os.path.join(THUMBNAILS_FOLDER, thumbnail_filename)
-            generate_thumbnail(file_path, thumbnail_path)
-        
         return jsonify({
             'success': True,
             'message': f'File {filename} uploaded successfully',
@@ -1454,11 +1408,6 @@ def api_agency():
         'success': True,
         'data': agency_data
     })
-
-@app.route('/static/thumbnails/<filename>')
-def serve_thumbnail(filename):
-    """Serve thumbnail files"""
-    return send_file(os.path.join(THUMBNAILS_FOLDER, filename))
 
 if __name__ == '__main__':
     # Ensure directories exist on startup
