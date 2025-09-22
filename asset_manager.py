@@ -153,12 +153,16 @@ def handle_file_upload(file_storage):
     filename = secure_filename(file_storage.filename or '')
     if not filename or not _ext_ok(filename):
         return {'ok': False, 'error': 'Invalid file type.'}
-    size = file_storage.content_length or 0
+    size = getattr(file_storage, 'content_length', None) or 0
     if size and size > MAX_FILE_MB * 1024 * 1024:
         return {'ok': False, 'error': 'File too large.'}
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     save_path = os.path.join(UPLOAD_DIR, filename)
-    file_storage.save(save_path)
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    try:
+        file_storage.save(save_path)
+    except Exception as e:
+        return {'ok': False, 'error': f'Failed to save file: {e}'}
 
     # update catalog
     cat = _load_catalog()
