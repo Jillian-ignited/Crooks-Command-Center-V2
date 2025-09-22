@@ -1,4 +1,4 @@
-import json
+import json, re
 from datetime import datetime
 from collections import Counter, defaultdict
 from typing import List, Dict, Any
@@ -7,7 +7,6 @@ def _safe_json_loads(line: str):
     try:
         return json.loads(line)
     except Exception:
-        # Try to recover by stripping BOMs or invalid trailing commas
         try:
             cleaned = line.encode('utf-8', 'ignore').decode('utf-8', 'ignore')
             return json.loads(cleaned)
@@ -32,15 +31,18 @@ def analyze_hashtags(posts: List[Dict[str, Any]]):
     counter = Counter()
     for p in posts:
         tags = p.get('hashtags') or []
+        if not tags:
+            # Extract inline hashtags from caption/description
+            text = (p.get('caption') or '') + ' ' + (p.get('description') or '')
+            tags = re.findall(r"#(\w+)", text)
         if isinstance(tags, str):
-            # Some scrapers return a space-delimited string
             tags = [t.strip() for t in tags.split() if t.strip().startswith('#')]
         for t in tags:
             tag = t.lower().lstrip('#')
             if tag:
                 counter[tag] += 1
 
-    # Cultural categories (very simple keyword mapping for now)
+    # Lightweight cultural categories
     categories = {
         'hip-hop': {'hiphop', 'rap', 'boom bap', 'trap', 'hip-hop', 'hiphopculture'},
         'streetwear': {'streetwear', 'ootd', 'sneakers', 'hypebeast', 'kicks'},
@@ -63,44 +65,31 @@ def calculate_engagement_metrics(posts: List[Dict[str, Any]]):
     total_comments = 0
     total_shares = 0
     total_views = 0
-    timestamps = []
 
+    by_day = defaultdict(lambda: {'likes':0, 'comments':0, 'shares':0, 'views':0, 'count':0})
     for p in posts:
-        # IG fields
         total_likes += int(p.get('likesCount') or 0)
         total_comments += int(p.get('commentsCount') or 0)
-        # TikTok fields
         total_shares += int(p.get('shareCount') or 0)
         total_views += int(p.get('viewCount') or 0)
 
         ts = p.get('timestamp')
         if ts:
             try:
-                timestamps.append(datetime.fromisoformat(ts.replace('Z', '+00:00')))
+                day = datetime.fromisoformat(ts.replace('Z', '+00:00')).date().isoformat()
             except Exception:
-                pass
-
-    count = len(posts) if posts else 1
-    avg_engagement = (total_likes + total_comments + total_shares) / count
-
-    # Trend by day
-    by_day = defaultdict(lambda: {'likes':0, 'comments':0, 'shares':0, 'views':0, 'count':0})
-    for p in posts:
-        ts = p.get('timestamp')
-        day_key = None
-        if ts:
-            try:
-                day_key = datetime.fromisoformat(ts.replace('Z', '+00:00')).date().isoformat()
-            except Exception:
-                day_key = 'unknown'
+                day = 'unknown'
         else:
-            day_key = 'unknown'
+            day = 'unknown'
 
-        by_day[day_key]['likes'] += int(p.get('likesCount') or 0)
-        by_day[day_key]['comments'] += int(p.get('commentsCount') or 0)
-        by_day[day_key]['shares'] += int(p.get('shareCount') or 0)
-        by_day[day_key]['views'] += int(p.get('viewCount') or 0)
-        by_day[day_key]['count'] += 1
+        by_day[day]['likes'] += int(p.get('likesCount') or 0)
+        by_day[day]['comments'] += int(p.get('commentsCount') or 0)
+        by_day[day]['shares'] += int(p.get('shareCount') or 0)
+        by_day[day]['views'] += int(p.get('viewCount') or 0)
+        by_day[day]['count'] += 1
+
+    count_posts = len(posts) if posts else 1
+    avg_engagement = (total_likes + total_comments + total_shares) / count_posts
 
     trend = []
     for day, vals in sorted(by_day.items()):
@@ -111,7 +100,6 @@ def calculate_engagement_metrics(posts: List[Dict[str, Any]]):
             'posts': vals['count']
         })
 
-    total_posts = len(posts)
     engagement_rate = 0.0
     if total_views > 0:
         engagement_rate = round((total_likes + total_comments + total_shares) / total_views * 100.0, 2)
@@ -122,7 +110,7 @@ def calculate_engagement_metrics(posts: List[Dict[str, Any]]):
             'comments': total_comments,
             'shares': total_shares,
             'views': total_views,
-            'posts': total_posts
+            'posts': len(posts)
         },
         'averages': {
             'engagement_per_post': round(avg_engagement, 2)
@@ -139,13 +127,12 @@ def identify_cultural_moments(posts: List[Dict[str, Any]]):
         ('Hip-Hop Anniversary', ['hiphop', 'hip-hop', 'rap', 'biggie', 'tupac', 'wu-tang']),
         ('Streetwear Heritage', ['archive', 'throwback', 'y2k', 'heritage']),
     ]
-
     for p in posts:
         text = (p.get('caption') or '') + ' ' + (p.get('description') or '')
-        text_l = text.lower()
+        tl = text.lower()
         hit = []
         for label, keys in keywords:
-            if any(k in text_l for k in keys):
+            if any(k in tl for k in keys):
                 hit.append(label)
         if hit:
             moments.append({
@@ -160,7 +147,11 @@ def competitive_analysis(data: Dict[str, Any]):
     """Analyze competitive positioning"""
     posts = data.get('all_posts', [])
     brand_mentions = Counter()
-    competitors = ['supreme', 'bape', 'kith', 'palace', 'fear of god', 'off-white', 'purple brand']
+    competitors = [
+        'crooks & castles','crooks and castles','crooks',
+        'supreme','bape','kith','palace','fear of god',
+        'off-white','purple brand','stussy','billionaire boys club'
+    ]
 
     for p in posts:
         text = (p.get('caption') or '') + ' ' + (p.get('description') or '')
@@ -169,13 +160,14 @@ def competitive_analysis(data: Dict[str, Any]):
             if c in tl:
                 brand_mentions[c] += 1
 
-    # Very lightweight comp metric
-    comp = [{'brand': b.title(), 'mentions': n} for b, n in brand_mentions.most_common()]
+    total = sum(brand_mentions.values()) or 1
+    comp = []
+    for b, n in brand_mentions.most_common():
+        comp.append({'brand': b.title(), 'mentions': n, 'share_pct': round(n * 100 / total, 2)})
     return {'brand_mentions': comp, 'notes': 'Mentions detected in captions/descriptions only.'}
 
 def generate_intelligence_report(data: Dict[str, Any]):
     """Create formatted intelligence reports"""
-    # Data should include metrics, hashtags, cultural moments, competition
     report = {
         'generated_at': datetime.utcnow().isoformat() + 'Z',
         'summary': {
@@ -186,9 +178,9 @@ def generate_intelligence_report(data: Dict[str, Any]):
         'cultural_moments': data.get('cultural_moments', [])[:20],
         'competitive': data.get('competitive', {}),
         'recommendations': [
-            'Post more around identified cultural moments in the next 7–14 days.',
+            'Double down on upcoming cultural moments in the next 7–14 days.',
             'Repurpose high-engagement formats across IG Reels and TikTok.',
-            'Align assets to calendar events with gaps flagged below 72 hours in advance.'
+            'Map assets to events and fill gaps 72h ahead of go-live.'
         ]
     }
     return report
