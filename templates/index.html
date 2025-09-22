@@ -1,94 +1,1623 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CROOKS & CASTLES — COMMAND CENTER V2</title>
-  <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CROOKS & CASTLES - Command Center V2</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .main-container {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .status-banner {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 0.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .nav-tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            color: #ffffff;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 107, 53, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(255, 107, 53, 0.2);
+        }
+
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .panel {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .panel-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #ff6b35;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Content Management Styles */
+        .content-form, .calendar-form {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #ff6b35;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: #ffffff;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Content List Styles */
+        .content-list, .event-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .content-item, .event-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .content-item:hover, .event-item:hover {
+            background: rgba(255, 107, 53, 0.1);
+            border-color: rgba(255, 107, 53, 0.3);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .item-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ff6b35;
+            flex: 1;
+        }
+
+        .item-meta {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-draft {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .status-published {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .status-scheduled {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        /* Asset Library Enhanced Styles */
+        .asset-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(255, 107, 53, 0.5);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.15);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .asset-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+        }
+
+        .asset-thumbnail {
+            width: 100%;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .asset-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .asset-info {
+            margin-bottom: 1rem;
+        }
+
+        .asset-name {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #ff6b35;
+            word-break: break-word;
+        }
+
+        .asset-meta {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        .asset-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .asset-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Calendar Enhanced Styles */
+        .calendar-view {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .calendar-controls {
+            margin-bottom: 2rem;
+        }
+
+        .view-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .view-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .view-btn.active {
+            background: #ff6b35;
+            border-color: #ff6b35;
+        }
+
+        .milestone-section {
+            margin-bottom: 2rem;
+        }
+
+        .milestone-type-header {
+            background: rgba(255, 107, 53, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: #ff6b35;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .milestone-count {
+            background: rgba(255, 107, 53, 0.3);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .milestone-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #ff6b35;
+            transition: all 0.3s ease;
+        }
+
+        .milestone-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(3px);
+        }
+
+        .milestone-item.cultural {
+            border-left-color: #4ecdc4;
+        }
+
+        .milestone-item.hvd-phase1 {
+            border-left-color: #28a745;
+        }
+
+        .milestone-item.hvd-phase2 {
+            border-left-color: #ffc107;
+        }
+
+        .milestone-item.hvd-phase3 {
+            border-left-color: #dc3545;
+        }
+
+        .milestone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .milestone-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .milestone-date {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .milestone-category {
+            display: inline-block;
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-right: 0.5rem;
+        }
+
+        .milestone-category.cultural {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+        }
+
+        .milestone-category.deliverable {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .milestone-category.reporting {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .deliverable-status {
+            margin-top: 1rem;
+        }
+
+        .status-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-btn {
+            padding: 0.3rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-btn.pending {
+            background: rgba(108, 117, 125, 0.2);
+            border-color: #6c757d;
+        }
+
+        .status-btn.in-progress {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+        }
+
+        .status-btn.completed {
+            background: rgba(40, 167, 69, 0.2);
+            border-color: #28a745;
+        }
+
+        .status-btn.approved {
+            background: rgba(23, 162, 184, 0.2);
+            border-color: #17a2b8;
+        }
+
+        .status-btn.active {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .cultural-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+        }
+
+        .insight-trend {
+            font-weight: 700;
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .insight-impact {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .insight-impact.high {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .insight-impact.medium {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .cultural-moment {
+            background: rgba(78, 205, 196, 0.1);
+            border-left: 3px solid #4ecdc4;
+            padding: 0.8rem;
+            margin-top: 1rem;
+            border-radius: 0 6px 6px 0;
+            font-style: italic;
+        }
+
+        /* Loading and States */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.7;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 107, 53, 0.3);
+            border-radius: 50%;
+            border-top-color: #ff6b35;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.7;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ff6b35;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #ffffff;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .close:hover {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">
-      <span class="logo">CROOKS & CASTLES</span>
-      <span class="badge">COMMAND CENTER</span>
+    <div class="header">
+        <h1>CROOKS & CASTLES</h1>
+        <div class="header-subtitle">Command Center V2 - Strategic Intelligence Platform</div>
     </div>
-    <nav class="tabs">
-      <button class="tab active" data-tab="intelligence"><i class="fa-solid fa-chart-line"></i> Intelligence</button>
-      <button class="tab" data-tab="assets"><i class="fa-solid fa-folder-open"></i> Assets</button>
-      <button class="tab" data-tab="calendar"><i class="fa-solid fa-calendar"></i> Calendar</button>
-      <button class="tab" data-tab="agency"><i class="fa-solid fa-briefcase"></i> Agency</button>
-      <button class="tab" data-tab="upload"><i class="fa-solid fa-upload"></i> Upload</button>
-    </nav>
-  </header>
 
-  <main>
-    <section id="intelligence" class="panel active">
-      <div class="card">
-        <h2>Engagement Overview</h2>
-        <pre id="intel-metrics" class="mono"></pre>
-      </div>
-      <div class="card">
-        <h2>Top Hashtags</h2>
-        <div id="hashtags" class="grid"></div>
-      </div>
-      <div class="card">
-        <h2>Cultural Moments</h2>
-        <div id="moments" class="list"></div>
-      </div>
-      <div class="card">
-        <h2>Competitive Mentions</h2>
-        <div id="competitors" class="list"></div>
-      </div>
-      <div class="card actions">
-        <button id="btn-generate-report" class="btn primary"><i class="fa-solid fa-file-export"></i> Generate Intelligence Report</button>
-      </div>
-    </section>
-
-    <section id="assets" class="panel">
-      <div class="card">
-        <h2>Asset Library</h2>
-        <div id="asset-grid" class="asset-grid"></div>
-      </div>
-    </section>
-
-    <section id="calendar" class="panel">
-      <div class="card">
-        <div class="calendar-head">
-          <h2>Strategic Calendar</h2>
-          <div class="view-switch">
-            <a id="btn-cal-export" class="btn small" href="/api/calendar/export.csv"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
-            <button data-view="7_day_view" class="btn small">7 Day</button>
-            <button data-view="30_day_view" class="btn small">30 Day</button>
-            <button data-view="60_day_view" class="btn small">60 Day</button>
-            <button data-view="90_day_view" class="btn small">90 Day</button>
-          </div>
+    <div class="main-container">
+        <!-- Status Banner -->
+        <div id="status-banner" class="status-banner">
+            <div class="loading-spinner"></div>
+            <span>Loading analytics...</span>
         </div>
-        <div id="calendar-events" class="list"></div>
-      </div>
-    </section>
 
-    <section id="agency" class="panel">
-      <div class="card">
-        <h2>Agency Tracking — High Voltage Digital <a id="btn-agency-export" class="btn small" href="/api/agency/export.csv"><i class="fa-solid fa-file-csv"></i> Export</a></h2>
-        <pre id="agency-data" class="mono"></pre>
-      </div>
-    </section>
+        <!-- Metrics -->
+        <div id="metrics-row" class="metrics-row" style="display: none;"></div>
 
-    <section id="upload" class="panel">
-      <div class="card">
-        <h2>Upload Files</h2>
-        <div id="drop" class="dropzone">Drag & drop files here, or click to select</div>
-        <input id="file-input" type="file" multiple hidden>
-        <div id="upload-results" class="list"></div>
-      </div>
-    </section>
-  </main>
+        <!-- Navigation -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('analytics')">📊 Analytics</button>
+            <button class="nav-tab" onclick="showTab('content')">📝 Content Manager</button>
+            <button class="nav-tab" onclick="showTab('calendar')">📅 Strategic Calendar</button>
+            <button class="nav-tab" onclick="showTab('cultural')">🌟 Cultural Intelligence</button>
+            <button class="nav-tab" onclick="showTab('assets')">📁 Asset Library</button>
+            <button class="nav-tab" onclick="showTab('reports')">📋 Reports</button>
+        </div>
 
-  <footer class="site-footer">
-    <span>Built for CROOKS — Discipline × Disruption.</span>
-  </footer>
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="panel">
+                    <div class="panel-title">Engagement Timeline</div>
+                    <div id="engagement-chart"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">Top Hashtags</div>
+                    <div id="hashtag-chart"></div>
+                </div>
+            </div>
+        </div>
 
-  <script src="/static/js/app.js"></script>
+        <!-- Content Manager Tab -->
+        <div id="content" class="tab-content">
+            <div class="dashboard-grid">
+                <div class="panel">
+                    <div class="panel-title">Create New Content</div>
+                    <form class="content-form" id="content-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Title</label>
+                                <input type="text" class="form-input" id="content-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Platform</label>
+                                <select class="form-select" id="content-platform" required>
+                                    <option value="">Select Platform</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="both">Both Platforms</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-textarea" id="content-body" placeholder="Write your content here..."></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Hashtags</label>
+                                <input type="text" class="form-input" id="content-hashtags" placeholder="#streetwear #crooksandcastles">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="content-status">
+                                    <option value="draft">Draft</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="published">Published</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Scheduled Date (optional)</label>
+                            <input type="datetime-local" class="form-input" id="content-schedule">
+                        </div>
+                        <button type="submit" class="btn">Create Content</button>
+                    </form>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">Content Library</div>
+                    <div class="content-list" id="content-list">
+                        <div class="loading">Loading content...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strategic Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <div class="calendar-view">
+                <div class="panel">
+                    <div class="panel-title">Add Calendar Event</div>
+                    <form class="calendar-form" id="calendar-form">
+                        <div class="form-group">
+                            <label class="form-label">Event Title</label>
+                            <input type="text" class="form-input" id="event-title" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Date</label>
+                                <input type="date" class="form-input" id="event-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" id="event-category">
+                                    <option value="content">Content</option>
+                                    <option value="campaign">Campaign</option>
+                                    <option value="meeting">Meeting</option>
+                                    <option value="launch">Launch</option>
+                                    <option value="analysis">Analysis</option>
+                                    <option value="deliverable">HVD Deliverable</option>
+                                    <option value="cultural">Cultural Moment</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-textarea" id="event-description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Assignees</label>
+                            <input type="text" class="form-input" id="event-assignees" placeholder="Team members (comma separated)">
+                        </div>
+                        <button type="submit" class="btn">Add Event</button>
+                    </form>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">Strategic Planning Timeline</div>
+                    <div class="calendar-controls">
+                        <div class="view-selector">
+                            <button class="view-btn active" onclick="showCalendarView('all')">All Events</button>
+                            <button class="view-btn" onclick="showCalendarView('cultural')">Cultural Moments</button>
+                            <button class="view-btn" onclick="showCalendarView('hvd-phase1')">HVD Phase 1</button>
+                            <button class="view-btn" onclick="showCalendarView('hvd-phase2')">HVD Phase 2</button>
+                            <button class="view-btn" onclick="showCalendarView('hvd-phase3')">HVD Phase 3</button>
+                            <button class="view-btn" onclick="showCalendarView('7-day')">Next 7 Days</button>
+                        </div>
+                    </div>
+                    <div id="calendar-events" class="event-list">
+                        <div class="loading">Loading calendar...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cultural Intelligence Tab -->
+        <div id="cultural" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">Streetwear Cultural Intelligence</div>
+                <div class="cultural-insights-grid" id="cultural-insights-grid">
+                    <div class="loading">Loading cultural insights...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Asset Library Tab -->
+        <div id="assets" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">Team Asset Library</div>
+                
+                <!-- Asset Controls -->
+                <div class="asset-controls">
+                    <div class="search-box">
+                        <input type="text" class="form-input" id="asset-search" placeholder="Search assets...">
+                    </div>
+                    <select class="form-select filter-select" id="category-filter">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select class="form-select filter-select" id="type-filter">
+                        <option value="">All Types</option>
+                        <option value="image">Images</option>
+                        <option value="video">Videos</option>
+                        <option value="document">Documents</option>
+                        <option value="audio">Audio</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <button class="btn" onclick="showUploadModal()">Upload Assets</button>
+                </div>
+
+                <!-- Asset Grid -->
+                <div class="asset-grid" id="asset-grid">
+                    <div class="loading">Loading assets...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">Generate Reports</div>
+                <div class="dashboard-grid">
+                    <div>
+                        <h3>Analytics Report</h3>
+                        <p>Export comprehensive performance analytics for stakeholder review.</p>
+                        <button class="btn" onclick="exportAnalytics()">📊 Export Analytics</button>
+                    </div>
+                    <div>
+                        <h3>Content Report</h3>
+                        <p>Generate content performance and planning reports.</p>
+                        <button class="btn" onclick="exportContent()">📝 Export Content Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Upload Asset</div>
+                <button class="close" onclick="closeModal('upload-modal')">&times;</button>
+            </div>
+            <form id="asset-upload-form">
+                <div class="upload-zone" id="upload-zone">
+                    <input type="file" id="file-input" multiple style="display: none;">
+                    <div class="upload-icon">📁</div>
+                    <h3>Upload Files</h3>
+                    <p>Drag & drop files or click to select</p>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="upload-category">
+                            <option value="Other">Other</option>
+                            <option value="Images">Images</option>
+                            <option value="Videos">Videos</option>
+                            <option value="Graphics">Graphics</option>
+                            <option value="Documents">Documents</option>
+                            <option value="Brand Assets">Brand Assets</option>
+                            <option value="Campaign Materials">Campaign Materials</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Uploader Name</label>
+                        <input type="text" class="form-input" id="upload-uploader" placeholder="Your name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="upload-description" placeholder="Describe this asset..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tags</label>
+                    <input type="text" class="form-input" id="upload-tags" placeholder="Comma-separated tags">
+                </div>
+                <button type="submit" class="btn">Upload Asset</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentData = {};
+        let currentCalendarView = 'all';
+        let deliverableTracking = {};
+
+        // Initialize dashboard
+        async function initializeDashboard() {
+            try {
+                const response = await fetch('/api/data');
+                currentData = await response.json();
+                
+                if (currentData.status === 'no_data') {
+                    showNoDataMessage();
+                } else if (currentData.status === 'success') {
+                    showAnalytics();
+                    loadContent();
+                    loadCalendar();
+                    loadAssets();
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showErrorMessage('Failed to connect to analytics data');
+            }
+        }
+
+        function showNoDataMessage() {
+            const banner = document.getElementById('status-banner');
+            banner.className = 'status-banner';
+            banner.innerHTML = `
+                <h3>⚠️ No Data Found</h3>
+                <p>Place your <strong>instagram_data.jsonl</strong> and <strong>tiktok_data.jsonl</strong> files in the root directory to activate analytics.</p>
+            `;
+        }
+
+        function showAnalytics() {
+            const banner = document.getElementById('status-banner');
+            banner.className = 'status-banner';
+            banner.innerHTML = `
+                <h3>✅ Analytics Active</h3>
+                <p>Processing ${currentData.metrics.total_posts} posts from Instagram and TikTok</p>
+            `;
+            
+            // Show metrics
+            const metricsRow = document.getElementById('metrics-row');
+            metricsRow.innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-value">${currentData.metrics.total_posts.toLocaleString()}</div>
+                    <div class="metric-label">Total Posts</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${currentData.metrics.total_engagement.toLocaleString()}</div>
+                    <div class="metric-label">Total Engagement</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${currentData.metrics.avg_engagement}</div>
+                    <div class="metric-label">Avg Engagement</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">IG:${currentData.metrics.instagram_posts} TT:${currentData.metrics.tiktok_posts}</div>
+                    <div class="metric-label">Platform Mix</div>
+                </div>
+            `;
+            metricsRow.style.display = 'grid';
+            
+            // Update charts
+            if (currentData.charts.engagement) {
+                Plotly.newPlot('engagement-chart', currentData.charts.engagement.data, 
+                              currentData.charts.engagement.layout, {responsive: true});
+            }
+            
+            if (currentData.charts.hashtags) {
+                Plotly.newPlot('hashtag-chart', currentData.charts.hashtags.data, 
+                              currentData.charts.hashtags.layout, {responsive: true});
+            }
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            
+            // Load tab-specific data
+            if (tabName === 'content') loadContent();
+            if (tabName === 'calendar') loadCalendar();
+            if (tabName === 'cultural') loadCulturalInsights();
+            if (tabName === 'assets') loadAssets();
+        }
+
+        // Content Management
+        document.getElementById('content-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const contentData = {
+                title: document.getElementById('content-title').value,
+                platform: document.getElementById('content-platform').value,
+                body: document.getElementById('content-body').value,
+                hashtags: document.getElementById('content-hashtags').value,
+                status: document.getElementById('content-status').value,
+                scheduled_date: document.getElementById('content-schedule').value || null
+            };
+            
+            try {
+                const response = await fetch('/api/content', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(contentData)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('content-form').reset();
+                    loadContent();
+                }
+            } catch (error) {
+                console.error('Error creating content:', error);
+            }
+        });
+
+        async function loadContent() {
+            try {
+                const response = await fetch('/api/content');
+                const data = await response.json();
+                
+                const contentList = document.getElementById('content-list');
+                
+                if (data.content.length === 0) {
+                    contentList.innerHTML = '<div class="empty-state">No content created yet. Use the form to create your first content piece.</div>';
+                    return;
+                }
+                
+                contentList.innerHTML = data.content.map(content => `
+                    <div class="content-item">
+                        <div class="item-header">
+                            <div class="item-title">${content.title}</div>
+                            <span class="status-badge status-${content.status}">${content.status.toUpperCase()}</span>
+                        </div>
+                        <div class="item-meta">
+                            Platform: ${content.platform} • Created: ${new Date(content.created_at).toLocaleDateString()}
+                            ${content.scheduled_date ? ` • Scheduled: ${new Date(content.scheduled_date).toLocaleDateString()}` : ''}
+                        </div>
+                        <div style="margin: 1rem 0;">${content.body.substring(0, 100)}${content.body.length > 100 ? '...' : ''}</div>
+                        ${content.hashtags ? `<div style="color: #ff6b35; font-size: 0.9rem;">${content.hashtags}</div>` : ''}
+                        <div class="item-actions">
+                            <button class="btn btn-small" onclick="editContent('${content.id}')">Edit</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteContent('${content.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading content:', error);
+            }
+        }
+
+        async function deleteContent(contentId) {
+            if (confirm('Delete this content?')) {
+                try {
+                    await fetch('/api/content', {
+                        method: 'DELETE',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({id: contentId})
+                    });
+                    loadContent();
+                } catch (error) {
+                    console.error('Error deleting content:', error);
+                }
+            }
+        }
+
+        // Calendar Management
+        document.getElementById('calendar-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const eventData = {
+                title: document.getElementById('event-title').value,
+                date: document.getElementById('event-date').value,
+                category: document.getElementById('event-category').value,
+                description: document.getElementById('event-description').value,
+                assignees: document.getElementById('event-assignees').value.split(',').map(s => s.trim()).filter(s => s)
+            };
+            
+            try {
+                const response = await fetch('/api/calendar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(eventData)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('calendar-form').reset();
+                    loadCalendar();
+                }
+            } catch (error) {
+                console.error('Error creating event:', error);
+            }
+        });
+
+        async function loadCalendar() {
+            try {
+                const response = await fetch('/api/calendar');
+                const data = await response.json();
+                
+                // Load deliverable tracking data
+                const trackingResponse = await fetch('/api/deliverables/status');
+                const trackingData = await trackingResponse.json();
+                deliverableTracking = trackingData.tracking || {};
+                
+                const eventsContainer = document.getElementById('calendar-events');
+                
+                // Combine events and milestones
+                const events = [...data.events, ...data.milestones];
+                
+                // Filter by current view
+                let filteredEvents = events;
+                if (currentCalendarView !== 'all') {
+                    if (currentCalendarView === '7-day') {
+                        const sevenDaysFromNow = new Date();
+                        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+                        filteredEvents = events.filter(event => {
+                            const eventDate = new Date(event.date);
+                            const today = new Date();
+                            return eventDate >= today && eventDate <= sevenDaysFromNow;
+                        });
+                    } else {
+                        filteredEvents = events.filter(event => 
+                            event.type === currentCalendarView || event.category === currentCalendarView
+                        );
+                    }
+                }
+                
+                // Group events by type
+                const groupedEvents = {};
+                filteredEvents.forEach(event => {
+                    let groupKey = event.type || 'custom';
+                    if (event.type && event.type.startsWith('hvd-')) {
+                        groupKey = event.type;
+                    } else if (event.type === 'cultural') {
+                        groupKey = 'cultural';
+                    }
+                    
+                    if (!groupedEvents[groupKey]) {
+                        groupedEvents[groupKey] = [];
+                    }
+                    groupedEvents[groupKey].push(event);
+                });
+                
+                // Generate HTML for each group
+                let html = '';
+                const groupTitles = {
+                    'cultural': 'Streetwear Cultural Moments',
+                    'hvd-phase1': 'High Voltage Digital - Phase 1 ($4,000/month)',
+                    'hvd-phase2': 'High Voltage Digital - Phase 2 ($7,500/month)', 
+                    'hvd-phase3': 'High Voltage Digital - Phase 3 ($10,000/month)',
+                    '7-day': 'Daily Goals',
+                    'custom': 'Custom Events'
+                };
+                
+                Object.keys(groupedEvents).sort().forEach(groupKey => {
+                    const groupTitle = groupTitles[groupKey] || groupKey.toUpperCase();
+                    const groupEvents = groupedEvents[groupKey];
+                    
+                    html += `<div class="milestone-section">
+                        <div class="milestone-type-header">
+                            ${groupTitle}
+                            <span class="milestone-count">${groupEvents.length}</span>
+                        </div>`;
+                    
+                    groupEvents.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(event => {
+                        const eventDate = new Date(event.date);
+                        const isPast = eventDate < new Date();
+                        const eventId = event.id || `${event.type}_${event.date}_${event.title.replace(/\s+/g, '_')}`;
+                        const trackingInfo = deliverableTracking[eventId] || {};
+                        
+                        html += `<div class="milestone-item ${event.type || ''}" data-event-id="${eventId}">
+                            <div class="milestone-header">
+                                <div>
+                                    <div class="milestone-title">${event.title}</div>
+                                    <div class="milestone-date">
+                                        📅 ${eventDate.toLocaleDateString('en-US', { 
+                                            weekday: 'short', 
+                                            year: 'numeric', 
+                                            month: 'short', 
+                                            day: 'numeric' 
+                                        })}
+                                        ${isPast ? ' (Past)' : ''}
+                                    </div>
+                                    <div>
+                                        <span class="milestone-category ${event.category || event.type}">${event.category || event.type}</span>
+                                        ${event.assignees && event.assignees.length ? `<span class="milestone-category">👥 ${event.assignees.join(', ')}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin: 1rem 0;">${event.description || ''}</div>
+                            
+                            ${(event.type && event.type.startsWith('hvd-')) ? `
+                                <div class="deliverable-status">
+                                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Deliverable Status:</div>
+                                    <div class="status-selector">
+                                        <button class="status-btn pending ${trackingInfo.status === 'pending' || !trackingInfo.status ? 'active' : ''}" 
+                                                onclick="updateDeliverableStatus('${eventId}', 'pending')">📋 Pending</button>
+                                        <button class="status-btn in-progress ${trackingInfo.status === 'in_progress' ? 'active' : ''}" 
+                                                onclick="updateDeliverableStatus('${eventId}', 'in_progress')">⏳ In Progress</button>
+                                        <button class="status-btn completed ${trackingInfo.status === 'completed' ? 'active' : ''}" 
+                                                onclick="updateDeliverableStatus('${eventId}', 'completed')">✅ Completed</button>
+                                        <button class="status-btn approved ${trackingInfo.status === 'approved' ? 'active' : ''}" 
+                                                onclick="updateDeliverableStatus('${eventId}', 'approved')">🎯 Approved</button>
+                                    </div>
+                                    ${trackingInfo.notes ? `<div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">📝 ${trackingInfo.notes}</div>` : ''}
+                                    ${trackingInfo.updated_at ? `<div style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.6;">Last updated: ${new Date(trackingInfo.updated_at).toLocaleDateString()}</div>` : ''}
+                                </div>
+                            ` : ''}
+                            
+                            ${event.cultural_moment ? `
+                                <div class="cultural-moment">
+                                    <strong>Cultural Context:</strong> ${event.cultural_moment}
+                                </div>
+                            ` : ''}
+                            
+                            ${!event.auto_generated ? `
+                                <div style="margin-top: 1rem;">
+                                    <button class="btn btn-small btn-danger" onclick="deleteEvent('${event.id}')">Delete</button>
+                                </div>
+                            ` : ''}
+                        </div>`;
+                    });
+                    
+                    html += '</div>';
+                });
+                
+                if (html === '') {
+                    html = '<div class="empty-state">No events for this view. Add events using the form or switch views.</div>';
+                }
+                
+                eventsContainer.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading calendar:', error);
+            }
+        }
+
+        function showCalendarView(view) {
+            currentCalendarView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadCalendar();
+        }
+
+        async function updateDeliverableStatus(eventId, status) {
+            try {
+                const notes = prompt(`Add notes for this ${status} status (optional):`);
+                
+                const response = await fetch('/api/deliverables/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: eventId,
+                        status: status,
+                        notes: notes || '',
+                        updated_by: 'User'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    loadCalendar(); // Reload to show updated status
+                }
+            } catch (error) {
+                console.error('Error updating deliverable status:', error);
+            }
+        }
+
+        async function deleteEvent(eventId) {
+            if (confirm('Delete this event?')) {
+                try {
+                    await fetch('/api/calendar', {
+                        method: 'DELETE',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({id: eventId})
+                    });
+                    loadCalendar();
+                } catch (error) {
+                    console.error('Error deleting event:', error);
+                }
+            }
+        }
+
+        // Cultural Intelligence
+        async function loadCulturalInsights() {
+            try {
+                const response = await fetch('/api/cultural-insights');
+                const data = await response.json();
+                
+                const container = document.getElementById('cultural-insights-grid');
+                
+                container.innerHTML = data.cultural_insights.map(insight => `
+                    <div class="insight-card">
+                        <div class="insight-trend">${insight.trend}</div>
+                        <span class="insight-impact ${insight.impact.toLowerCase()}">${insight.impact} Impact</span>
+                        <div style="margin: 1rem 0; line-height: 1.6;">${insight.description}</div>
+                        <div style="font-weight: 600; color: #4ecdc4; margin-bottom: 0.5rem;">💡 Opportunity:</div>
+                        <div style="margin-bottom: 1rem;">${insight.opportunity}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 0.5rem;">⏰ Timeline: ${insight.timeline}</div>
+                        ${insight.cultural_moment ? `
+                            <div class="cultural-moment">
+                                ${insight.cultural_moment}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading cultural insights:', error);
+            }
+        }
+
+        // Asset Management
+        async function loadAssets() {
+            const searchQuery = document.getElementById('asset-search')?.value || '';
+            const categoryFilter = document.getElementById('category-filter')?.value || '';
+            const typeFilter = document.getElementById('type-filter')?.value || '';
+            
+            try {
+                const params = new URLSearchParams({
+                    search: searchQuery,
+                    category: categoryFilter,
+                    type: typeFilter
+                });
+                
+                const response = await fetch(`/api/assets?${params}`);
+                const data = await response.json();
+                
+                // Populate category filter if empty
+                const categorySelect = document.getElementById('category-filter');
+                if (categorySelect && categorySelect.children.length === 1) {
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat;
+                        option.textContent = cat;
+                        categorySelect.appendChild(option);
+                    });
+                }
+                
+                const assetGrid = document.getElementById('asset-grid');
+                
+                if (data.assets.length === 0) {
+                    assetGrid.innerHTML = '<div class="empty-state">No assets found. Upload files to build your asset library.</div>';
+                    return;
+                }
+                
+                assetGrid.innerHTML = data.assets.map(asset => `
+                    <div class="asset-card">
+                        <div class="asset-thumbnail">
+                            ${asset.thumbnail ? 
+                                `<img src="/api/assets/thumbnail/${asset.thumbnail}" alt="${asset.filename}">` :
+                                `<div style="font-size: 2rem; opacity: 0.5;">📄</div>`
+                            }
+                        </div>
+                        <div class="asset-info">
+                            <div class="asset-name">${asset.filename}</div>
+                            <div class="asset-meta">
+                                ${(asset.size / 1024).toFixed(1)} KB • ${asset.file_type}
+                                <br>Uploaded: ${new Date(asset.created_at).toLocaleDateString()}
+                                <br>By: ${asset.uploader}
+                                ${asset.download_count ? `<br>Downloads: ${asset.download_count}` : ''}
+                            </div>
+                            ${asset.description ? `<div style="font-size: 0.9rem; margin: 0.5rem 0;">${asset.description}</div>` : ''}
+                            ${asset.tags && asset.tags.length ? `
+                                <div class="asset-tags">
+                                    ${asset.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="asset-actions">
+                            <a href="/api/assets/download/${asset.filename}" class="btn btn-small">Download</a>
+                            <button class="btn btn-small btn-danger" onclick="deleteAsset('${asset.filename}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading assets:', error);
+            }
+        }
+
+        // Asset upload
+        function showUploadModal() {
+            document.getElementById('upload-modal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Upload zone functionality
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+
+        if (uploadZone && fileInput) {
+            uploadZone.addEventListener('click', () => fileInput.click());
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                handleFileUpload(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFileUpload(e.target.files);
+            });
+        }
+
+        document.getElementById('asset-upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const files = fileInput.files;
+            if (files.length > 0) {
+                handleFileUpload(files);
+            }
+        });
+
+        async function handleFileUpload(files) {
+            const category = document.getElementById('upload-category').value;
+            const description = document.getElementById('upload-description').value;
+            const tags = document.getElementById('upload-tags').value;
+            const uploader = document.getElementById('upload-uploader').value || 'Unknown';
+            
+            for (let file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('category', category);
+                formData.append('description', description);
+                formData.append('tags', tags);
+                formData.append('uploader', uploader);
+                
+                try {
+                    const response = await fetch('/api/assets', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        console.log('Uploaded:', file.name);
+                    }
+                } catch (error) {
+                    console.error('Error uploading:', error);
+                }
+            }
+            
+            closeModal('upload-modal');
+            document.getElementById('asset-upload-form').reset();
+            loadAssets();
+        }
+
+        async function deleteAsset(filename) {
+            if (confirm('Delete this asset?')) {
+                try {
+                    await fetch(`/api/assets/delete/${filename}`, {
+                        method: 'DELETE'
+                    });
+                    loadAssets();
+                } catch (error) {
+                    console.error('Error deleting asset:', error);
+                }
+            }
+        }
+
+        // Export functions
+        function exportAnalytics() {
+            window.open('/api/export/analytics', '_blank');
+        }
+
+        function exportContent() {
+            alert('Content export feature coming soon');
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            loadCulturalInsights(); // Load cultural insights on startup
+            
+            // Setup asset search listeners
+            const searchInput = document.getElementById('asset-search');
+            const categoryFilter = document.getElementById('category-filter');
+            const typeFilter = document.getElementById('type-filter');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(loadAssets, 300));
+            }
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', loadAssets);
+            }
+            if (typeFilter) {
+                typeFilter.addEventListener('change', loadAssets);
+            }
+        });
+
+        // Initialize
+        initializeDashboard();
+    </script>
 </body>
 </html>
