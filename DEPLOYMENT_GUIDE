@@ -1,0 +1,218 @@
+# Crooks & Castles Intelligence Platform - 11 Brand Competitive Focus
+
+## 🚀 Quick Deployment to Render
+
+### File Structure
+```
+your-repo/
+├── app.py                           ← Enterprise Intelligence Platform (11-brand focus)
+├── requirements.txt                 ← Python dependencies
+├── Procfile                        ← Render deployment config
+├── .gitignore                      ← Keeps data files private
+├── templates/
+│   └── enterprise_dashboard.html   ← Professional dashboard interface
+└── DEPLOYMENT_GUIDE.md            ← This guide
+```
+
+### 1. Clear Your Repository & Deploy
+```bash
+# Remove all existing files (keep any .jsonl data files you want)
+rm -rf * .* 2>/dev/null || true
+
+# Add these 6 new files to your repo
+# Create templates folder: mkdir templates
+
+# Commit and push
+git add .
+git commit -m "Deploy 11-brand competitive intelligence platform"
+git push
+
+# Render auto-deploys from Procfile
+```
+
+---
+
+## 🏆 Your 11 Tracked Competitors
+
+### **Luxury Tier (Aspirational Score 9+)**
+- **Supreme** (9.8) - Luxury streetwear leader
+- **Essentials by Fear of God** (9.1) - High-end accessible luxury
+
+### **Established Tier (Score 7-8.5)**
+- **Stussy** (8.4) - Classic streetwear brand
+- **LRG** (7.1) - Lifted Research Group
+- **Diamond Supply Co.** (6.9) - Skatewear heritage
+
+### **Mid-Tier (Score 6-7)**
+- **Smoke Rise** (6.8) - Contemporary streetwear
+- **Reason Clothing** (6.4) - Urban fashion
+
+### **Emerging Tier (Score 7-8)**
+- **Hellstar** (7.8) - Rising streetwear brand
+- **Godspeed** (7.2) - Emerging competitor
+
+### **Legacy Tier (Score 5-6)**
+- **Ed Hardy** (5.8) - Vintage tattoo aesthetic
+- **Von Dutch** (6.1) - Y2K revival brand
+
+---
+
+## 📊 Platform Intelligence Features
+
+### 11-Brand Competitive Analysis
+- **Real-time ranking** among your tracked competitors
+- **Tier-based performance** comparison
+- **Head-to-head analysis** with any brand
+- **Market positioning** within competitive set
+
+### Data Sources for Your Apify Scrapers
+Upload your existing Apify data in this structure:
+```
+data_sources/
+├── instagram/
+│   ├── supreme_instagram_data.jsonl
+│   ├── stussy_instagram_data.jsonl
+│   ├── hellstar_instagram_data.jsonl
+│   ├── godspeed_instagram_data.jsonl
+│   ├── fear_of_god_essentials_instagram_data.jsonl
+│   ├── smoke_rise_instagram_data.jsonl
+│   ├── reason_clothing_instagram_data.jsonl
+│   ├── lrg_instagram_data.jsonl
+│   ├── diamond_supply_instagram_data.jsonl
+│   ├── ed_hardy_instagram_data.jsonl
+│   └── von_dutch_instagram_data.jsonl
+├── tiktok/
+│   ├── supreme_tiktok_data.jsonl
+│   ├── stussy_tiktok_data.jsonl
+│   └── [same pattern for all 11 brands]
+└── hashtags/
+    └── streetwear_hashtag_data.jsonl
+```
+
+### Enhanced Intelligence Features
+
+#### Brand-Specific Analysis
+- **Head-to-head comparisons** with any of the 11 brands
+- **Tier-based competitive positioning** analysis
+- **Market ranking** within your competitive set
+- **Strategic opportunities** against specific competitors
+
+#### Hashtag Intelligence
+- **Streetwear hashtag performance** across all competitors
+- **Opportunity hashtags** with low competition/high engagement
+- **Trend detection** in streetwear community conversations
+- **Content gap analysis** for hashtag strategy
+
+#### Advanced Competitive Features
+- **Aspirational scoring** (Supreme: 9.8, Essentials: 9.1, etc.)
+- **Posting frequency analysis** vs each competitor
+- **Engagement rate benchmarking** against tier averages
+- **Content theme analysis** to find gaps
+- **Viral campaign detection** with replication insights
+
+---
+
+## 🎯 What This Shows With Your Data
+
+### **Competitive Intelligence Dashboard:**
+- "Crooks & Castles estimated #6 of 11 tracked brands"
+- "Supreme posts 8.2x/week vs Crooks 3.2x/week - visibility opportunity"
+- "Hellstar engagement rate: 2.1% vs Crooks estimated 2.8% - advantage"
+- "Tier analysis: Mid-tier average 45.2 social score, Crooks estimated 42.0"
+
+### **Hashtag Opportunities:**
+- "#vintagestreetwe­ar: 4,200 avg engagement, only 2/11 brands using"
+- "#sustainablefashion: High engagement, low competitor saturation"
+- "#streetweararchive: Trending with 67% weekly growth"
+
+### **Strategic Insights:**
+- "Ed Hardy relies on legacy appeal - modernization opportunity"
+- "Smoke Rise posting frequency declining - content volume advantage"
+- "Supreme luxury pricing - accessible luxury positioning gap"
+
+---
+
+## 📅 Campaign Planning Features
+
+### Multi-View Calendar System
+- **7-day detailed view** with drag-and-drop content planning
+- **30/60/90-day strategic** overview with cultural moments
+- **Asset mapping** with flexible tagging (not requiring all assets tagged)
+- **Cultural moment auto-detection** for streetwear/hip-hop relevancy
+
+### Cultural Intelligence
+- **Fashion week timing** (NYFW, Paris, Milan, London)
+- **Music release windows** (album drops, festival seasons)
+- **Streetwear drop patterns** (Supreme Thursdays, seasonal releases)
+- **Cultural events** (Coachella, Rolling Loud, Complex Con)
+
+---
+
+## 🤝 Agency Collaboration (High Voltage Digital)
+
+### Shared Workflows
+- **Campaign calendar** coordination
+- **Asset permissions** and approval workflows
+- **Performance tracking** with real data integration
+- **Communication logs** and project management
+
+### Weekly Data Refresh
+- **Manual refresh** via dashboard button
+- **Automated detection** when new Apify files uploaded
+- **Single source of truth** for all stakeholders
+- **Export capabilities** for presentations and reporting
+
+---
+
+## 💡 Flexible Data Organization
+
+The platform **auto-detects** your current Apify file structure:
+- Works with **any naming convention**
+- Handles **JSON, JSONL, or CSV** formats
+- Processes **combined or separate** files per brand/platform
+- **No reorganization required** - just upload your existing data
+
+---
+
+## 🎪 Business Impact
+
+### **Content Strategy**
+- **Content gap identification** against 11 specific competitors
+- **Optimal posting timing** based on competitive analysis
+- **Hashtag strategy** with low-competition opportunities
+- **Cultural moment timing** for maximum relevance
+
+### **Competitive Advantage**
+- **Real-time positioning** within your exact competitive set
+- **Performance benchmarking** against tier-specific averages
+- **Strategic opportunities** against underperforming competitors
+- **Market share insights** within streetwear segment
+
+### **Revenue Growth**
+- **Pricing intelligence** from luxury vs mid-tier positioning
+- **Viral campaign replication** from successful competitor content
+- **Cultural timing** for product launches and collaborations
+- **Tier leadership** opportunities in mid-tier/established segments
+
+---
+
+## 🔄 Weekly Workflow with 11-Brand Focus
+
+1. **Monday:** Upload fresh Apify data for all 11 brands
+2. **Tuesday:** Review competitive rankings and tier analysis
+3. **Wednesday:** Plan content based on competitor gaps and cultural moments
+4. **Thursday:** Coordinate with High Voltage Digital on campaign assets
+5. **Friday:** Export competitive reports and schedule next week's content
+6. **Weekend:** Monitor for viral campaigns and drop announcements
+
+**This platform transforms your 11-brand competitive tracking from manual analysis into automated strategic advantage.**
+
+---
+
+## ✅ Ready to Deploy!
+
+**Your enterprise intelligence platform is ready for immediate deployment to Render.** 
+
+Upload your existing Apify data in any format - the platform will automatically detect and process it for sophisticated competitive intelligence against your exact 11 tracked competitors.
+
+🎯 **Deploy now and start gaining competitive advantage!**
