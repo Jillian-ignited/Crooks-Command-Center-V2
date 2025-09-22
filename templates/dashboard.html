@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crooks & Castles - Command Center V2</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -30,48 +28,49 @@
             z-index: 1000;
         }
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 900;
+        .header h1 {
             color: #ff6b35;
+            font-size: 1.8rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        .nav-tabs {
+        .tabs {
             display: flex;
-            gap: 1rem;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
-        .nav-tab {
-            padding: 0.7rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: #333;
+            color: #fff;
             border: none;
             border-radius: 8px;
-            color: #ffffff;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 600;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
         }
 
-        .nav-tab.active {
+        .tab:hover {
             background: #ff6b35;
-            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
         }
 
-        .nav-tab:hover {
-            background: rgba(255, 107, 53, 0.7);
+        .tab.active {
+            background: #ff6b35;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
         }
 
-        .container {
+        .content {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
@@ -79,476 +78,355 @@
 
         .tab-content {
             display: none;
+            animation: fadeIn 0.5s ease-in;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        .dashboard-grid {
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             margin-bottom: 2rem;
         }
 
-        .competitive-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .widget {
+        .card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease;
+            padding: 2rem;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            transition: all 0.3s ease;
         }
 
-        .widget:hover {
+        .card:hover {
             transform: translateY(-5px);
-            border-color: #ff6b35;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+            border-color: rgba(255, 107, 53, 0.5);
         }
 
-        .widget-header {
+        .card h3 {
+            color: #ff6b35;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .metric {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin: 0.75rem 0;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .widget-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #ff6b35;
-            margin-bottom: 0.5rem;
+        .metric:last-child {
+            border-bottom: none;
         }
 
         .metric-value {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: #ffffff;
-            line-height: 1;
-        }
-
-        .metric-label {
-            font-size: 0.9rem;
-            color: #aaa;
-            margin-top: 0.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
+            font-weight: 700;
+            font-size: 1.2rem;
             color: #ff6b35;
-            font-weight: 600;
         }
 
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.1rem;
+            color: #ccc;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ff6b35;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+            padding: 1rem;
             border-radius: 8px;
-            color: #ffffff;
-            font-size: 1rem;
+            margin: 1rem 0;
         }
 
-        .form-control:focus {
-            outline: none;
-            border-color: #ff6b35;
-            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        .success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            color: #51cf66;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
             background: #ff6b35;
-            color: #000;
+            color: white;
             border: none;
+            padding: 0.75rem 1.5rem;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .btn:hover {
             background: #e55a2b;
             transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .competitive-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .competitive-table th,
-        .competitive-table td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .competitive-table th {
-            color: #ff6b35;
-            font-weight: 700;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-        }
-
-        .competitor-tier {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .tier-luxury { background: #ffd700; color: #000; }
-        .tier-premium { background: #c0c0c0; color: #000; }
-        .tier-established { background: #cd7f32; color: #fff; }
-        .tier-mid-tier { background: #4CAF50; color: #fff; }
-        .tier-emerging { background: #2196F3; color: #fff; }
-        .tier-legacy { background: #9C27B0; color: #fff; }
-
-        .opportunity-item {
-            background: rgba(255, 107, 53, 0.1);
-            border-left: 4px solid #ff6b35;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            border-radius: 0 8px 8px 0;
-        }
-
-        .opportunity-title {
-            font-weight: 600;
-            color: #ff6b35;
-            margin-bottom: 0.5rem;
-        }
-
-        .hashtag-cloud {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .hashtag-tag {
-            background: rgba(255, 107, 53, 0.2);
-            color: #ff6b35;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .chart-container {
-            height: 300px;
-            margin-top: 1rem;
-        }
-
-        .insight-card {
-            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
-            border: 1px solid rgba(255, 107, 53, 0.3);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-        }
-
-        .insight-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #ff6b35;
-            margin-bottom: 0.5rem;
-        }
-
-        .no-data {
-            text-align: center;
-            color: #aaa;
-            font-style: italic;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
-
-        .performance-badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin: 0.2rem;
-        }
-
-        .badge-high { background: #4CAF50; color: white; }
-        .badge-medium { background: #FF9800; color: white; }
-        .badge-low { background: #f44336; color: white; }
-
-        .competitive-insights {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .loading {
-            text-align: center;
-            color: #aaa;
-            padding: 2rem;
-        }
-
-        .upload-zone {
-            border: 2px dashed #ff6b35;
-            padding: 3rem;
-            text-align: center;
-            border-radius: 12px;
-            margin: 1rem 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upload-zone:hover {
-            background: rgba(255, 107, 53, 0.05);
-            border-color: #e55a2b;
-        }
-
-        .upload-zone.dragover {
-            background: rgba(255, 107, 53, 0.1);
-            border-color: #ff6b35;
-            border-style: solid;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
         }
 
         .asset-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
         }
 
-        .asset-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .asset-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-5px);
-        }
-
-        .asset-icon {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            color: #ff6b35;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 1px;
-            background: #333;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 1rem;
-        }
-
-        .calendar-day {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem 0.5rem;
-            min-height: 100px;
-            position: relative;
-        }
-
-        .calendar-day.other-month {
-            color: #666;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .calendar-event {
-            background: #ff6b35;
-            color: #000;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            margin: 0.25rem 0;
-            cursor: pointer;
-        }
-
-        .deliverable-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            margin: 0.5rem 0;
-        }
-
-        .status-pending { border-left: 4px solid #ff9800; }
-        .status-progress { border-left: 4px solid #2196F3; }
-        .status-completed { border-left: 4px solid #4CAF50; }
-        .status-approved { border-left: 4px solid #ff6b35; }
-
-        .content-item {
+        .asset-card {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
+        }
+
+        .asset-thumbnail {
+            width: 100%;
+            height: 150px;
+            background: #333;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #666;
+            overflow: hidden;
+        }
+
+        .asset-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .calendar-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .calendar-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-btn.active {
+            background: #ff6b35;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #ff6b35;
+            padding: 1.5rem;
             margin: 1rem 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .event-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+
+        .event-title {
+            color: #ff6b35;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .event-meta {
+            color: #ccc;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .hashtag-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .hashtag-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+        }
+
+        .hashtag-tag {
+            color: #ff6b35;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #ff6b35;
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            margin: 2rem 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            background: rgba(255, 107, 53, 0.05);
+            border-color: #e55a2b;
+        }
+
+        .upload-area.dragover {
+            background: rgba(255, 107, 53, 0.1);
+            border-color: #ff6b35;
+        }
+
+        .recommendation-card {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .priority-high {
             border-left: 4px solid #ff6b35;
         }
 
+        .priority-medium {
+            border-left: 4px solid #ffd43b;
+        }
+
+        .priority-low {
+            border-left: 4px solid #51cf66;
+        }
+
         @media (max-width: 768px) {
-            .competitive-grid {
+            .tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .tab {
+                width: 100%;
+                max-width: 200px;
+                text-align: center;
+            }
+            
+            .content {
+                padding: 1rem;
+            }
+            
+            .grid {
                 grid-template-columns: 1fr;
-            }
-            
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .nav-tabs {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-            
-            .nav-tab {
-                padding: 0.5rem 1rem;
-                font-size: 0.9rem;
             }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">Crooks & Castles Command Center V2</div>
-            <nav class="nav-tabs">
-                <button class="nav-tab active" onclick="showTab('overview')">Overview</button>
-                <button class="nav-tab" onclick="showTab('competitive')">Competitive Intelligence</button>
-                <button class="nav-tab" onclick="showTab('analytics')">Analytics</button>
-                <button class="nav-tab" onclick="showTab('calendar')">Strategic Calendar</button>
-                <button class="nav-tab" onclick="showTab('assets')">Asset Library</button>
-                <button class="nav-tab" onclick="showTab('content')">Content Manager</button>
-                <button class="nav-tab" onclick="showTab('cultural')">Cultural Intelligence</button>
-            </nav>
-        </div>
-    </header>
+    <div class="header">
+        <h1>🏰 Crooks & Castles Command Center V2</h1>
+    </div>
 
-    <main class="container">
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('overview')">Overview</button>
+        <button class="tab" onclick="showTab('intelligence')">Competitive Intelligence</button>
+        <button class="tab" onclick="showTab('analytics')">Analytics</button>
+        <button class="tab" onclick="showTab('calendar')">Strategic Calendar</button>
+        <button class="tab" onclick="showTab('assets')">Asset Library</button>
+        <button class="tab" onclick="showTab('content')">Content Manager</button>
+        <button class="tab" onclick="showTab('cultural')">Cultural Intelligence</button>
+    </div>
+
+    <div class="content">
         <!-- Overview Tab -->
         <div id="overview" class="tab-content active">
-            <div class="dashboard-grid">
-                <div class="widget">
-                    <div class="widget-title">Market Position</div>
-                    <div class="metric-value" id="market-position">Loading...</div>
-                    <div class="metric-label">vs. Competitors</div>
-                </div>
-                
-                <div class="widget">
-                    <div class="widget-title">Engagement Performance</div>
-                    <div class="metric-value" id="engagement-performance">Loading...</div>
-                    <div class="metric-label">Average across platforms</div>
-                </div>
-                
-                <div class="widget">
-                    <div class="widget-title">Content Output</div>
-                    <div class="metric-value" id="content-output">Loading...</div>
-                    <div class="metric-label">Posts this month</div>
-                </div>
-                
-                <div class="widget">
-                    <div class="widget-title">HVD Deliverables</div>
-                    <div class="metric-value" id="hvd-status">Phase 1</div>
-                    <div class="metric-label">$4,000/month active</div>
-                </div>
-            </div>
-            
-            <div class="widget">
-                <div class="widget-title">Strategic Overview</div>
-                <div class="competitive-insights">
-                    <div class="insight-card">
-                        <div class="insight-title">Current Focus</div>
-                        <p>Analyzing competitive positioning against 11 key streetwear brands across luxury to emerging tiers. Building comprehensive intelligence platform for strategic advantage.</p>
-                    </div>
-                    <div class="insight-card">
-                        <div class="insight-title">Next Cultural Moment</div>
-                        <p id="next-cultural-moment">Coachella 2025 (April 11-18) - Peak festival fashion and influencer collaboration opportunities.</p>
-                    </div>
-                    <div class="insight-card">
-                        <div class="insight-title">Competitive Advantage</div>
-                        <p>Real-time competitive intelligence identifies market gaps, optimal timing, and partnership opportunities competitors are missing.</p>
-                    </div>
+            <div class="loading" id="overview-loading">Loading dashboard overview...</div>
+            <div id="overview-content" style="display: none;">
+                <div class="grid" id="overview-grid">
+                    <!-- Content will be loaded dynamically -->
                 </div>
             </div>
         </div>
 
         <!-- Competitive Intelligence Tab -->
-        <div id="competitive" class="tab-content">
-            <div class="competitive-grid">
-                <div>
-                    <div class="widget">
-                        <div class="widget-title">Competitive Performance Ranking</div>
-                        <div class="loading" id="competitive-loading">Loading competitive analysis...</div>
-                        <table class="competitive-table" id="competitive-table" style="display: none;">
-                            <thead>
-                                <tr>
-                                    <th>Brand</th>
-                                    <th>Tier</th>
-                                    <th>Avg Engagement</th>
-                                    <th>Content Volume</th>
-                                    <th>Performance</th>
-                                    <th>Trend</th>
-                                </tr>
-                            </thead>
-                            <tbody id="competitive-table-body">
-                            </tbody>
-                        </table>
+        <div id="intelligence" class="tab-content">
+            <div class="loading" id="intelligence-loading">Analyzing competitive intelligence...</div>
+            <div id="intelligence-content" style="display: none;">
+                <div class="grid">
+                    <div class="card">
+                        <h3>📊 Analysis Summary</h3>
+                        <div id="intelligence-summary">
+                            <!-- Content loaded via API -->
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>🎯 Market Position</h3>
+                        <div id="market-position">
+                            <!-- Content loaded via API -->
+                        </div>
                     </div>
                 </div>
                 
-                <div>
-                    <div class="widget">
-                        <div class="widget-title">Market Opportunities</div>
-                        <div id="competitive-opportunities">
-                            <div class="opportunity-item">
-                                <div class="opportunity-title">Data Setup Required</div>
-                                <p>Upload competitor social media data to competitive_data/social_scrapes/ folder for analysis.</p>
-                                <p><strong>Expected files:</strong> supreme_instagram.jsonl, stussy_tiktok.jsonl, etc.</p>
-                            </div>
-                            <div class="opportunity-item">
-                                <div class="opportunity-title">Apify Integration Ready</div>
-                                <p>Your Apify scraping setup will automatically populate competitive intelligence once data flows in.</p>
-                            </div>
-                        </div>
+                <div class="card">
+                    <h3>📈 Top Trending Hashtags</h3>
+                    <div class="hashtag-grid" id="hashtag-analysis">
+                        <!-- Content loaded via API -->
                     </div>
-                    
-                    <div class="widget">
-                        <div class="widget-title">Competitive Insights</div>
-                        <div class="insight-card">
-                            <div class="insight-title">Monitoring 11 Key Competitors</div>
-                            <p>Supreme, Stussy, Hellstar, Godspeed, Fear of God Essentials, Smoke Rise, Reason Clothing, LRG, Diamond Supply Co., Ed Hardy, Von Dutch</p>
-                        </div>
-                        <div class="insight-card">
-                            <div class="insight-title">Intelligence Layers</div>
-                            <p>Social performance, content strategy, hashtag gaps, posting patterns, engagement trends, market positioning</p>
-                        </div>
+                </div>
+                
+                <div class="card">
+                    <h3>🏆 Strategic Recommendations</h3>
+                    <div id="recommendations">
+                        <!-- Content loaded via API -->
                     </div>
                 </div>
             </div>
@@ -556,845 +434,692 @@
 
         <!-- Analytics Tab -->
         <div id="analytics" class="tab-content">
-            <div class="dashboard-grid">
-                <div class="widget">
-                    <div class="widget-title">Platform Performance</div>
-                    <div id="platform-chart" class="chart-container">
-                        <div class="no-data" id="platform-data-status">Connect your instagram_data.jsonl and tiktok_data.jsonl files for analytics</div>
+            <div class="loading" id="analytics-loading">Processing analytics data...</div>
+            <div id="analytics-content" style="display: none;">
+                <div class="grid">
+                    <div class="card">
+                        <h3>📈 Engagement Metrics</h3>
+                        <div id="engagement-metrics">
+                            <!-- Content loaded via API -->
+                        </div>
                     </div>
-                </div>
-                
-                <div class="widget">
-                    <div class="widget-title">Engagement Overview</div>
-                    <div class="metric-value" id="total-engagement">0</div>
-                    <div class="metric-label">Total Posts Analyzed</div>
-                    <div style="margin-top: 1rem;">
-                        <button class="btn" onclick="loadAnalyticsData()">Refresh Analytics</button>
-                        <button class="btn btn-secondary" onclick="exportAnalytics()">Export Data</button>
+                    <div class="card">
+                        <h3>🎭 Cultural Moments</h3>
+                        <div id="cultural-moments">
+                            <!-- Content loaded via API -->
+                        </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="widget">
-                <div class="widget-title">Content Performance Analysis</div>
-                <div id="content-analysis">
-                    <div class="loading">Upload your social media data files to analyze content performance</div>
                 </div>
             </div>
         </div>
 
         <!-- Strategic Calendar Tab -->
         <div id="calendar" class="tab-content">
-            <div class="competitive-grid">
-                <div class="widget">
-                    <div class="widget-title">Streetwear Cultural Calendar</div>
-                    <div class="widget-header">
-                        <button class="btn" onclick="showAddEventForm()">Add Custom Event</button>
+            <div class="calendar-controls">
+                <button class="calendar-btn" onclick="loadCalendarView('7')">7 Days</button>
+                <button class="calendar-btn active" onclick="loadCalendarView('30')">30 Days</button>
+                <button class="calendar-btn" onclick="loadCalendarView('60')">60 Days</button>
+                <button class="calendar-btn" onclick="loadCalendarView('90')">90+ Days</button>
+            </div>
+            
+            <div class="loading" id="calendar-loading">Loading strategic calendar...</div>
+            <div id="calendar-content" style="display: none;">
+                <div class="grid">
+                    <div class="card">
+                        <h3>📅 Calendar Summary</h3>
+                        <div id="calendar-summary">
+                            <!-- Content loaded via API -->
+                        </div>
                     </div>
-                    <div id="cultural-calendar">
-                        <div class="loading">Loading cultural moments and events...</div>
+                    <div class="card">
+                        <h3>💰 Budget Allocation</h3>
+                        <div id="budget-allocation">
+                            <!-- Content loaded via API -->
+                        </div>
                     </div>
                 </div>
                 
-                <div class="widget">
-                    <div class="widget-title">High Voltage Digital Deliverables</div>
-                    <div class="widget-header">
-                        <select id="phase-filter" class="form-control" onchange="filterDeliverables(this.value)" style="width: auto;">
-                            <option value="all">All Phases</option>
-                            <option value="phase1">Phase 1 - $4K</option>
-                            <option value="phase2">Phase 2 - $7.5K</option>
-                            <option value="phase3">Phase 3 - $10K</option>
-                        </select>
+                <div class="card">
+                    <h3>🎯 Upcoming Events</h3>
+                    <div id="calendar-events">
+                        <!-- Content loaded via API -->
                     </div>
-                    <div id="hvd-deliverables">
-                        <div class="loading">Loading deliverables...</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Add Event Modal -->
-            <div id="add-event-form" style="display: none;">
-                <div class="widget">
-                    <div class="widget-title">Add Strategic Event</div>
-                    <form onsubmit="addCalendarEvent(event)">
-                        <div class="form-group">
-                            <label>Event Title</label>
-                            <input type="text" class="form-control" id="event-title" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" class="form-control" id="event-date" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select class="form-control" id="event-category">
-                                <option value="campaign">Campaign</option>
-                                <option value="launch">Product Launch</option>
-                                <option value="meeting">Team Meeting</option>
-                                <option value="cultural">Cultural Moment</option>
-                                <option value="analysis">Performance Analysis</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Description</label>
-                            <textarea class="form-control" id="event-description" rows="3"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Assignee</label>
-                            <input type="text" class="form-control" id="event-assignee" placeholder="Team member or agency">
-                        </div>
-                        <div>
-                            <button type="submit" class="btn">Add Event</button>
-                            <button type="button" class="btn btn-secondary" onclick="hideAddEventForm()">Cancel</button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>
 
         <!-- Asset Library Tab -->
         <div id="assets" class="tab-content">
-            <div class="widget">
-                <div class="widget-title">Asset Library</div>
-                <div class="widget-header">
-                    <button class="btn" onclick="document.getElementById('file-input').click()">Upload Files</button>
-                    <input type="file" id="file-input" multiple accept=".png,.jpg,.jpeg,.gif,.mp4,.mov,.pdf,.psd,.ai,.sketch,.fig" style="display: none;" onchange="uploadFiles(this.files)">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <h3>📤 Upload Assets</h3>
+                <p>Click here or drag and drop files to upload</p>
+                <input type="file" id="fileInput" multiple style="display: none;" onchange="uploadFiles(this.files)">
+            </div>
+            
+            <div class="loading" id="assets-loading">Loading asset library...</div>
+            <div id="assets-content" style="display: none;">
+                <div class="grid">
+                    <div class="card">
+                        <h3>📊 Asset Statistics</h3>
+                        <div id="asset-stats">
+                            <!-- Content loaded via API -->
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>📁 Categories</h3>
+                        <div id="asset-categories">
+                            <!-- Content loaded via API -->
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="upload-zone" onclick="document.getElementById('file-input').click()">
-                    <div class="asset-icon">📁</div>
-                    <p>Drag & drop files here or click to browse</p>
-                    <p style="color: #aaa; font-size: 0.9rem;">Supports: Images, Videos, Documents, Design Files</p>
-                </div>
-                
-                <div id="asset-library">
-                    <div class="loading">Loading asset library...</div>
+                <div class="asset-grid" id="asset-grid">
+                    <!-- Content loaded via API -->
                 </div>
             </div>
         </div>
 
         <!-- Content Manager Tab -->
         <div id="content" class="tab-content">
-            <div class="competitive-grid">
-                <div class="widget">
-                    <div class="widget-title">Create Content</div>
-                    <form onsubmit="createContent(event)">
-                        <div class="form-group">
-                            <label>Content Title</label>
-                            <input type="text" class="form-control" id="content-title" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Description/Caption</label>
-                            <textarea class="form-control" id="content-description" rows="3" placeholder="Content description or caption"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Platform</label>
-                            <select class="form-control" id="content-platform">
-                                <option value="instagram">Instagram</option>
-                                <option value="tiktok">TikTok</option>
-                                <option value="both">Both Platforms</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select class="form-control" id="content-status">
-                                <option value="draft">Draft</option>
-                                <option value="scheduled">Scheduled</option>
-                                <option value="published">Published</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Scheduled Date (Optional)</label>
-                            <input type="date" class="form-control" id="content-scheduled-date">
-                        </div>
-                        <div class="form-group">
-                            <label>Hashtags</label>
-                            <input type="text" class="form-control" id="content-hashtags" placeholder="#streetwear #fashion #crooksandcastles">
-                        </div>
-                        <button type="submit" class="btn">Create Content</button>
-                    </form>
-                </div>
-                
-                <div class="widget">
-                    <div class="widget-title">Content Library</div>
-                    <div class="widget-header">
-                        <button class="btn btn-secondary" onclick="loadContentLibrary()">Refresh</button>
-                    </div>
-                    <div id="content-library">
-                        <div class="loading">Loading content library...</div>
-                    </div>
+            <div class="loading" id="content-loading">Loading content manager...</div>
+            <div id="content-content" style="display: none;">
+                <div class="card">
+                    <h3>📝 Content Planning</h3>
+                    <p>Content management features coming soon...</p>
                 </div>
             </div>
         </div>
 
         <!-- Cultural Intelligence Tab -->
         <div id="cultural" class="tab-content">
-            <div class="competitive-grid">
-                <div class="widget">
-                    <div class="widget-title">Current Streetwear Trends</div>
-                    <div id="cultural-trends">
-                        <div class="loading">Analyzing cultural trends...</div>
-                    </div>
-                </div>
-                
-                <div class="widget">
-                    <div class="widget-title">Consumer Behavior Insights</div>
-                    <div id="consumer-insights">
-                        <div class="loading">Processing consumer data...</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="widget">
-                <div class="widget-title">Strategic Cultural Moments</div>
-                <div id="cultural-planning">
-                    <div class="competitive-insights">
-                        <div class="insight-card">
-                            <div class="insight-title">Coachella 2025 (April 11-18)</div>
-                            <p><strong>Opportunity:</strong> Festival capsule collection, influencer partnerships, desert aesthetic content</p>
-                            <p><strong>Strategy:</strong> Partner with micro-influencers attending, create festival-ready fits, leverage FOMO marketing</p>
+            <div class="loading" id="cultural-loading">Analyzing cultural intelligence...</div>
+            <div id="cultural-content" style="display: none;">
+                <div class="grid">
+                    <div class="card">
+                        <h3>🎭 Cultural Moments</h3>
+                        <div id="cultural-moments-detail">
+                            <!-- Content loaded via API -->
                         </div>
-                        <div class="insight-card">
-                            <div class="insight-title">Back-to-School Season (August 15)</div>
-                            <p><strong>Opportunity:</strong> Student-focused campaigns, campus ambassador program</p>
-                            <p><strong>Strategy:</strong> Student discounts, campus culture content, fresh semester energy campaigns</p>
-                        </div>
-                        <div class="insight-card">
-                            <div class="insight-title">Black Friday/Cyber Monday (November)</div>
-                            <p><strong>Opportunity:</strong> Major streetwear shopping moment, limited drops</p>
-                            <p><strong>Strategy:</strong> Exclusive BFCM releases, strategic pricing, scarcity marketing</p>
+                    </div>
+                    <div class="card">
+                        <h3>📈 Cultural Trends</h3>
+                        <div id="cultural-trends">
+                            <!-- Content loaded via API -->
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <script>
         // Global variables
-        let competitiveData = null;
-        let culturalInsights = null;
-        let currentAssets = [];
-        let currentContent = [];
-        
-        // Tab Management
+        let currentCalendarView = '30';
+        let currentTab = 'overview';
+
+        // Tab management
         function showTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
-            // Remove active class from all nav tabs
-            document.querySelectorAll('.nav-tab').forEach(tab => {
+            document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // Show selected tab
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
-            
-            // Load tab-specific data
+
+            currentTab = tabName;
             loadTabData(tabName);
         }
-        
+
+        // Load data for specific tab
         function loadTabData(tabName) {
             switch(tabName) {
-                case 'competitive':
-                    loadCompetitiveIntelligence();
+                case 'overview':
+                    loadOverview();
+                    break;
+                case 'intelligence':
+                    loadIntelligence();
                     break;
                 case 'analytics':
                     loadAnalytics();
                     break;
                 case 'calendar':
-                    loadStrategicCalendar();
+                    loadCalendar();
                     break;
                 case 'assets':
-                    loadAssetLibrary();
+                    loadAssets();
                     break;
                 case 'content':
-                    loadContentManager();
+                    loadContent();
                     break;
                 case 'cultural':
-                    loadCulturalIntelligence();
+                    loadCultural();
                     break;
-                default:
-                    loadOverview();
             }
         }
-        
-        // Load Overview Data
+
+        // Load overview data
         function loadOverview() {
-            // Load basic analytics for overview
-            fetch('/api/analytics')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('engagement-performance').textContent = 
-                        Math.round((data.instagram.avg_engagement + data.tiktok.avg_engagement) / 2);
-                    document.getElementById('content-output').textContent = data.combined.total_posts;
+            const loading = document.getElementById('overview-loading');
+            const content = document.getElementById('overview-content');
+            const grid = document.getElementById('overview-grid');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            fetch('/api/overview')
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load overview');
+                    return response.json();
                 })
-                .catch(error => {
-                    document.getElementById('engagement-performance').textContent = 'N/A';
-                    document.getElementById('content-output').textContent = 'N/A';
-                });
-            
-            document.getElementById('market-position').textContent = 'Analyzing...';
-        }
-        
-        // Load Competitive Intelligence
-        function loadCompetitiveIntelligence() {
-            fetch('/api/competitive-analysis')
-                .then(response => response.json())
                 .then(data => {
-                    competitiveData = data;
-                    renderCompetitiveTable(data);
-                })
-                .catch(error => {
-                    console.error('Error loading competitive intelligence:', error);
-                    document.getElementById('competitive-loading').innerHTML = 
-                        '<div class="no-data">Upload competitor social media data to competitive_data/social_scrapes/ for analysis</div>';
-                });
-        }
-        
-        function renderCompetitiveTable(data) {
-            const tableBody = document.getElementById('competitive-table-body');
-            const table = document.getElementById('competitive-table');
-            const loadingDiv = document.getElementById('competitive-loading');
-            
-            if (!data.competitor_analysis?.social_metrics || Object.keys(data.competitor_analysis.social_metrics).length === 0) {
-                loadingDiv.innerHTML = 
-                    '<div class="no-data">No competitor data found. Upload competitor files to see competitive analysis.</div>';
-                return;
-            }
-            
-            loadingDiv.style.display = 'none';
-            table.style.display = 'table';
-            
-            // Clear existing rows
-            tableBody.innerHTML = '';
-            
-            const competitors = Object.entries(data.competitor_analysis.social_metrics);
-            const tierMap = {
-                'luxury': 'tier-luxury',
-                'premium': 'tier-premium', 
-                'established': 'tier-established',
-                'mid-tier': 'tier-mid-tier',
-                'emerging': 'tier-emerging',
-                'legacy': 'tier-legacy'
-            };
-            
-            const competitorInfo = {
-                'supreme': {tier: 'luxury'},
-                'stussy': {tier: 'premium'},
-                'hellstar': {tier: 'emerging'},
-                'godspeed': {tier: 'emerging'},
-                'fear_of_god_essentials': {tier: 'luxury'},
-                'smoke_rise': {tier: 'mid-tier'},
-                'reason_clothing': {tier: 'mid-tier'},
-                'lrg': {tier: 'established'},
-                'diamond_supply': {tier: 'established'},
-                'ed_hardy': {tier: 'legacy'},
-                'von_dutch': {tier: 'legacy'}
-            };
-            
-            competitors.forEach(([competitor, metrics]) => {
-                const row = tableBody.insertRow();
-                const info = competitorInfo[competitor] || {tier: 'unknown'};
-                const avgEngagement = ((metrics.avg_ig_engagement || 0) + (metrics.avg_tiktok_engagement || 0)) / 2;
-                
-                row.innerHTML = `
-                    <td>${competitor.replace(/_/g, ' ').toUpperCase()}</td>
-                    <td><span class="competitor-tier ${tierMap[info.tier] || ''}">${info.tier}</span></td>
-                    <td>${avgEngagement.toFixed(1)}</td>
-                    <td>${metrics.total_content || 0}</td>
-                    <td><span class="performance-badge badge-${avgEngagement > 1000 ? 'high' : avgEngagement > 100 ? 'medium' : 'low'}">${avgEngagement > 1000 ? 'High' : avgEngagement > 100 ? 'Medium' : 'Low'}</span></td>
-                    <td>${metrics.engagement_rate_trend || 'stable'}</td>
-                `;
-            });
-        }
-        
-        // Load Analytics
-        function loadAnalytics() {
-            loadAnalyticsData();
-        }
-        
-        function loadAnalyticsData() {
-            fetch('/api/analytics')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('total-engagement').textContent = data.combined.total_posts;
-                    
-                    if (data.combined.total_posts > 0) {
-                        document.getElementById('platform-data-status').innerHTML = `
-                            <div class="insight-card">
-                                <div class="insight-title">Platform Breakdown</div>
-                                <p>Instagram: ${data.instagram.total_posts} posts (Avg engagement: ${data.instagram.avg_engagement})</p>
-                                <p>TikTok: ${data.tiktok.total_posts} posts (Avg engagement: ${data.tiktok.avg_engagement})</p>
+                    grid.innerHTML = `
+                        <div class="card">
+                            <h3>🎯 Intelligence Status</h3>
+                            <div class="metric">
+                                <span>Data Sources</span>
+                                <span class="metric-value">${data.intelligence.sources}</span>
                             </div>
-                        `;
+                            <div class="metric">
+                                <span>Last Updated</span>
+                                <span class="metric-value">${formatDate(data.intelligence.last_updated)}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Trustworthiness</span>
+                                <span class="metric-value">${data.intelligence.trustworthiness_score}%</span>
+                            </div>
+                        </div>
                         
-                        document.getElementById('content-analysis').innerHTML = `
-                            <div class="competitive-insights">
-                                <div class="insight-card">
-                                    <div class="insight-title">Top Instagram Hashtags</div>
-                                    <div class="hashtag-cloud">
-                                        ${data.instagram.top_hashtags.slice(0, 5).map(([tag, count]) => 
-                                            `<span class="hashtag-tag">#${tag} (${count})</span>`).join('')}
-                                    </div>
-                                </div>
-                                <div class="insight-card">
-                                    <div class="insight-title">Top TikTok Hashtags</div>
-                                    <div class="hashtag-cloud">
-                                        ${data.tiktok.top_hashtags.slice(0, 5).map(([tag, count]) => 
-                                            `<span class="hashtag-tag">#${tag} (${count})</span>`).join('')}
-                                    </div>
-                                </div>
+                        <div class="card">
+                            <h3>📁 Asset Library</h3>
+                            <div class="metric">
+                                <span>Total Assets</span>
+                                <span class="metric-value">${data.assets.total}</span>
                             </div>
-                        `;
-                    } else {
-                        document.getElementById('platform-data-status').innerHTML = 
-                            '<div class="no-data">Upload instagram_data.jsonl and tiktok_data.jsonl files to analyze your content performance</div>';
-                    }
+                            <div class="metric">
+                                <span>Categories</span>
+                                <span class="metric-value">${data.assets.categories}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Storage Used</span>
+                                <span class="metric-value">${data.assets.storage_mb}MB</span>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>📅 Calendar Planning</h3>
+                            <div class="metric">
+                                <span>Upcoming Events</span>
+                                <span class="metric-value">${data.calendar.upcoming_events}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Active Campaigns</span>
+                                <span class="metric-value">${data.calendar.active_campaigns}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Budget Allocated</span>
+                                <span class="metric-value">$${data.calendar.budget_allocated.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>🏢 Agency Status</h3>
+                            <div class="metric">
+                                <span>Active Projects</span>
+                                <span class="metric-value">${data.agency.active_projects}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Monthly Budget</span>
+                                <span class="metric-value">$${data.agency.monthly_budget.toLocaleString()}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Completion Rate</span>
+                                <span class="metric-value">${data.agency.completion_rate}%</span>
+                            </div>
+                        </div>
+                    `;
+
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error loading overview:', error);
+                    grid.innerHTML = '<div class="error">Error loading overview data. Please try again.</div>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                });
+        }
+
+        // Load intelligence data
+        function loadIntelligence() {
+            const loading = document.getElementById('intelligence-loading');
+            const content = document.getElementById('intelligence-content');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            fetch('/api/intelligence')
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load intelligence');
+                    return response.json();
+                })
+                .then(data => {
+                    // Update summary
+                    document.getElementById('intelligence-summary').innerHTML = `
+                        <div class="metric">
+                            <span>Analysis Timestamp</span>
+                            <span class="metric-value">${formatDate(data.analysis_timestamp)}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Trustworthiness Score</span>
+                            <span class="metric-value">${data.trustworthiness_score}%</span>
+                        </div>
+                        <div class="metric">
+                            <span>Total Posts Analyzed</span>
+                            <span class="metric-value">${data.data_summary.total_analyzed}</span>
+                        </div>
+                    `;
+
+                    // Update market position
+                    document.getElementById('market-position').innerHTML = `
+                        <div class="metric">
+                            <span>Instagram Posts</span>
+                            <span class="metric-value">${data.data_summary.instagram_posts}</span>
+                        </div>
+                        <div class="metric">
+                            <span>TikTok Videos</span>
+                            <span class="metric-value">${data.data_summary.tiktok_videos}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Data Quality</span>
+                            <span class="metric-value">${data.trustworthiness_score > 80 ? 'High' : data.trustworthiness_score > 60 ? 'Medium' : 'Low'}</span>
+                        </div>
+                    `;
+
+                    // Update hashtag analysis
+                    const hashtagHtml = Object.entries(data.hashtag_analysis).slice(0, 8).map(([hashtag, info]) => `
+                        <div class="hashtag-card">
+                            <div class="hashtag-tag">${hashtag}</div>
+                            <div class="metric">
+                                <span>Uses</span>
+                                <span>${info.count}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Avg Engagement</span>
+                                <span>${info.avg_engagement}</span>
+                            </div>
+                            <div class="metric">
+                                <span>Relevance</span>
+                                <span>${info.relevance}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    document.getElementById('hashtag-analysis').innerHTML = hashtagHtml;
+
+                    // Update recommendations
+                    const recommendationsHtml = data.recommendations.slice(0, 5).map(rec => `
+                        <div class="recommendation-card priority-${rec.priority}">
+                            <h4>${rec.recommendation}</h4>
+                            <p><strong>Category:</strong> ${rec.category}</p>
+                            <p><strong>Priority:</strong> ${rec.priority}</p>
+                            <p><strong>Expected Impact:</strong> ${rec.expected_impact}</p>
+                            <p><strong>Rationale:</strong> ${rec.rationale}</p>
+                            <p><strong>Implementation:</strong> ${rec.implementation}</p>
+                        </div>
+                    `).join('');
+                    document.getElementById('recommendations').innerHTML = recommendationsHtml;
+
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error loading intelligence:', error);
+                    content.innerHTML = '<div class="error">Error loading intelligence data. Please try again.</div>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                });
+        }
+
+        // Load analytics data
+        function loadAnalytics() {
+            const loading = document.getElementById('analytics-loading');
+            const content = document.getElementById('analytics-content');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            // Load intelligence data for analytics
+            fetch('/api/intelligence')
+                .then(response => response.json())
+                .then(data => {
+                    // Update engagement metrics
+                    const avgEngagement = Object.values(data.hashtag_analysis).reduce((sum, h) => sum + (h.avg_engagement || 0), 0) / Object.keys(data.hashtag_analysis).length || 0;
+                    document.getElementById('engagement-metrics').innerHTML = `
+                        <div class="metric">
+                            <span>Total Posts</span>
+                            <span class="metric-value">${data.data_summary.total_analyzed}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Avg Engagement</span>
+                            <span class="metric-value">${avgEngagement.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Top Hashtags</span>
+                            <span class="metric-value">${Object.keys(data.hashtag_analysis).length}</span>
+                        </div>
+                    `;
+
+                    // Update cultural moments
+                    const culturalHtml = Object.entries(data.cultural_moments || {}).map(([moment, info]) => `
+                        <div class="metric">
+                            <span>${moment.replace(/_/g, ' ').toUpperCase()}</span>
+                            <span class="metric-value">${info.post_count || 0} posts</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('cultural-moments').innerHTML = culturalHtml || '<p>No cultural moments detected</p>';
+
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
                 })
                 .catch(error => {
                     console.error('Error loading analytics:', error);
-                    document.getElementById('platform-data-status').innerHTML = 
-                        '<div class="no-data">Error loading analytics data</div>';
+                    content.innerHTML = '<div class="error">Error loading analytics data. Please try again.</div>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
                 });
         }
-        
-        function exportAnalytics() {
-            fetch('/api/export/analytics')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const blob = new Blob([data.data], { type: 'text/csv' });
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = data.filename;
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                    }
-                })
-                .catch(error => console.error('Error exporting analytics:', error));
+
+        // Load calendar data
+        function loadCalendar() {
+            loadCalendarView(currentCalendarView);
         }
-        
-        // Load Strategic Calendar
-        function loadStrategicCalendar() {
-            fetch('/api/calendar')
-                .then(response => response.json())
-                .then(data => {
-                    renderCulturalCalendar(data);
+
+        function loadCalendarView(view) {
+            currentCalendarView = view;
+            
+            // Update button states
+            document.querySelectorAll('.calendar-btn').forEach(btn => btn.classList.remove('active'));
+            event?.target?.classList.add('active');
+
+            const loading = document.getElementById('calendar-loading');
+            const content = document.getElementById('calendar-content');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            fetch(`/api/calendar/${view}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load calendar');
+                    return response.json();
                 })
-                .catch(error => console.error('Error loading calendar:', error));
-                
-            fetch('/api/deliverables')
-                .then(response => response.json())
                 .then(data => {
-                    renderHVDDeliverables(data);
-                })
-                .catch(error => console.error('Error loading deliverables:', error));
-        }
-        
-        function renderCulturalCalendar(events) {
-            const container = document.getElementById('cultural-calendar');
-            
-            const culturalEvents = events.filter(event => event.type === 'cultural');
-            const upcomingEvents = culturalEvents.slice(0, 8);
-            
-            let html = '';
-            upcomingEvents.forEach(event => {
-                const eventDate = new Date(event.date);
-                const isUpcoming = eventDate > new Date();
-                
-                html += `
-                    <div class="insight-card ${isUpcoming ? '' : 'past-event'}" style="${!isUpcoming ? 'opacity: 0.6;' : ''}">
-                        <div class="insight-title">${event.title}</div>
-                        <p><strong>Date:</strong> ${eventDate.toLocaleDateString()}</p>
-                        <p><strong>Category:</strong> ${event.category}</p>
-                        <p>${event.description}</p>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html || '<div class="no-data">No cultural events loaded</div>';
-        }
-        
-        function renderHVDDeliverables(data) {
-            const container = document.getElementById('hvd-deliverables');
-            
-            let html = '';
-            Object.entries(data).forEach(([phase, phaseData]) => {
-                const phaseTitle = phase.replace('phase', 'Phase ');
-                
-                html += `
-                    <div class="insight-card phase-${phase}">
-                        <div class="insight-title">${phaseTitle} - $${phaseData.budget.toLocaleString()}</div>
-                        <p><strong>${phaseData.focus}</strong></p>
-                        <p>${phaseData.duration}</p>
-                `;
-                
-                phaseData.deliverables.forEach((deliverable, index) => {
-                    html += `
-                        <div class="deliverable-item status-${deliverable.status}">
-                            <div>
-                                <strong>${deliverable.item}</strong><br>
-                                <small>${deliverable.quantity}</small>
-                            </div>
-                            <select onchange="updateDeliverableStatus('${phase}', ${index}, this.value)" 
-                                    style="background: rgba(0,0,0,0.3); color: white; border: 1px solid #444; border-radius: 4px; padding: 0.25rem;">
-                                <option value="pending" ${deliverable.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                <option value="progress" ${deliverable.status === 'progress' ? 'selected' : ''}>In Progress</option>
-                                <option value="completed" ${deliverable.status === 'completed' ? 'selected' : ''}>Completed</option>
-                                <option value="approved" ${deliverable.status === 'approved' ? 'selected' : ''}>Approved</option>
-                            </select>
+                    // Update calendar summary
+                    document.getElementById('calendar-summary').innerHTML = `
+                        <div class="metric">
+                            <span>Total Events</span>
+                            <span class="metric-value">${data.summary.total_events}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Active Campaigns</span>
+                            <span class="metric-value">${data.summary.active_campaigns}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Date Range</span>
+                            <span class="metric-value">${data.summary.date_range.start} to ${data.summary.date_range.end}</span>
                         </div>
                     `;
-                });
-                
-                html += '</div>';
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function updateDeliverableStatus(phase, itemIndex, status) {
-            fetch('/api/deliverables', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    phase: phase,
-                    item_index: itemIndex,
-                    status: status,
-                    notes: ''
+
+                    // Update budget allocation
+                    document.getElementById('budget-allocation').innerHTML = `
+                        <div class="metric">
+                            <span>Total Budget</span>
+                            <span class="metric-value">$${data.summary.total_budget.toLocaleString()}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Avg per Event</span>
+                            <span class="metric-value">$${(data.summary.total_budget / data.summary.total_events || 0).toFixed(0)}</span>
+                        </div>
+                        <div class="metric">
+                            <span>View Period</span>
+                            <span class="metric-value">${view} days</span>
+                        </div>
+                    `;
+
+                    // Update events
+                    const eventsHtml = data.events.map(event => `
+                        <div class="event-card">
+                            <div class="event-title">${event.title}</div>
+                            <div class="event-meta">
+                                ${event.date} | ${event.category} | Budget: $${event.budget.toLocaleString()} | Priority: ${event.priority}
+                            </div>
+                            <p>${event.description}</p>
+                            ${event.assets && event.assets.length > 0 ? `<p><strong>Assets:</strong> ${event.assets.join(', ')}</p>` : ''}
+                            ${event.cultural_context ? `<p><strong>Cultural Context:</strong> ${event.cultural_context}</p>` : ''}
+                        </div>
+                    `).join('');
+                    document.getElementById('calendar-events').innerHTML = eventsHtml;
+
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    loadStrategicCalendar(); // Reload to show updated status
-                }
-            })
-            .catch(error => console.error('Error updating deliverable:', error));
+                .catch(error => {
+                    console.error('Error loading calendar:', error);
+                    content.innerHTML = '<div class="error">Error loading calendar data. Please try again.</div>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                });
         }
-        
-        function filterDeliverables(phase) {
-            const container = document.getElementById('hvd-deliverables');
-            const phaseCards = container.querySelectorAll('.insight-card');
-            
-            phaseCards.forEach(card => {
-                if (phase === 'all' || card.classList.contains(`phase-${phase}`)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-        
-        function showAddEventForm() {
-            document.getElementById('add-event-form').style.display = 'block';
-        }
-        
-        function hideAddEventForm() {
-            document.getElementById('add-event-form').style.display = 'none';
-        }
-        
-        function addCalendarEvent(event) {
-            event.preventDefault();
-            
-            const eventData = {
-                title: document.getElementById('event-title').value,
-                date: document.getElementById('event-date').value,
-                category: document.getElementById('event-category').value,
-                description: document.getElementById('event-description').value,
-                assignee: document.getElementById('event-assignee').value
-            };
-            
-            fetch('/api/calendar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(eventData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    hideAddEventForm();
-                    loadStrategicCalendar();
-                    event.target.reset();
-                }
-            })
-            .catch(error => console.error('Error adding event:', error));
-        }
-        
-        // Load Asset Library
-        function loadAssetLibrary() {
+
+        // Load assets data
+        function loadAssets() {
+            const loading = document.getElementById('assets-loading');
+            const content = document.getElementById('assets-content');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
             fetch('/api/assets')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load assets');
+                    return response.json();
+                })
                 .then(data => {
-                    currentAssets = data;
-                    renderAssetLibrary(data);
+                    // Update asset stats
+                    document.getElementById('asset-stats').innerHTML = `
+                        <div class="metric">
+                            <span>Total Assets</span>
+                            <span class="metric-value">${data.total_assets}</span>
+                        </div>
+                        <div class="metric">
+                            <span>Total Size</span>
+                            <span class="metric-value">${data.total_size_mb}MB</span>
+                        </div>
+                        <div class="metric">
+                            <span>Categories</span>
+                            <span class="metric-value">${Object.keys(data.categories).length}</span>
+                        </div>
+                    `;
+
+                    // Update categories
+                    const categoriesHtml = Object.entries(data.categories).map(([category, info]) => `
+                        <div class="metric">
+                            <span>${category.replace(/_/g, ' ').toUpperCase()}</span>
+                            <span class="metric-value">${info.count} files</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('asset-categories').innerHTML = categoriesHtml;
+
+                    // Update asset grid
+                    const assetsHtml = data.assets.map(asset => `
+                        <div class="asset-card">
+                            <div class="asset-thumbnail">
+                                ${asset.thumbnail_path ? 
+                                    `<img src="${asset.thumbnail_path}" alt="${asset.filename}">` :
+                                    getFileIcon(asset.filename)
+                                }
+                            </div>
+                            <h4>${asset.filename}</h4>
+                            <p>${asset.file_size_mb}MB | ${asset.category.replace(/_/g, ' ')}</p>
+                            <a href="${asset.download_url}" class="btn" style="margin-top: 1rem; text-decoration: none;">
+                                📥 Download
+                            </a>
+                        </div>
+                    `).join('');
+                    document.getElementById('asset-grid').innerHTML = assetsHtml;
+
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
                 })
                 .catch(error => {
                     console.error('Error loading assets:', error);
-                    document.getElementById('asset-library').innerHTML = 
-                        '<div class="no-data">Error loading asset library</div>';
+                    content.innerHTML = '<div class="error">Error loading asset data. Please try again.</div>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
                 });
         }
-        
-        function renderAssetLibrary(assets) {
-            const container = document.getElementById('asset-library');
-            
-            if (assets.length === 0) {
-                container.innerHTML = '<div class="no-data">No assets uploaded yet. Upload files to get started.</div>';
-                return;
-            }
-            
-            let html = '<div class="asset-grid">';
-            
-            assets.forEach(asset => {
-                const fileIcon = getFileIcon(asset.type);
-                const fileSize = formatFileSize(asset.size);
-                
-                html += `
-                    <div class="asset-item">
-                        <div class="asset-icon">${fileIcon}</div>
-                        <h4>${asset.name}</h4>
-                        <p>Size: ${fileSize}</p>
-                        <p>Uploaded: ${new Date(asset.uploaded).toLocaleDateString()}</p>
-                        <button class="btn btn-secondary" onclick="downloadAsset('${asset.name}')">Download</button>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            container.innerHTML = html;
+
+        // Load content data
+        function loadContent() {
+            const loading = document.getElementById('content-loading');
+            const content = document.getElementById('content-content');
+
+            loading.style.display = 'none';
+            content.style.display = 'block';
         }
-        
-        function getFileIcon(type) {
-            const icons = {
-                'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️', 'gif': '🖼️',
-                'mp4': '🎥', 'mov': '🎥',
-                'pdf': '📄', 'txt': '📄',
-                'psd': '🎨', 'ai': '🎨', 'sketch': '🎨', 'fig': '🎨'
-            };
-            return icons[type.toLowerCase()] || '📁';
+
+        // Load cultural intelligence data
+        function loadCultural() {
+            const loading = document.getElementById('cultural-loading');
+            const content = document.getElementById('cultural-content');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            fetch('/api/intelligence')
+                .then(response => response.json())
+                .then(data => {
+                    // Update cultural moments detail
+                    const culturalMomentsHtml = Object.entries(data.cultural_moments || {}).map(([moment, info]) => `
+                        <div class="metric">
+                            <span>${moment.replace(/_/g, ' ').toUpperCase()}</span>
+                            <span class="metric-value">Score: ${info.relevance_score || 0}%</span>
+                        </div>
+                        <p>${info.opportunity || 'Cultural opportunity identified'}</p>
+                    `).join('');
+                    document.getElementById('cultural-moments-detail').innerHTML = culturalMomentsHtml || '<p>No cultural moments detected</p>';
+
+                    // Update cultural trends (placeholder)
+                    document.getElementById('cultural-trends').innerHTML = `
+                        <div class="metric">
+                            <span>Authenticity Focus</span>
+                            <span class="metric-value">High Impact</span>
+                        </div>
+                        <div class="metric">
+                            <span>Community Collaboration</span>
+                            <span class="metric-value">Growing Trend</span>
+                        </div>
+                        <div class="metric">
+                            <span>Cultural Fusion</span>
+                            <span class="metric-value">Medium Impact</span>
+                        </div>
+                    `;
+
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error loading cultural intelligence:', error);
+                    content.innerHTML = '<div class="error">Error loading cultural intelligence data. Please try again.</div>';
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                });
         }
-        
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+
+        // File upload functions
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
         }
-        
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            uploadFiles(files);
+        }
+
         function uploadFiles(files) {
-            if (files.length === 0) return;
-            
+            if (!files || files.length === 0) return;
+
+            const formData = new FormData();
             for (let file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        loadAssetLibrary(); // Refresh the library
-                    } else {
-                        alert('Error uploading file: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error uploading file:', error);
-                    alert('Error uploading file');
-                });
+                formData.append('files', file);
             }
-        }
-        
-        function downloadAsset(filename) {
-            window.open(`/api/download/${filename}`, '_blank');
-        }
-        
-        // Load Content Manager
-        function loadContentManager() {
-            loadContentLibrary();
-        }
-        
-        function loadContentLibrary() {
-            fetch('/api/content')
-                .then(response => response.json())
-                .then(data => {
-                    currentContent = data;
-                    renderContentLibrary(data);
-                })
-                .catch(error => {
-                    console.error('Error loading content:', error);
-                    document.getElementById('content-library').innerHTML = 
-                        '<div class="no-data">Error loading content library</div>';
-                });
-        }
-        
-        function renderContentLibrary(content) {
-            const container = document.getElementById('content-library');
-            
-            if (content.length === 0) {
-                container.innerHTML = '<div class="no-data">No content created yet. Create your first piece of content.</div>';
-                return;
-            }
-            
-            let html = '';
-            content.forEach(item => {
-                html += `
-                    <div class="content-item">
-                        <div class="insight-title">${item.title}</div>
-                        <p><strong>Platform:</strong> ${item.platform}</p>
-                        <p><strong>Status:</strong> <span class="performance-badge badge-${item.status === 'published' ? 'high' : item.status === 'scheduled' ? 'medium' : 'low'}">${item.status}</span></p>
-                        ${item.scheduled_date ? `<p><strong>Scheduled:</strong> ${new Date(item.scheduled_date).toLocaleDateString()}</p>` : ''}
-                        <p>${item.description}</p>
-                        ${item.hashtags && item.hashtags.length > 0 ? `
-                            <div class="hashtag-cloud">
-                                ${item.hashtags.map(tag => `<span class="hashtag-tag">${tag}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                        <small>Created: ${new Date(item.created).toLocaleDateString()} by ${item.creator}</small>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function createContent(event) {
-            event.preventDefault();
-            
-            const hashtags = document.getElementById('content-hashtags').value
-                .split(/[\s,]+/)
-                .filter(tag => tag.trim())
-                .map(tag => tag.startsWith('#') ? tag : '#' + tag);
-            
-            const contentData = {
-                title: document.getElementById('content-title').value,
-                description: document.getElementById('content-description').value,
-                platform: document.getElementById('content-platform').value,
-                status: document.getElementById('content-status').value,
-                scheduled_date: document.getElementById('content-scheduled-date').value,
-                hashtags: hashtags
-            };
-            
-            fetch('/api/content', {
+
+            // Show upload progress
+            const uploadArea = document.querySelector('.upload-area');
+            const originalContent = uploadArea.innerHTML;
+            uploadArea.innerHTML = '<div class="loading">Uploading files...</div>';
+
+            fetch('/api/upload', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(contentData)
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    loadContentLibrary();
-                    event.target.reset();
+                    uploadArea.innerHTML = `<div class="success">Successfully uploaded ${data.count} files!</div>`;
+                    setTimeout(() => {
+                        uploadArea.innerHTML = originalContent;
+                        if (currentTab === 'assets') {
+                            loadAssets(); // Refresh asset library
+                        }
+                    }, 2000);
                 } else {
-                    alert('Error creating content: ' + data.error);
+                    throw new Error(data.error || 'Upload failed');
                 }
             })
             .catch(error => {
-                console.error('Error creating content:', error);
-                alert('Error creating content');
+                console.error('Upload error:', error);
+                uploadArea.innerHTML = `<div class="error">Upload failed: ${error.message}</div>`;
+                setTimeout(() => {
+                    uploadArea.innerHTML = originalContent;
+                }, 3000);
             });
         }
-        
-        // Load Cultural Intelligence
-        function loadCulturalIntelligence() {
-            fetch('/api/cultural-insights')
-                .then(response => response.json())
-                .then(data => {
-                    renderCulturalTrends(data);
-                    renderConsumerInsights(data);
-                })
-                .catch(error => console.error('Error loading cultural insights:', error));
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            try {
+                return new Date(dateString).toLocaleDateString();
+            } catch (e) {
+                return dateString;
+            }
         }
-        
-        function renderCulturalTrends(data) {
-            const container = document.getElementById('cultural-trends');
-            
-            let html = '';
-            (data.current_trends || []).forEach(trend => {
-                html += `
-                    <div class="insight-card">
-                        <div class="insight-title">${trend.trend}</div>
-                        <p>${trend.description}</p>
-                        <p><strong>Opportunity:</strong> ${trend.opportunity}</p>
-                        <p><strong>Timeframe:</strong> ${trend.timeframe}</p>
-                        <span class="performance-badge badge-${trend.confidence === 'Very High' ? 'high' : trend.confidence === 'High' ? 'medium' : 'low'}">${trend.confidence} Confidence</span>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+                'mp4': '🎥', 'mov': '🎥', 'avi': '🎥',
+                'pdf': '📄', 'doc': '📄', 'docx': '📄',
+                'json': '📊', 'jsonl': '📊', 'csv': '📊',
+                'mp3': '🎵', 'wav': '🎵'
+            };
+            return icons[ext] || '📄';
         }
-        
-        function renderConsumerInsights(data) {
-            const container = document.getElementById('consumer-insights');
-            
-            let html = '';
-            (data.consumer_behavior || []).forEach(behavior => {
-                html += `
-                    <div class="insight-card">
-                        <div class="insight-title">${behavior.behavior}</div>
-                        <p><strong>Insight:</strong> ${behavior.insight}</p>
-                        <p><strong>Action:</strong> ${behavior.action}</p>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        // Drag and drop functionality for asset upload
+
+        // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            const uploadZone = document.querySelector('.upload-zone');
-            
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadZone.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadZone.addEventListener(eventName, highlight, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadZone.addEventListener(eventName, unhighlight, false);
-            });
-            
-            function highlight(e) {
-                uploadZone.classList.add('dragover');
-            }
-            
-            function unhighlight(e) {
-                uploadZone.classList.remove('dragover');
-            }
-            
-            uploadZone.addEventListener('drop', handleDrop, false);
-            
-            function handleDrop(e) {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                uploadFiles(files);
-            }
-            
-            // Initialize dashboard
             loadOverview();
         });
     </script>
