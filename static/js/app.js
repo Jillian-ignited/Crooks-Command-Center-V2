@@ -7,23 +7,34 @@ function switchTab(key){
 }
 $$('.tab').forEach(btn => btn.addEventListener('click', ()=> switchTab(btn.dataset.tab)));
 
-async function safeFetch(url, opts={}){
-  try{
+async function safeFetch(url, opts = {}){
+  try {
     const r = await fetch(url, opts);
-    if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-    // endpoints that return files (report/csv) won't be JSON
-    const ct = r.headers.get('content-type') || '';
-    if(!ct.includes('application/json')) return r;
-    return await r.json();
-  }catch(e){ return {error: e.message}; }
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json') || url.includes('/api/')) {
+      try {
+        const data = await r.json();
+        if (!r.ok) return { error: (data && (data.detail || data.error)) || `${r.status} ${r.statusText}`, raw: data };
+        return data;
+      } catch (_) {}
+    }
+    const text = await r.text();
+    if (!r.ok) return { error: `${r.status} ${r.statusText}`, raw: text };
+    try { return JSON.parse(text); } catch { return { error: 'NON_JSON_RESPONSE', raw: text }; }
+  } catch (e) {
+    return { error: e.message || 'NETWORK_ERROR' };
+  }
 }
 
-function fmtNum(n){ try{ return Number(n).toLocaleString(); }catch{ return n; } }
+function fmt(n){ try{ return Number(n).toLocaleString(); }catch{ return n; } }
 
-// ---------------- INTELLIGENCE ----------------
+// ---------- INTELLIGENCE ----------
 async function loadIntelligence(){
   const data = await safeFetch('/api/intelligence');
-  if(data.error){ $('#intel-metrics').textContent = 'Error: ' + data.error; return; }
+  if (data.error){
+    $('#intel-metrics').textContent = `Error: ${data.error}\n` + (data.raw ? (typeof data.raw==='string' ? data.raw.slice(0,400) : JSON.stringify(data.raw,null,2)) : '');
+    return;
+  }
   const m = data.engagement || {};
   const metrics = {
     posts: data.posts_count || 0,
@@ -36,18 +47,18 @@ async function loadIntelligence(){
   };
   $('#intel-metrics').textContent = JSON.stringify(metrics, null, 2);
 
-  const tags = (data.hashtags || []).slice(0, 24);
+  // hashtags
   const hc = $('#hashtags'); hc.innerHTML = '';
-  tags.forEach(t=>{
+  (data.hashtags||[]).slice(0,24).forEach(t=>{
     const el = document.createElement('div');
     el.className='asset';
     el.innerHTML = `<strong>#${t.hashtag}</strong><div class="meta">count: ${t.count}${t.categories?.length?` · ${t.categories.join(', ')}`:''}</div>`;
     hc.appendChild(el);
   });
 
-  const moments = data.cultural_moments || [];
+  // cultural moments
   const mc = $('#moments'); mc.innerHTML = '';
-  moments.forEach(mo=>{
+  (data.cultural_moments||[]).forEach(mo=>{
     const el = document.createElement('div');
     el.className='asset';
     el.innerHTML = `<div><strong>${(mo.labels||[]).join(' / ')}</strong></div>
@@ -56,32 +67,46 @@ async function loadIntelligence(){
     mc.appendChild(el);
   });
 
-  const comp = data.competitive?.brand_mentions || [];
-  const cc = $('#competitors'); cc.innerHTML = '';
-  comp.forEach(c=>{
-    const el = document.createElement('div');
-    el.className='asset';
-    el.innerHTML = `<div><strong>${c.brand}</strong></div><div class="meta">mentions: ${c.mentions} · share: ${c.share_pct}%</div>`;
-    cc.appendChild(el);
-  });
+  // enhanced competitors (if route exists)
+  const comp = await safeFetch('/api/intelligence/competitors');
+  const cv = $('#comp-voice'); cv.innerHTML = '';
+  if (!comp.error){
+    const sov = document.createElement('div');
+    sov.className = 'asset';
+    sov.innerHTML = `<div><strong>Share of Voice</strong></div>` +
+      (comp.share_of_voice||[]).map(x=>`<div class="meta">${x.brand}: ${x.mentions} · ${x.share_pct}%</div>`).join('');
+    cv.appendChild(sov);
+
+    const be = document.createElement('div');
+    be.className = 'asset';
+    be.innerHTML = `<div><strong>Brand Engagement (avg)</strong></div>` +
+      (comp.brand_engagement||[]).map(x=>`<div class="meta">${x.brand}: eng ${fmt(x.avg_engagement)} · views ${fmt(x.avg_views)} (${x.posts} posts)</div>`).join('');
+    cv.appendChild(be);
+
+    const tt = document.createElement('div');
+    tt.className = 'asset';
+    tt.innerHTML = `<div><strong>Trending Terms</strong></div>` +
+      (comp.trending_terms||[]).slice(0,20).map(x=>`<span class="chip">#${x.term} <small>${x.score}</small></span>`).join(' ');
+    cv.appendChild(tt);
+  }
 
   $('#btn-generate-report').onclick = async ()=>{
     const res = await fetch('/api/reports/generate');
-    if(!res.ok){ alert('Report failed.'); return; }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='intelligence_report.json';
-    document.body.appendChild(a); a.click(); a.remove();
+    if(!res.ok){ alert('Report failed'); return; }
+    const blob = await res.blob(); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='intelligence_report.json'; document.body.appendChild(a); a.click(); a.remove();
   };
 }
 
-// ---------------- ASSETS ----------------
+// ---------- ASSETS ----------
 async function loadAssets(){
   const data = await safeFetch('/api/assets');
   const grid = $('#asset-grid'); grid.innerHTML = '';
-  if(data.error){ grid.innerHTML = `<div class="asset">Error: ${data.error}</div>`; return; }
-  (data.catalog?.assets || []).forEach(a=>{
-    const imgSrc = a.thumbnail ? `/uploads/${a.thumbnail}` : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250"><rect width="100%" height="100%" fill="#0f0f0f"/><text x="50%" y="50%" fill="#777" font-family="monospace" font-size="14" text-anchor="middle">No Preview</text></svg>`);
+  if (data.error){ grid.innerHTML = `<div class="asset">Error: ${data.error}</div>`; return; }
+
+  (data.catalog?.assets||[]).forEach(a=>{
+    const imgSrc = a.thumbnail ? `/uploads/${a.thumbnail}` :
+      'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="#0f0f0f"/><text x="50%" y="50%" fill="#777" font-family="monospace" font-size="14" text-anchor="middle">No Preview</text></svg>`);
     const card = document.createElement('div');
     card.className='asset';
     card.innerHTML = `
@@ -93,11 +118,11 @@ async function loadAssets(){
   });
 }
 
-// ---------------- CALENDAR ----------------
+// ---------- CALENDAR ----------
 async function loadCalendar(view='7_day_view'){
   const data = await safeFetch(`/api/calendar/${view}`);
   const wrap = $('#calendar-events'); wrap.innerHTML='';
-  if(data.error){ wrap.innerHTML = `<div class="asset">Error: ${data.error}</div>`; return; }
+  if (data.error){ wrap.innerHTML = `<div class="asset">Error: ${data.error}</div>`; return; }
   (data.events||[]).forEach(ev=>{
     const el = document.createElement('div');
     el.className = 'asset';
@@ -118,81 +143,63 @@ function bindCalendarButtons(){
   });
 }
 
-// ---------------- AGENCY ----------------
+// ---------- AGENCY ----------
 async function loadAgency(){
   const data = await safeFetch('/api/agency');
   $('#agency-data').textContent = JSON.stringify(data, null, 2);
 }
 
-// ---------------- UPLOADS ----------------
+// ---------- UPLOADS ----------
 function enableUpload(){
-  const drop = $('#drop'); const input = $('#file-input'); const out = $('#upload-results');
+  const drop = $('#drop'), input = $('#file-input'), out = $('#upload-results');
+  const MAX = 100 * 1024 * 1024;
+  const ACCEPT = new Set(['png','jpg','jpeg','gif','webp','mp4','mov','avi','mkv','pdf','ppt','pptx','doc','docx','txt','json','jsonl','csv']);
+  const extOf = n => (n.includes('.') ? n.split('.').pop().toLowerCase() : '');
+  const okType = f => ACCEPT.has(extOf(f.name));
+  const okSize = f => f.size <= MAX;
+
   drop.addEventListener('click',()=>input.click());
   drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
   drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
   drop.addEventListener('drop', e=>{
-    e.preventDefault(); drop.classList.remove('drag'); sendFiles([...e.dataTransfer.files]);
+    e.preventDefault(); drop.classList.remove('drag'); handleFiles([...e.dataTransfer.files]);
   });
-  input.addEventListener('change', ()=>{ sendFiles([...input.files]); input.value=''; });
+  input.addEventListener('change', ()=>{ handleFiles([...input.files]); input.value=''; });
 
-  async function sendFiles(files){
-    const form = new FormData(); files.forEach(f=>form.append('files', f));
+  const statusCard = html => { const el = document.createElement('div'); el.className='asset'; el.innerHTML = html; out.prepend(el); return el; };
+
+  async function handleFiles(files){
+    if(!files.length) return;
+    const errors = [], ok = [];
+    files.forEach(f=>{
+      if(!okType(f)) errors.push(`❌ ${f.name}: invalid type`);
+      else if(!okSize(f)) errors.push(`❌ ${f.name}: over 100MB`);
+      else ok.push(f);
+    });
+    if(errors.length) statusCard(errors.map(e=>`<div>${e}</div>`).join(''));
+    if(!ok.length) return;
+
+    const card = statusCard(`<strong>Uploading ${ok.length} file(s)…</strong><div class="meta">Working…</div>`);
+    const form = new FormData(); ok.forEach(f=>form.append('files', f));
     try{
-      const r = await fetch('/api/upload', { method:'POST', body:form });
+      const r = await fetch('/api/upload', { method:'POST', body: form });
+      if(!r.ok){ const txt = await r.text(); card.innerHTML = `<div>Upload failed: ${r.status} ${r.statusText}</div><pre class="mono">${txt.slice(0,400)}</pre>`; return; }
       const data = await r.json();
-      out.innerHTML = `<div class="asset"><strong>Upload Results</strong><pre class="mono">${JSON.stringify(data,null,2)}</pre></div>`;
+      const bad = (data.results||[]).filter(x=>!x.ok), good = (data.results||[]).filter(x=>x.ok);
+      card.innerHTML = `<div><strong>Upload complete</strong></div><div class="meta">Success: ${good.length} · Errors: ${bad.length}</div>`;
       loadAssets(); loadIntelligence();
     }catch(e){
-      out.innerHTML = `<div class="asset">Upload error: ${e.message||e}</div>`;
+      card.innerHTML = `<div>Upload error: ${e.message||e}</div>`;
     }
   }
 }
 
-// ---------------- ADMIN FORMS (DB) ----------------
-async function postJSON(url, body){
-  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
-  try{ return await r.json(); }catch{ return {error:'non-json response'} }
-}
-function bindAdminForms(){
-  const fe = $('#form-add-event');
-  if(fe){
-    fe.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const fd = new FormData(fe);
-      const payload = {
-        date: fd.get('date'),
-        title: fd.get('title'),
-        status: fd.get('status') || 'planned',
-        deliverables: [], assets_mapped: [], target_kpis: {}
-      };
-      const res = await postJSON('/api/calendar', payload);
-      alert(res.ok ? 'Event created' : ('Error: ' + (res.error||'unknown')));
-      if(res.ok) loadCalendar('30_day_view');
-    });
-  }
-  const fp = $('#form-add-project');
-  if(fp){
-    fp.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const fd = new FormData(fp);
-      const res = await postJSON(`/api/agency/${fd.get('agency_id')}/projects`, {
-        name: fd.get('name'),
-        due_date: fd.get('due_date') || null,
-        status: 'pending'
-      });
-      alert(res.ok ? 'Project created' : ('Error: ' + (res.error||'unknown')));
-      if(res.ok) loadAgency();
-    });
-  }
-}
-
-// ---------------- BOOT ----------------
+// ---------- BOOT ----------
 window.addEventListener('DOMContentLoaded', ()=>{
   loadIntelligence();
   loadAssets();
   loadCalendar('7_day_view');
   loadAgency();
-  enableUpload();
   bindCalendarButtons();
-  bindAdminForms();
+  enableUpload();
 });
