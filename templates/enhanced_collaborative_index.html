@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crooks & Castles Command Center V2 - Collaborative Intelligence Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced_collaborative.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/apify_visualization.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced_crooks_branding.css') }}">
+</head>
+<body>
+    <!-- Navigation Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-logo">
+                <i class="fas fa-crown"></i>
+                <span>Crooks Command Center</span>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" style="{% if user_dashboard_config.color_theme %}background: {{ user_dashboard_config.color_theme }};{% endif %}">
+                    {% if current_user and current_user.avatar_url %}
+                        <img src="{{ current_user.avatar_url }}" alt="User Avatar">
+                    {% else %}
+                        <i class="fas fa-user"></i>
+                    {% endif %}
+                </div>
+                <div class="user-details">
+                    <span class="user-name">
+                        {% if current_user %}
+                            {{ current_user.first_name }} {{ current_user.last_name }}
+                        {% else %}
+                            Team Member
+                        {% endif %}
+                    </span>
+                    <span class="user-role" style="{% if user_dashboard_config.color_theme %}color: {{ user_dashboard_config.color_theme }};{% endif %}">
+                        {% if user_dashboard_config.role_config %}
+                            {{ user_dashboard_config.role_config.name }}
+                        {% else %}
+                            Brand Manager
+                        {% endif %}
+                    </span>
+                    {% if current_user and current_user.department %}
+                        <span class="user-department">{{ current_user.department }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <ul class="nav-menu">
+            <li class="nav-item active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </li>
+            <li class="nav-item" data-tab="intelligence">
+                <i class="fas fa-brain"></i>
+                <span>Brand Intelligence</span>
+                <span class="badge">{{ intelligence_summary.data_sources.instagram + intelligence_summary.data_sources.hashtags + intelligence_summary.data_sources.tiktok if intelligence_summary.data_sources else 0 }}</span>
+            </li>
+            <li class="nav-item" data-tab="cultural-radar">
+                <i class="fas fa-satellite-dish"></i>
+                <span>Cultural Radar</span>
+                <span class="badge trending">{{ cultural_radar.trending_hashtags|length if cultural_radar.trending_hashtags else 0 }}</span>
+            </li>
+            <li class="nav-item" data-tab="projects">
+                <i class="fas fa-project-diagram"></i>
+                <span>Collaborative Projects</span>
+                <span class="badge">{{ dashboard_data.active_projects|length if dashboard_data.active_projects else 0 }}</span>
+            </li>
+            <li class="nav-item" data-tab="assets">
+                <i class="fas fa-folder-open"></i>
+                <span>Asset Library</span>
+                <span class="badge">{{ dashboard_data.team_stats.total_assets if dashboard_data.team_stats else 0 }}</span>
+            </li>
+            <li class="nav-item" data-tab="calendar">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Strategic Calendar</span>
+                <span class="badge">{{ upcoming_events|length if upcoming_events else 0 }}</span>
+            </li>
+            <li class="nav-item" data-tab="reports">
+                <i class="fas fa-chart-line"></i>
+                <span>Reports & Analytics</span>
+            </li>
+            <li class="nav-item" data-tab="file-manager">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>File Manager</span>
+            </li>
+            <li class="nav-item" data-tab="workflows">
+                <i class="fas fa-tasks"></i>
+                <span>Workflows</span>
+                <span class="badge">{{ workflow_dashboard.stats.action_required if workflow_dashboard.stats else 0 }}</span>
+            </li>
+            {% if user_dashboard_config.permissions and 'manage_users' in user_dashboard_config.permissions %}
+            <li class="nav-item" data-tab="team-management">
+                <i class="fas fa-users"></i>
+                <span>Team Management</span>
+            </li>
+            {% endif %}
+            {% if user_dashboard_config.permissions and 'system_admin' in user_dashboard_config.permissions %}
+            <li class="nav-item" data-tab="system-admin">
+                <i class="fas fa-cogs"></i>
+                <span>System Admin</span>
+            </li>
+            {% endif %}
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="intelligence-status">
+                <div class="status-indicator active"></div>
+                <span>Intelligence Active</span>
+                <small>Last updated: {{ intelligence_summary.last_updated[:10] if intelligence_summary.last_updated else 'Never' }}</small>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <header class="content-header">
+                <div class="header-main">
+                    <h1><i class="fas fa-crown"></i> Crooks & Castles Command Center V2</h1>
+                    <div class="header-subtitle">
+                        {% if current_user %}
+                            <p>Welcome back, <strong>{{ current_user.first_name }}</strong>! 
+                            {% if user_dashboard_config.role_config %}
+                                {{ user_dashboard_config.role_config.description }}
+                            {% else %}
+                                Ready to build the culture.
+                            {% endif %}
+                            </p>
+                        {% else %}
+                            <p>Collaborative Brand Intelligence & Strategic Planning Platform</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="refreshIntelligence()" style="{% if user_dashboard_config.color_theme %}background: {{ user_dashboard_config.color_theme }};{% endif %}">
+                        <i class="fas fa-sync-alt"></i> Refresh Intelligence
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportReport()">
+                        <i class="fas fa-download"></i> Export Report
+                    </button>
+                    {% if user_dashboard_config.permissions and 'create_campaigns' in user_dashboard_config.permissions %}
+                    <button class="btn btn-success" onclick="createNewCampaign()">
+                        <i class="fas fa-plus"></i> New Campaign
+                    </button>
+                    {% endif %}
+                </div>
+            </header>
+
+            <!-- Key Metrics Dashboard -->
+            <div class="metrics-grid">
+                <div class="metric-card competitive">
+                    <div class="metric-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Competitive Rank</h3>
+                        <div class="metric-value">
+                            #{{ intelligence_summary.crooks_rank if intelligence_summary.crooks_rank != 'N/A' else '?' }}<span>/{{ intelligence_summary.total_brands or 12 }}</span>
+                        </div>
+                        <div class="metric-change negative">
+                            <i class="fas fa-arrow-down"></i> Need improvement
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card cultural">
+                    <div class="metric-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Cultural Trends</h3>
+                        <div class="metric-value">
+                            {{ cultural_radar.trending_hashtags|length if cultural_radar.trending_hashtags else 0 }}<span> trending</span>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-arrow-up"></i> Y2K revival +340%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card projects">
+                    <div class="metric-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Active Projects</h3>
+                        <div class="metric-value">
+                            {{ dashboard_data.active_projects|length if dashboard_data.active_projects else 0 }}<span> projects</span>
+                        </div>
+                        <div class="metric-change neutral">
+                            <i class="fas fa-clock"></i> {{ dashboard_data.pending_approvals|length if dashboard_data.pending_approvals else 0 }} pending approvals
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card intelligence">
+                    <div class="metric-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="metric-content">
+                        <h3>Intelligence Data</h3>
+                        <div class="metric-value">
+                            {{ (intelligence_summary.data_sources.instagram + intelligence_summary.data_sources.hashtags + intelligence_summary.data_sources.tiktok) if intelligence_summary.data_sources else 0 }}<span> records</span>
+                        </div>
+                        <div class="metric-change positive">
+                            <i class="fas fa-check"></i> All sources active
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Recent Activity -->
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    <div class="quick-actions">
+                        <button class="action-btn" onclick="showTab('file-manager')">
+                            <i class="fas fa-upload"></i>
+                            <span>Upload Intelligence Data</span>
+                        </button>
+                        <button class="action-btn" onclick="createProject()">
+                            <i class="fas fa-plus"></i>
+                            <span>New Project</span>
+                        </button>
+                        <button class="action-btn" onclick="showTab('assets')">
+                            <i class="fas fa-image"></i>
+                            <span>Upload Asset</span>
+                        </button>
+                        <button class="action-btn" onclick="generateReport()">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Generate Report</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+                    <div class="activity-feed">
+                        {% if dashboard_data.recent_activity %}
+                            {% for activity in dashboard_data.recent_activity %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-{{ 'upload' if activity.type == 'asset_uploaded' else 'edit' if activity.type == 'project_updated' else 'check' }}"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p>{{ activity.description }}</p>
+                                    <small>{{ activity.timestamp[:16] }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>No recent activity</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Manager Tab -->
+        <div id="file-manager" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-cloud-upload-alt"></i> File Manager</h1>
+                <p>Upload intelligence data, assets, and campaign materials</p>
+            </header>
+
+            <div class="file-manager-grid">
+                <!-- Intelligence Data Upload -->
+                <div class="upload-section">
+                    <h3><i class="fas fa-brain"></i> Intelligence Data Upload</h3>
+                    <div class="upload-tabs">
+                        <button class="upload-tab active" data-type="instagram">
+                            <i class="fab fa-instagram"></i> Instagram Data
+                        </button>
+                        <button class="upload-tab" data-type="hashtags">
+                            <i class="fas fa-hashtag"></i> Hashtag Data
+                        </button>
+                        <button class="upload-tab" data-type="tiktok">
+                            <i class="fab fa-tiktok"></i> TikTok Data
+                        </button>
+                    </div>
+                    
+                    <div class="dropzone-container">
+                        <div id="intelligence-dropzone" class="dropzone">
+                            <div class="dz-message">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <h4>Drop JSONL files here or click to upload</h4>
+                                <p>Upload your Apify intelligence data for processing</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-info">
+                        <h4>Supported Formats:</h4>
+                        <ul>
+                            <li><strong>JSONL</strong> - Apify export format (recommended)</li>
+                            <li><strong>JSON</strong> - Standard JSON format</li>
+                            <li><strong>CSV</strong> - Comma-separated values</li>
+                        </ul>
+                        <p><strong>Max file size:</strong> 16MB per file</p>
+                    </div>
+                </div>
+
+                <!-- Asset Upload -->
+                <div class="upload-section">
+                    <h3><i class="fas fa-images"></i> Brand Assets Upload</h3>
+                    <div class="asset-category-selector">
+                        <select id="asset-category">
+                            <option value="logos_branding">Logos & Branding</option>
+                            <option value="heritage_archive">Heritage Archive</option>
+                            <option value="product_imagery">Product Imagery</option>
+                            <option value="campaign_creative">Campaign Creative</option>
+                            <option value="collaboration_assets">Collaboration Assets</option>
+                            <option value="cultural_content">Cultural Content</option>
+                            <option value="design_templates">Design Templates</option>
+                            <option value="video_content">Video Content</option>
+                        </select>
+                    </div>
+                    
+                    <div class="dropzone-container">
+                        <div id="asset-dropzone" class="dropzone">
+                            <div class="dz-message">
+                                <i class="fas fa-images"></i>
+                                <h4>Drop assets here or click to upload</h4>
+                                <p>Upload images, videos, documents, and design files</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-info">
+                        <h4>Supported Formats:</h4>
+                        <ul>
+                            <li><strong>Images:</strong> JPG, PNG, SVG, WebP</li>
+                            <li><strong>Videos:</strong> MP4, MOV, AVI</li>
+                            <li><strong>Documents:</strong> PDF, DOC, DOCX</li>
+                            <li><strong>Design:</strong> AI, PSD, SKETCH, FIGMA</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Report & Document Upload -->
+                <div class="upload-section">
+                    <h3><i class="fas fa-file-alt"></i> Reports & Documents</h3>
+                    <div class="dropzone-container">
+                        <div id="document-dropzone" class="dropzone">
+                            <div class="dz-message">
+                                <i class="fas fa-file-alt"></i>
+                                <h4>Drop documents here or click to upload</h4>
+                                <p>Upload reports, presentations, and planning documents</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-info">
+                        <h4>Document Types:</h4>
+                        <ul>
+                            <li><strong>Reports:</strong> PDF, DOCX, XLSX</li>
+                            <li><strong>Presentations:</strong> PPTX, KEY</li>
+                            <li><strong>Planning:</strong> PDF, DOCX, TXT</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Library -->
+            <div class="file-library">
+                <h3><i class="fas fa-folder-open"></i> File Library</h3>
+                <div class="library-filters">
+                    <button class="filter-btn active" data-filter="all">All Files</button>
+                    <button class="filter-btn" data-filter="intelligence">Intelligence Data</button>
+                    <button class="filter-btn" data-filter="assets">Brand Assets</button>
+                    <button class="filter-btn" data-filter="reports">Reports</button>
+                    <button class="filter-btn" data-filter="recent">Recent Uploads</button>
+                </div>
+                
+                <div class="file-grid" id="file-library-grid">
+                    <!-- Files will be populated dynamically -->
+                </div>
+                    <!-- Intelligence Tab -->
+        <div id="intelligence" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-brain"></i> Brand Intelligence</h1>
+                <p>Competitive analysis and market intelligence powered by Apify</p>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="commandCenter.refreshIntelligenceData()">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="apifyVisualizer.exportCharts()">
+                        <i class="fas fa-download"></i> Export Charts
+                    </button>
+                    <button class="btn btn-secondary" onclick="commandCenter.exportIntelligenceReport()">
+                        <i class="fas fa-file-export"></i> Export Report
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chart Filters -->
+            <div id="chart-filters" class="chart-filters">
+                <!-- Filters will be populated by JavaScript -->
+            </div>
+
+            <!-- Intelligence Metrics Overview -->
+            <div class="metrics-overview">
+                <div class="metric-card competitive">
+                    <div class="metric-icon"><i class="fas fa-trophy"></i></div>
+                    <div class="metric-value" id="competitive-rank-metric">
+                        #{{ intelligence_summary.crooks_rank if intelligence_summary.crooks_rank else 'N/A' }}
+                        <span>/{{ intelligence_summary.total_brands if intelligence_summary.total_brands else '0' }}</span>
+                    </div>
+                    <div class="metric-label">Competitive Rank</div>
+                    <div class="metric-change positive">+2 positions</div>
+                </div>
+                
+                <div class="metric-card cultural">
+                    <div class="metric-icon"><i class="fas fa-hashtag"></i></div>
+                    <div class="metric-value" id="trending-hashtags-metric">
+                        {{ cultural_radar.trending_hashtags|length if cultural_radar.trending_hashtags else 0 }}
+                        <span> trending</span>
+                    </div>
+                    <div class="metric-label">Cultural Trends</div>
+                    <div class="metric-change positive">+15% velocity</div>
+                </div>
+                
+                <div class="metric-card intelligence">
+                    <div class="metric-icon"><i class="fas fa-database"></i></div>
+                    <div class="metric-value" id="data-points-metric">
+                        {% if intelligence_summary.data_sources %}
+                            {{ intelligence_summary.data_sources.instagram + intelligence_summary.data_sources.hashtags + intelligence_summary.data_sources.tiktok }}
+                        {% else %}
+                            0
+                        {% endif %}
+                        <span> records</span>
+                    </div>
+                    <div class="metric-label">Data Points</div>
+                    <div class="metric-change positive">+1.2K today</div>
+                </div>
+                
+                <div class="metric-card engagement">
+                    <div class="metric-icon"><i class="fas fa-heart"></i></div>
+                    <div class="metric-value" id="engagement-rate-metric">
+                        2.4<span>%</span>
+                    </div>
+                    <div class="metric-label">Avg Engagement</div>
+                    <div class="metric-change negative">-0.3% vs last week</div>
+                </div>
+            </div>
+
+            <!-- Intelligence Dashboard Grid -->
+            <div class="intelligence-grid">
+                <!-- Competitive Rankings Chart -->
+                <div class="intelligence-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">Competitive Brand Rankings</h3>
+                            <p class="chart-subtitle">Average engagement performance across monitored brands</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn" onclick="apifyVisualizer.refreshAllCharts()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="competitive-rankings-chart"></canvas>
+                    </div>
+                    <div class="real-time-indicator">
+                        <div class="real-time-dot"></div>
+                        Live Data
+                    </div>
+                </div>
+
+                <!-- Hashtag Velocity Chart -->
+                <div class="intelligence-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">Hashtag Velocity & Engagement</h3>
+                            <p class="chart-subtitle">Trending hashtags with growth momentum</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn" onclick="commandCenter.viewHashtagDetails()">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="hashtag-velocity-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- TikTok Trends Chart -->
+                <div class="intelligence-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">TikTok Content Distribution</h3>
+                            <p class="chart-subtitle">Content performance by cultural moment type</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="tiktok-trends-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Engagement Timeline Chart -->
+                <div class="intelligence-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">Engagement Timeline</h3>
+                            <p class="chart-subtitle">Crooks & Castles vs competitor average over time</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="engagement-timeline-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full-Width Charts -->
+            <div class="intelligence-card">
+                <div class="chart-header">
+                    <div>
+                        <h3 class="chart-title">Brand Performance Radar</h3>
+                        <p class="chart-subtitle">Multi-dimensional performance analysis</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="brand-performance-radar"></canvas>
+                </div>
+            </div>
+
+            <div class="intelligence-grid">
+                <!-- Strategic Opportunity Matrix -->
+                <div class="intelligence-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">Strategic Opportunity Matrix</h3>
+                            <p class="chart-subtitle">Impact vs effort analysis for strategic initiatives</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="opportunity-matrix-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Content Performance Heatmap -->
+                <div class="intelligence-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title">Content Performance Heatmap</h3>
+                            <p class="chart-subtitle">Best posting times by platform</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="content-performance-heatmap"></canvas>
+                    </div>
+                </div>
+            </div>      <!-- Competitive Rankings -->
+            <div class="intelligence-grid">
+                <div class="intelligence-card full-width">
+                    <h3><i class="fas fa-trophy"></i> Competitive Rankings</h3>
+                    <div class="rankings-table">
+                        <div class="table-header">
+                            <div class="rank-col">Rank</div>
+                            <div class="brand-col">Brand</div>
+                            <div class="posts-col">Posts</div>
+                            <div class="engagement-col">Avg Engagement</div>
+                            <div class="performance-col">Performance</div>
+                            <div class="actions-col">Actions</div>
+                        </div>
+                        <div id="rankings-body">
+                            <!-- Rankings will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="intelligence-card">
+                    <h3><i class="fas fa-chart-line"></i> Performance Metrics</h3>
+                    <canvas id="performanceChart"></canvas>
+                </div>
+
+                <div class="intelligence-card">
+                    <h3><i class="fas fa-bullseye"></i> Strategic Opportunities</h3>
+                    <div class="opportunities-list" id="opportunities-list">
+                        <!-- Opportunities will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cultural Radar Tab -->
+        <div id="cultural-radar" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-satellite-dish"></i> Cultural Radar</h1>
+                <p>Real-time cultural trends and Gen Z insights</p>
+            </header>
+
+            <div class="cultural-grid">
+                <div class="cultural-card">
+                    <h3><i class="fas fa-fire"></i> Trending Hashtags</h3>
+                    <div class="hashtag-list" id="trending-hashtags">
+                        <!-- Trending hashtags will be populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="cultural-card">
+                    <h3><i class="fab fa-tiktok"></i> TikTok Cultural Moments</h3>
+                    <div class="tiktok-insights" id="tiktok-insights">
+                        <!-- TikTok insights will be populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="cultural-card full-width">
+                    <h3><i class="fas fa-chart-area"></i> Cultural Velocity Tracking</h3>
+                    <canvas id="velocityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Tab -->
+        <div id="projects" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-project-diagram"></i> Collaborative Projects</h1>
+                <p>Team projects and campaign development</p>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="createNewProject()">
+                        <i class="fas fa-plus"></i> New Project
+                    </button>
+                </div>
+            </header>
+
+            <div class="projects-grid" id="projects-grid">
+                <!-- Projects will be populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Assets Tab -->
+        <div id="assets" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-folder-open"></i> Asset Library</h1>
+                <p>Brand assets and collaborative content management</p>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showTab('file-manager')">
+                        <i class="fas fa-upload"></i> Upload Assets
+                    </button>
+                </div>
+            </header>
+
+            <div class="assets-filter">
+                <button class="filter-btn active" data-category="all">All Assets</button>
+                <button class="filter-btn" data-category="logos_branding">Logos & Branding</button>
+                <button class="filter-btn" data-category="heritage_archive">Heritage Archive</button>
+                <button class="filter-btn" data-category="product_imagery">Product Imagery</button>
+                <button class="filter-btn" data-category="campaign_creative">Campaign Creative</button>
+                <button class="filter-btn" data-category="collaboration_assets">Collaborations</button>
+            </div>
+
+            <div class="assets-grid" id="assets-grid">
+                <!-- Assets will be populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-calendar-alt"></i> Strategic Calendar</h1>
+                <p>Strategic planning and intelligence scheduling</p>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="createEvent()">
+                        <i class="fas fa-plus"></i> New Event
+                    </button>
+                </div>
+            </header>
+
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button class="btn btn-secondary" onclick="previousMonth()">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h2 id="calendar-month-year">{{ calendar_view.month_name }} {{ calendar_view.year }}</h2>
+                    <button class="btn btn-secondary" onclick="nextMonth()">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                
+                <div class="calendar-grid" id="calendar-grid">
+                    <!-- Calendar will be populated dynamically -->
+                </div>
+            </div>
+
+            <div class="upcoming-events">
+                <h3><i class="fas fa-clock"></i> Upcoming Events</h3>
+                <div class="events-list" id="upcoming-events-list">
+                    <!-- Upcoming events will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflows Tab -->
+        <div id="workflows" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-tasks"></i> Workflow Management</h1>
+                <p>Manage collaborative workflows and approval processes</p>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="createNewWorkflow()">
+                        <i class="fas fa-plus"></i> New Workflow
+                    </button>
+                </div>
+            </header>
+
+            <!-- Workflow Statistics -->
+            {% if workflow_dashboard.stats %}
+            <div class="workflow-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Active Workflows</h3>
+                        <div class="stat-value">{{ workflow_dashboard.stats.active_workflows }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Action Required</h3>
+                        <div class="stat-value">{{ workflow_dashboard.stats.action_required }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Pending Approval</h3>
+                        <div class="stat-value">{{ workflow_dashboard.stats.pending_approval }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Completed</h3>
+                        <div class="stat-value">{{ workflow_dashboard.stats.completed_workflows }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Active Workflows -->
+            <div class="workflow-section">
+                <h2>Active Workflows</h2>
+                <div class="workflow-list">
+                    {% if workflow_dashboard.active_workflows %}
+                        {% for workflow in workflow_dashboard.active_workflows %}
+                        <div class="workflow-item" data-workflow-id="{{ workflow.id }}">
+                            <div class="workflow-header">
+                                <h3>{{ workflow.name }}</h3>
+                                <span class="workflow-status {{ workflow.status }}">{{ workflow.status.replace('_', ' ').title() }}</span>
+                            </div>
+                            <div class="workflow-details">
+                                <p>{{ workflow.description }}</p>
+                                <div class="workflow-meta">
+                                    <span class="workflow-category">{{ workflow.category.title() }}</span>
+                                    <span class="workflow-priority {{ workflow.priority }}">{{ workflow.priority.title() }}</span>
+                                    {% if workflow.due_date %}
+                                    <span class="workflow-due">Due: {{ workflow.due_date[:10] }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="workflow-actions">
+                                <button class="btn btn-sm btn-primary" onclick="viewWorkflow('{{ workflow.id }}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                {% if workflow.current_step %}
+                                <button class="btn btn-sm btn-success" onclick="advanceWorkflow('{{ workflow.id }}')">
+                                    <i class="fas fa-arrow-right"></i> Advance
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-tasks"></i>
+                            <h3>No Active Workflows</h3>
+                            <p>Create a new workflow to get started with collaborative processes.</p>
+                            <button class="btn btn-primary" onclick="createNewWorkflow()">
+                                <i class="fas fa-plus"></i> Create Workflow
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Required -->
+            {% if workflow_dashboard.action_required %}
+            <div class="workflow-section">
+                <h2>Action Required</h2>
+                <div class="action-list">
+                    {% for workflow in workflow_dashboard.action_required %}
+                    <div class="action-item urgent" data-workflow-id="{{ workflow.id }}">
+                        <div class="action-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="action-content">
+                            <h4>{{ workflow.name }}</h4>
+                            <p>{{ workflow.current_step }} requires your attention</p>
+                            <div class="action-meta">
+                                <span class="action-priority {{ workflow.priority }}">{{ workflow.priority.title() }}</span>
+                                {% if workflow.due_date %}
+                                <span class="action-due">Due: {{ workflow.due_date[:10] }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-primary" onclick="takeAction('{{ workflow.id }}')">
+                                <i class="fas fa-play"></i> Take Action
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Team Management Tab -->
+        {% if user_dashboard_config.permissions and 'manage_users' in user_dashboard_config.permissions %}
+        <div id="team-management" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-users"></i> Team Management</h1>
+                <p>Manage team members, roles, and permissions</p>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="inviteTeamMember()">
+                        <i class="fas fa-user-plus"></i> Invite Member
+                    </button>
+                </div>
+            </header>
+
+            <!-- Team Overview -->
+            {% if team_dashboard %}
+            <div class="team-overview">
+                <div class="team-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Team Members</h3>
+                            <div class="stat-value">{{ team_dashboard.collaboration_stats.team_members }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Active Projects</h3>
+                            <div class="stat-value">{{ team_dashboard.collaboration_stats.active_projects }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Pending Approvals</h3>
+                            <div class="stat-value">{{ team_dashboard.collaboration_stats.pending_approvals }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Team Activity -->
+                <div class="team-activity">
+                    <h2>Recent Team Activity</h2>
+                    <div class="activity-feed">
+                        {% if team_dashboard.team_activity %}
+                            {% for activity in team_dashboard.team_activity[:10] %}
+                            <div class="activity-item">
+                                <div class="activity-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p><strong>{{ activity.user.name }}</strong> {{ activity.action }}</p>
+                                    <small>{{ activity.timestamp[:16] }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <h3>No Recent Activity</h3>
+                                <p>Team activity will appear here as members collaborate.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- System Admin Tab -->
+        {% if user_dashboard_config.permissions and 'system_admin' in user_dashboard_config.permissions %}
+        <div id="system-admin" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-cogs"></i> System Administration</h1>
+                <p>System configuration and administrative tools</p>
+            </header>
+
+            <div class="admin-sections">
+                <div class="admin-card">
+                    <h3><i class="fas fa-database"></i> Data Management</h3>
+                    <p>Manage system data, backups, and exports</p>
+                    <div class="admin-actions">
+                        <button class="btn btn-primary" onclick="exportSystemData()">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                        <button class="btn btn-warning" onclick="backupSystem()">
+                            <i class="fas fa-save"></i> Backup System
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
+                    <p>Configure security policies and access controls</p>
+                    <div class="admin-actions">
+                        <button class="btn btn-primary" onclick="configureSecuritySettings()">
+                            <i class="fas fa-cog"></i> Configure
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <h3><i class="fas fa-chart-line"></i> System Analytics</h3>
+                    <p>View system performance and usage analytics</p>
+                    <div class="admin-actions">
+                        <button class="btn btn-primary" onclick="viewSystemAnalytics()">
+                            <i class="fas fa-eye"></i> View Analytics
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <header class="content-header">
+                <h1><i class="fas fa-chart-line"></i> Reports & Analytics</h1>
+                <p>Comprehensive reporting and data export</p>
+            </header>
+
+            <div class="reports-grid">
+                <div class="report-card">
+                    <h3><i class="fas fa-file-pdf"></i> Weekly Intelligence Report</h3>
+                    <p>Comprehensive weekly brand intelligence summary</p>
+                    <button class="btn btn-primary" onclick="generateWeeklyReport()">
+                        <i class="fas fa-download"></i> Generate Report
+                    </button>
+                </div>
+
+                <div class="report-card">
+                    <h3><i class="fas fa-chart-bar"></i> Competitive Analysis</h3>
+                    <p>Detailed competitive positioning analysis</p>
+                    <button class="btn btn-primary" onclick="generateCompetitiveReport()">
+                        <i class="fas fa-download"></i> Generate Report
+                    </button>
+                </div>
+
+                <div class="report-card">
+                    <h3><i class="fas fa-satellite-dish"></i> Cultural Radar Report</h3>
+                    <p>Cultural trends and opportunity analysis</p>
+                    <button class="btn btn-primary" onclick="generateCulturalReport()">
+                        <i class="fas fa-download"></i> Generate Report
+                    </button>
+                </div>
+
+                <div class="report-card">
+                    <h3><i class="fas fa-users"></i> Team Performance</h3>
+                    <p>Collaborative project and team analytics</p>
+                    <button class="btn btn-primary" onclick="generateTeamReport()">
+                        <i class="fas fa-download"></i> Generate Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal Title</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Modal content will be populated dynamically -->
+            </div>
+            <div class="modal-footer" id="modal-footer">
+                <!-- Modal footer will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notification-container" class="notification-container">
+        <!-- Notifications will be added dynamically -->
+    </div>
+
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    
+    <!-- Dropzone.js for file uploads -->
+    <script src="https://unpkg.com/dropzone@6/dist/dropzone-min.js"></script>
+    
+    <!-- Main application scripts -->
+    <script src="{{ url_for('static', filename='js/enhanced_collaborative.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/enhanced_apify_visualization.js') }}"></script>
+    
+    <script>
+        // Initialize the command center when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            window.commandCenter = new CrooksCommandCenter();
+            
+            // Initialize charts after a short delay to ensure DOM is fully ready
+            setTimeout(() => {
+                if (window.apifyVisualizer) {
+                    console.log('Apify visualizer initialized successfully');
+                } else {
+                    console.warn('Apify visualizer not available - charts may not display');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
