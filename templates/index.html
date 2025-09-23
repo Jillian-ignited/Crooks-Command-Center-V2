@@ -133,3 +133,473 @@
   <script src="/static/js/app.js?v=ccv2-20250923"></script>
 </body>
 </html>
+<!-- ADD THIS TO YOUR EXISTING INTELLIGENCE TAB CONTENT -->
+
+<!-- Competitive Intelligence Section -->
+<div class="competitive-intelligence-section" style="margin-top: 2rem;">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="color: #ff6b35; font-size: 1.5rem; margin: 0;">🏆 11-Brand Competitive Analysis</h3>
+        <button id="refreshCompetitiveData" class="btn btn-primary" onclick="loadCompetitiveData()">
+            🔄 Refresh Analysis
+        </button>
+    </div>
+
+    <!-- Brand Selection Dropdown -->
+    <div class="brand-selector" style="margin-bottom: 2rem;">
+        <label for="competitorSelect" style="color: #ffffff; font-weight: 600; display: block; margin-bottom: 0.5rem;">
+            Select Competitor for Head-to-Head Analysis:
+        </label>
+        <select id="competitorSelect" onchange="loadBrandComparison()" style="
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            width: 300px;
+            font-size: 1rem;
+        ">
+            <option value="">Choose a competitor...</option>
+        </select>
+    </div>
+
+    <!-- Competitive Overview Grid -->
+    <div class="competitive-overview-grid" style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    ">
+        <div id="competitorsOverview" class="competitors-overview">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Head-to-Head Comparison -->
+    <div id="headToHeadComparison" class="head-to-head-section" style="display: none; margin-top: 2rem;">
+        <h4 style="color: #ff6b35; font-size: 1.3rem; margin-bottom: 1rem;">📊 Head-to-Head Analysis</h4>
+        <div id="comparisonContent" class="comparison-content">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Strategic Insights -->
+    <div id="strategicInsights" class="insights-section" style="margin-top: 2rem;">
+        <h4 style="color: #ff6b35; font-size: 1.3rem; margin-bottom: 1rem;">🎯 Strategic Insights</h4>
+        <div id="insightsContent" class="insights-content">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<style>
+/* ADD THESE STYLES TO YOUR EXISTING CSS */
+
+.competitor-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.competitor-card:hover {
+    border-color: #ff6b35;
+    background: rgba(255, 107, 53, 0.1);
+    transform: translateY(-2px);
+}
+
+.competitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.competitor-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.competitor-tier {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.tier-luxury { background: linear-gradient(45deg, #ffd700, #ffed4a); color: #000; }
+.tier-heritage { background: linear-gradient(45deg, #8b5cf6, #a78bfa); color: #fff; }
+.tier-established { background: linear-gradient(45deg, #10b981, #34d399); color: #fff; }
+.tier-emerging { background: linear-gradient(45deg, #3b82f6, #60a5fa); color: #fff; }
+.tier-legacy { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: #000; }
+
+.competitor-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #ff6b35;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #a0a0a0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.position-strong { color: #10b981; }
+.position-moderate { color: #fbbf24; }
+.position-developing { color: #ef4444; }
+
+.insight-card {
+    background: rgba(255, 107, 53, 0.1);
+    border-left: 4px solid #ff6b35;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.insight-title {
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.insight-description {
+    color: #d0d0d0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.recommendation-item {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid #10b981;
+    border-radius: 6px;
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #d0d0d0;
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.comparison-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ff6b35;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+</style>
+
+<script>
+// ADD THIS JAVASCRIPT TO YOUR EXISTING JS FILE OR SCRIPT TAG
+
+let competitorsData = {};
+let currentComparisonData = {};
+
+// Load competitive data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCompetitiveData();
+});
+
+async function loadCompetitiveData() {
+    try {
+        // Show loading state
+        document.getElementById('competitorsOverview').innerHTML = '<div style="text-align: center; color: #a0a0a0; padding: 2rem;">Loading competitive intelligence...</div>';
+        
+        // Load competitors list
+        const competitorsResponse = await fetch('/api/competitors');
+        competitorsData = await competitorsResponse.json();
+        
+        // Populate competitor dropdown
+        populateCompetitorDropdown();
+        
+        // Load competitive analysis
+        const analysisResponse = await fetch('/api/competitive-analysis');
+        const analysisData = await analysisResponse.json();
+        
+        // Render competitors overview
+        renderCompetitorsOverview(analysisData);
+        
+        // Load strategic insights
+        loadStrategicInsights();
+        
+    } catch (error) {
+        console.error('Error loading competitive data:', error);
+        document.getElementById('competitorsOverview').innerHTML = '<div style="color: #ef4444; padding: 2rem;">Error loading competitive data. Please check your data files.</div>';
+    }
+}
+
+function populateCompetitorDropdown() {
+    const select = document.getElementById('competitorSelect');
+    select.innerHTML = '<option value="">Choose a competitor...</option>';
+    
+    Object.entries(competitorsData).forEach(([key, competitor]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = competitor.name;
+        select.appendChild(option);
+    });
+}
+
+function renderCompetitorsOverview(analysisData) {
+    const container = document.getElementById('competitorsOverview');
+    
+    if (Object.keys(analysisData).length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; color: #a0a0a0; padding: 2rem;">
+                <h4>No Competitive Data Available</h4>
+                <p>Upload your competitor JSONL files to see competitive intelligence.</p>
+                <p style="font-size: 0.9rem; margin-top: 1rem;">
+                    Expected files: supreme_data.jsonl, stussy_data.jsonl, etc.
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    Object.entries(analysisData).forEach(([key, data]) => {
+        const card = document.createElement('div');
+        card.className = 'competitor-card';
+        
+        const positionClass = `position-${data.competitive_position}`;
+        const tierClass = `tier-${data.tier}`;
+        
+        card.innerHTML = `
+            <div class="competitor-header">
+                <div class="competitor-name">${data.name}</div>
+                <div class="competitor-tier ${tierClass}">${data.tier}</div>
+            </div>
+            
+            <div class="competitor-stats">
+                <div class="stat-item">
+                    <span class="stat-value">${data.metrics.avg_engagement_per_post?.toLocaleString() || 'N/A'}</span>
+                    <span class="stat-label">Avg Engagement</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">${data.metrics.total_posts || 'N/A'}</span>
+                    <span class="stat-label">Total Posts</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <div style="font-size: 0.9rem; color: #a0a0a0; margin-bottom: 0.5rem;">Position:</div>
+                <div class="stat-value ${positionClass}" style="text-transform: capitalize; font-size: 1rem;">
+                    ${data.competitive_position}
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <div style="font-size: 0.9rem; color: #a0a0a0; margin-bottom: 0.5rem;">Content Strategy:</div>
+                <div style="color: #ffffff; font-size: 0.9rem; text-transform: capitalize;">
+                    ${data.content_strategy.replace(/_/g, ' ')}
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <div style="font-size: 0.9rem; color: #a0a0a0; margin-bottom: 0.5rem;">Key Strengths:</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">
+                    ${data.key_strengths.map(strength => 
+                        `<span style="background: rgba(255, 107, 53, 0.2); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; color: #ff6b35;">
+                            ${strength.replace(/_/g, ' ')}
+                        </span>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+async function loadBrandComparison() {
+    const selectedCompetitor = document.getElementById('competitorSelect').value;
+    
+    if (!selectedCompetitor) {
+        document.getElementById('headToHeadComparison').style.display = 'none';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/brand-comparison/${selectedCompetitor}`);
+        currentComparisonData = await response.json();
+        
+        renderBrandComparison();
+        document.getElementById('headToHeadComparison').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error loading brand comparison:', error);
+    }
+}
+
+function renderBrandComparison() {
+    const container = document.getElementById('comparisonContent');
+    
+    if (currentComparisonData.comparison === 'no_data') {
+        container.innerHTML = `
+            <div style="color: #a0a0a0; text-align: center; padding: 2rem;">
+                ${currentComparisonData.message}
+            </div>
+        `;
+        return;
+    }
+    
+    const crooksMetrics = currentComparisonData.metrics_comparison.crooks_castles;
+    const competitorMetrics = currentComparisonData.metrics_comparison.competitor;
+    const competitor = currentComparisonData.competitor;
+    
+    container.innerHTML = `
+        <div class="comparison-grid">
+            <div class="comparison-card">
+                <div class="brand-label">Crooks & Castles</div>
+                <div class="competitor-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">${crooksMetrics.avg_engagement_per_post?.toLocaleString() || 'N/A'}</span>
+                        <span class="stat-label">Avg Engagement</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${crooksMetrics.total_posts || 'N/A'}</span>
+                        <span class="stat-label">Posts</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="comparison-card">
+                <div class="brand-label">${competitor.name}</div>
+                <div class="competitor-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">${competitorMetrics.avg_engagement_per_post?.toLocaleString() || 'N/A'}</span>
+                        <span class="stat-label">Avg Engagement</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${competitorMetrics.total_posts || 'N/A'}</span>
+                        <span class="stat-label">Posts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem;">
+            <h5 style="color: #ffffff; margin-bottom: 1rem;">Strategic Insights:</h5>
+            ${currentComparisonData.strategic_insights.map(insight => 
+                `<div class="insight-card">
+                    <div class="insight-description">${insight}</div>
+                </div>`
+            ).join('')}
+        </div>
+        
+        <div style="margin-top: 1.5rem;">
+            <h5 style="color: #ffffff; margin-bottom: 1rem;">Recommended Actions:</h5>
+            ${currentComparisonData.recommended_actions.map(action => 
+                `<div class="recommendation-item">💡 ${action}</div>`
+            ).join('')}
+        </div>
+    `;
+}
+
+async function loadStrategicInsights() {
+    try {
+        const response = await fetch('/api/competitive-insights');
+        const insights = await response.json();
+        
+        renderStrategicInsights(insights);
+        
+    } catch (error) {
+        console.error('Error loading strategic insights:', error);
+    }
+}
+
+function renderStrategicInsights(insights) {
+    const container = document.getElementById('insightsContent');
+    
+    if (!insights || Object.keys(insights).length === 0) {
+        container.innerHTML = '<div style="color: #a0a0a0;">Upload more competitor data for strategic insights</div>';
+        return;
+    }
+    
+    let insightsHTML = '';
+    
+    // Market Leaders
+    if (insights.market_leaders && insights.market_leaders.length > 0) {
+        insightsHTML += `
+            <div class="insight-card">
+                <div class="insight-title">🏆 Market Leaders by Engagement</div>
+                <div class="insight-description">
+                    ${insights.market_leaders.map((leader, index) => 
+                        `${index + 1}. ${leader.name} (${leader.engagement.toLocaleString()} avg engagement)`
+                    ).join('<br>')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Emerging Threats
+    if (insights.emerging_threats && insights.emerging_threats.length > 0) {
+        insightsHTML += `
+            <div class="insight-card">
+                <div class="insight-title">⚡ Emerging Threats</div>
+                <div class="insight-description">
+                    ${insights.emerging_threats.map(threat => 
+                        `${threat.name} showing strong engagement (${threat.engagement.toLocaleString()})`
+                    ).join('<br>')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Content Trends
+    if (insights.content_trends && insights.content_trends.video_first_brands && insights.content_trends.video_first_brands.length > 0) {
+        insightsHTML += `
+            <div class="insight-card">
+                <div class="insight-title">📹 Video-First Competitors</div>
+                <div class="insight-description">
+                    ${insights.content_trends.video_first_brands.join(', ')} are leading with video-first content strategies
+                </div>
+            </div>
+        `;
+    }
+    
+    // Strategic Recommendations
+    if (insights.strategic_recommendations && insights.strategic_recommendations.length > 0) {
+        insightsHTML += `
+            <div style="margin-top: 1.5rem;">
+                <h5 style="color: #ffffff; margin-bottom: 1rem;">Strategic Recommendations:</h5>
+                ${insights.strategic_recommendations.map(rec => 
+                    `<div class="recommendation-item">🎯 ${rec}</div>`
+                ).join('')}
+            </div>
+        `;
+    }
+    
+    container.innerHTML = insightsHTML;
+}
+</script>
