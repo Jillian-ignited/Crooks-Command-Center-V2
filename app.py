@@ -1,514 +1,813 @@
-from __future__ import annotations
-import os, json, glob, csv, io
-from datetime import datetime, date
-from typing import Any, Dict, List
-from flask import (
-    Flask, jsonify, request, render_template, send_file,
-    make_response
-)
-from flask_cors import CORS
+import os
+import json
+import sqlite3
+import re
+from datetime import datetime, timedelta
+from collections import Counter, defaultdict
+from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
+import uuid
 
-# -----------------------------------------------------------------------------
-# App bootstrap
-# -----------------------------------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-DATA_DIR   = os.path.join(UPLOAD_DIR, "data")
-THUMBS_DIR = os.path.join(UPLOAD_DIR, "thumbnails")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(DATA_DIR,   exist_ok=True)
-os.makedirs(THUMBS_DIR, exist_ok=True)
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'crooks-castles-command-center-2025')
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['ASSETS_FOLDER'] = 'assets'
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
-app.url_map.strict_slashes = False
-CORS(app)
+# Ensure directories exist
+for directory in ['uploads', 'assets', 'reports', 'data']:
+    os.makedirs(directory, exist_ok=True)
 
-# Kill cache for HTML/JS/CSS while we iterate
-@app.after_request
-def no_cache(resp):
-    ct = (resp.headers.get("Content-Type") or "").lower()
-    if any(k in ct for k in ("text/html", "text/css", "javascript")):
-        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    return resp
+# Database setup
+DATABASE = 'command_center.db'
 
-# -----------------------------------------------------------------------------
-# Optional module imports (use if available)
-# -----------------------------------------------------------------------------
-# Everything below has safe fallbacks so a missing module won't crash the app.
-try:
-    from data_processor import (
-        load_jsonl_data as _dp_load,
-        analyze_hashtags as _dp_hashtags,
-        calculate_engagement_metrics as _dp_eng,
-        identify_cultural_moments as _dp_moments,
-        competitive_analysis as _dp_competitive,
-        generate_intelligence_report as _dp_report,
-    )
-except Exception:
-    _dp_load = _dp_hashtags = _dp_eng = _dp_moments = _dp_competitive = _dp_report = None
+def init_database():
+    """Initialize SQLite database with required tables"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    # Projects table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            status TEXT DEFAULT 'active',
+            priority TEXT DEFAULT 'medium',
+            deadline DATE,
+            assigned_to TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Assets table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL,
+            original_filename TEXT NOT NULL,
+            file_type TEXT,
+            file_size INTEGER,
+            description TEXT,
+            tags TEXT,
+            uploaded_by TEXT,
+            project_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects (id)
+        )
+    ''')
+    
+    # Calendar events table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS calendar_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            event_type TEXT DEFAULT 'general',
+            start_date DATE NOT NULL,
+            end_date DATE,
+            created_by TEXT,
+            project_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects (id)
+        )
+    ''')
+    
+    # Agency deliverables table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS agency_deliverables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            deliverable_name TEXT NOT NULL,
+            phase INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'pending',
+            due_date DATE,
+            assigned_to TEXT,
+            notes TEXT,
+            project_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects (id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
 
-try:
-    from enhanced_competitor_analysis import build_competitor_intel as _build_competitor_intel
-except Exception:
-    _build_competitor_intel = None
+# Competitor Intelligence Database
+COMPETITORS = {
+    'supreme': {
+        'name': 'Supreme',
+        'tier': 'luxury',
+        'detection_keywords': ['supreme', 'supremenewyork', '@supremenewyork', '#supreme'],
+        'usernames': ['supremenewyork', 'supreme'],
+        'target_audience': 'hype-collectors',
+        'price_range': 'premium'
+    },
+    'stussy': {
+        'name': 'Stussy', 
+        'tier': 'heritage',
+        'detection_keywords': ['stussy', '@stussy', '#stussy', 'stüssy'],
+        'usernames': ['stussy'],
+        'target_audience': 'streetwear-og',
+        'price_range': 'mid-premium'
+    },
+    'hellstar': {
+        'name': 'Hellstar',
+        'tier': 'emerging',
+        'detection_keywords': ['hellstar', '@hellstar', '#hellstar'],
+        'usernames': ['hellstar'],
+        'target_audience': 'gen-z-alt',
+        'price_range': 'mid-tier'
+    },
+    'godspeed': {
+        'name': 'Godspeed',
+        'tier': 'emerging',
+        'detection_keywords': ['godspeed', '@godspeed', '#godspeed'],
+        'usernames': ['godspeed'],
+        'target_audience': 'streetwear-purist',
+        'price_range': 'mid-tier'
+    },
+    'fog_essentials': {
+        'name': 'Fear of God Essentials',
+        'tier': 'luxury',
+        'detection_keywords': ['fearofgod', 'essentials', '@fearofgodessentials', '#fearofgod', '#essentials'],
+        'usernames': ['fearofgodessentials', 'fearofgod'],
+        'target_audience': 'minimalist-luxury',
+        'price_range': 'premium'
+    },
+    'smoke_rise': {
+        'name': 'Smoke Rise',
+        'tier': 'established',
+        'detection_keywords': ['smokerise', '@smokerise', '#smokerise'],
+        'usernames': ['smokerise'],
+        'target_audience': 'urban-contemporary',
+        'price_range': 'mid-tier'
+    },
+    'reason_clothing': {
+        'name': 'Reason Clothing',
+        'tier': 'established',
+        'detection_keywords': ['reasonclothing', 'reason', '@reasonclothing', '#reasonclothing'],
+        'usernames': ['reasonclothing'],
+        'target_audience': 'urban-lifestyle',
+        'price_range': 'accessible'
+    },
+    'lrg': {
+        'name': 'LRG',
+        'tier': 'heritage',
+        'detection_keywords': ['lrg', 'lrgclothing', '@lrgclothing', '#lrg'],
+        'usernames': ['lrgclothing', 'lrg'],
+        'target_audience': 'skatewear-culture',
+        'price_range': 'accessible'
+    },
+    'diamond_supply': {
+        'name': 'Diamond Supply Co.',
+        'tier': 'established',
+        'detection_keywords': ['diamond', 'diamondsupplyco', '@diamondsupplyco', '#diamondsupply'],
+        'usernames': ['diamondsupplyco', 'diamondsupply'],
+        'target_audience': 'skate-culture',
+        'price_range': 'mid-tier'
+    },
+    'ed_hardy': {
+        'name': 'Ed Hardy',
+        'tier': 'legacy',
+        'detection_keywords': ['edhardy', '@edhardyofficial', '#edhardy'],
+        'usernames': ['edhardyofficial', 'edhardy'],
+        'target_audience': 'nostalgic-revival',
+        'price_range': 'mid-tier'
+    },
+    'von_dutch': {
+        'name': 'Von Dutch',
+        'tier': 'legacy',
+        'detection_keywords': ['vondutch', '@vondutchoriginals', '#vondutch'],
+        'usernames': ['vondutchoriginals', 'vondutch'],
+        'target_audience': 'y2k-revival',
+        'price_range': 'premium'
+    },
+    'crooks_castles': {
+        'name': 'Crooks & Castles',
+        'tier': 'established',
+        'detection_keywords': ['crooks', 'castles', 'crooksandcastles', '@crooksandcastles', '#crooksandcastles'],
+        'usernames': ['crooksandcastles', 'crookscastles'],
+        'target_audience': 'streetwear-luxury',
+        'price_range': 'premium'
+    }
+}
 
-try:
-    from asset_manager import (
-        scan_upload_directory as _am_scan,
-        handle_file_upload as _am_upload,
-        serve_file_download as _am_download,
-    )
-except Exception:
-    _am_scan = _am_upload = _am_download = None
+# Initialize database on startup
+init_database()
 
-try:
-    from calendar_engine import get_calendar_views as _cal_views  # preferred
-except Exception:
-    _cal_views = None
+# MAIN ROUTES
+@app.route('/')
+def dashboard():
+    """Main dashboard"""
+    return render_template('index.html')
 
-try:
-    from agency_tracker import get_agency_snapshot as _agency_snapshot
-except Exception:
-    _agency_snapshot = None
+# PROJECT MANAGEMENT ROUTES
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    """Get all projects"""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM projects 
+        ORDER BY created_at DESC
+    ''')
+    
+    projects = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    return jsonify(projects)
 
-# Campaign planning (optional)
-try:
-    from content_planning import (
-        plan_campaign, list_campaigns, campaign_overview,
-        update_milestone_status, retitle_milestone, delete_campaign
-    )
-except Exception:
-    plan_campaign = list_campaigns = campaign_overview = None
-    update_milestone_status = retitle_milestone = delete_campaign = None
+@app.route('/api/projects', methods=['POST'])
+def create_project():
+    """Create new project"""
+    data = request.json
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO projects (name, description, status, priority, deadline, assigned_to)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('name'),
+        data.get('description'),
+        data.get('status', 'active'),
+        data.get('priority', 'medium'),
+        data.get('deadline'),
+        data.get('assigned_to')
+    ))
+    
+    project_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'id': project_id, 'status': 'created'})
 
+@app.route('/api/projects/<int:project_id>', methods=['PUT'])
+def update_project(project_id):
+    """Update project"""
+    data = request.json
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE projects 
+        SET name=?, description=?, status=?, priority=?, deadline=?, assigned_to=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+    ''', (
+        data.get('name'),
+        data.get('description'),
+        data.get('status'),
+        data.get('priority'),
+        data.get('deadline'),
+        data.get('assigned_to'),
+        project_id
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'status': 'updated'})
 
-# -----------------------------------------------------------------------------
-# Utilities / fallbacks
-# -----------------------------------------------------------------------------
-def _json_error(name: str, detail: str, http=500):
-    return jsonify({"error": name, "detail": detail}), http
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    """Delete project"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    cursor.execute('DELETE FROM projects WHERE id=?', (project_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'status': 'deleted'})
 
-def _safe_jsonl(path: str) -> List[Dict[str, Any]]:
-    items = []
+# ASSET MANAGEMENT ROUTES
+@app.route('/api/assets', methods=['GET'])
+def get_assets():
+    """Get all assets"""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT a.*, p.name as project_name 
+        FROM assets a
+        LEFT JOIN projects p ON a.project_id = p.id
+        ORDER BY a.created_at DESC
+    ''')
+    
+    assets = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    return jsonify(assets)
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Upload file"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file selected'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if file:
+        # Generate unique filename
+        filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Save file
+        file.save(filepath)
+        
+        # Save to database
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO assets (filename, original_filename, file_type, file_size, description, tags, uploaded_by, project_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            filename,
+            file.filename,
+            file.content_type,
+            os.path.getsize(filepath),
+            request.form.get('description', ''),
+            request.form.get('tags', ''),
+            request.form.get('uploaded_by', ''),
+            request.form.get('project_id', None)
+        ))
+        
+        asset_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'id': asset_id,
+            'filename': filename,
+            'original_filename': file.filename,
+            'status': 'uploaded'
+        })
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Serve uploaded files"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# CALENDAR ROUTES
+@app.route('/api/calendar/events', methods=['GET'])
+def get_calendar_events():
+    """Get calendar events"""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT e.*, p.name as project_name 
+        FROM calendar_events e
+        LEFT JOIN projects p ON e.project_id = p.id
+        ORDER BY e.start_date ASC
+    ''')
+    
+    events = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    return jsonify(events)
+
+@app.route('/api/calendar/events', methods=['POST'])
+def create_calendar_event():
+    """Create calendar event"""
+    data = request.json
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO calendar_events (title, description, event_type, start_date, end_date, created_by, project_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('title'),
+        data.get('description'),
+        data.get('event_type', 'general'),
+        data.get('start_date'),
+        data.get('end_date'),
+        data.get('created_by'),
+        data.get('project_id')
+    ))
+    
+    event_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'id': event_id, 'status': 'created'})
+
+# AGENCY ROUTES
+@app.route('/api/agency/deliverables', methods=['GET'])
+def get_agency_deliverables():
+    """Get agency deliverables"""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT d.*, p.name as project_name 
+        FROM agency_deliverables d
+        LEFT JOIN projects p ON d.project_id = p.id
+        ORDER BY d.due_date ASC, d.phase ASC
+    ''')
+    
+    deliverables = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    return jsonify(deliverables)
+
+@app.route('/api/agency/deliverables', methods=['POST'])
+def create_agency_deliverable():
+    """Create agency deliverable"""
+    data = request.json
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO agency_deliverables (deliverable_name, phase, status, due_date, assigned_to, notes, project_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('deliverable_name'),
+        data.get('phase', 1),
+        data.get('status', 'pending'),
+        data.get('due_date'),
+        data.get('assigned_to'),
+        data.get('notes'),
+        data.get('project_id')
+    ))
+    
+    deliverable_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'id': deliverable_id, 'status': 'created'})
+
+@app.route('/api/agency/deliverables/<int:deliverable_id>', methods=['PUT'])
+def update_agency_deliverable(deliverable_id):
+    """Update agency deliverable"""
+    data = request.json
+    
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE agency_deliverables 
+        SET deliverable_name=?, phase=?, status=?, due_date=?, assigned_to=?, notes=?, project_id=?
+        WHERE id=?
+    ''', (
+        data.get('deliverable_name'),
+        data.get('phase'),
+        data.get('status'),
+        data.get('due_date'),
+        data.get('assigned_to'),
+        data.get('notes'),
+        data.get('project_id'),
+        deliverable_id
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'status': 'updated'})
+
+# COMPETITIVE INTELLIGENCE ROUTES
+@app.route('/api/competitors')
+def get_competitors():
+    """Get all competitor data"""
+    return jsonify(COMPETITORS)
+
+@app.route('/api/competitive-analysis')
+def competitive_analysis():
+    """Generate competitive analysis by auto-detecting competitors in JSONL files"""
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    items.append(json.loads(line))
-                except Exception:
-                    continue
-    except FileNotFoundError:
-        pass
-    return items
+        analysis_data = auto_detect_and_analyze_competitors()
+        return jsonify(analysis_data)
+    except Exception as e:
+        return jsonify({'error': 'Unable to process data', 'details': str(e)}), 500
 
-def _collect_posts() -> List[Dict[str, Any]]:
-    """
-    Collect real data: canonical filenames + any *.jsonl under uploads/data.
-    """
-    posts: List[Dict[str, Any]] = []
-    # Canonical names from spec
-    ig = os.path.join(BASE_DIR, "dataset_instagram-hashtag-scraper_2025-09-21_13-10-57-668.jsonl")
-    tt = os.path.join(BASE_DIR, "dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl")
-    posts += _safe_jsonl(ig)
-    posts += _safe_jsonl(tt)
-    # Uploaded data drops
-    for path in glob.glob(os.path.join(DATA_DIR, "*.jsonl")):
-        posts += _safe_jsonl(path)
+@app.route('/api/brand-comparison/<competitor_key>')
+def brand_comparison(competitor_key):
+    """Head-to-head comparison with specific competitor"""
+    if competitor_key not in COMPETITORS:
+        return jsonify({'error': 'Competitor not found'}), 404
+    
+    try:
+        comparison_data = generate_brand_comparison(competitor_key)
+        return jsonify(comparison_data)
+    except Exception as e:
+        return jsonify({'error': 'Unable to generate comparison', 'details': str(e)}), 500
+
+@app.route('/api/competitive-insights')
+def competitive_insights():
+    """Get strategic insights based on competitive analysis"""
+    try:
+        insights = generate_competitive_insights()
+        return jsonify(insights)
+    except Exception as e:
+        return jsonify({'error': 'Unable to generate insights', 'details': str(e)}), 500
+
+# COMPETITIVE INTELLIGENCE HELPER FUNCTIONS
+def auto_detect_and_analyze_competitors():
+    """Read all JSONL files and auto-detect which competitor each post belongs to"""
+    upload_dir = app.config['UPLOAD_FOLDER']
+    
+    if not os.path.exists(upload_dir):
+        return {}
+    
+    # Storage for posts by competitor
+    competitor_posts = {key: [] for key in COMPETITORS.keys()}
+    
+    # Process all JSONL files
+    for filename in os.listdir(upload_dir):
+        if filename.endswith('.jsonl'):
+            file_path = os.path.join(upload_dir, filename)
+            posts = read_jsonl_file(file_path)
+            
+            # Classify each post by competitor
+            for post in posts:
+                detected_competitor = detect_competitor_from_post(post)
+                if detected_competitor:
+                    competitor_posts[detected_competitor].append(post)
+    
+    # Analyze each competitor's data
+    competitor_analysis = {}
+    for comp_key, posts in competitor_posts.items():
+        if posts:
+            metrics = analyze_posts_for_competitor(posts)
+            competitor_analysis[comp_key] = {
+                'name': COMPETITORS[comp_key]['name'],
+                'tier': COMPETITORS[comp_key]['tier'],
+                'target_audience': COMPETITORS[comp_key]['target_audience'],
+                'price_range': COMPETITORS[comp_key]['price_range'],
+                'posts_found': len(posts),
+                'metrics': metrics,
+                'competitive_position': assess_competitive_position(metrics, COMPETITORS[comp_key]['tier']),
+                'content_strategy': analyze_content_strategy(metrics)
+            }
+    
+    return competitor_analysis
+
+def read_jsonl_file(file_path):
+    """Read JSONL file and return list of posts"""
+    posts = []
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if line:
+                    try:
+                        post = json.loads(line)
+                        posts.append(post)
+                    except json.JSONDecodeError:
+                        continue
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+    
     return posts
 
-def _fallback_hashtags(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    from collections import Counter
-    c = Counter()
-    for p in posts:
-        tags = p.get("hashtags") or []
-        if isinstance(tags, str):
-            tags = [t for t in tags.split() if t.startswith("#")]
-        for t in tags:
-            t = t.lower().lstrip("#")
-            if t:
-                c[t] += 1
-    return [{"hashtag": k, "count": v, "categories": []} for k, v in c.most_common(60)]
+def detect_competitor_from_post(post):
+    """Detect which competitor a post belongs to based on content analysis"""
+    searchable_text = []
+    
+    # Common text fields in social media posts
+    text_fields = ['text', 'caption', 'description', 'username', 'displayname', 
+                   'ownerUsername', 'author', 'user', 'profile_name']
+    
+    for field in text_fields:
+        if field in post and post[field]:
+            searchable_text.append(str(post[field]).lower())
+    
+    # Check hashtags
+    if 'hashtags' in post and post['hashtags']:
+        for hashtag in post['hashtags']:
+            searchable_text.append(f"#{hashtag.lower()}")
+    
+    # Look for hashtags in text content
+    combined_text = ' '.join(searchable_text)
+    hashtag_matches = re.findall(r'#\w+', combined_text)
+    searchable_text.extend(hashtag_matches)
+    
+    # Check mentions
+    mention_matches = re.findall(r'@\w+', combined_text)
+    searchable_text.extend(mention_matches)
+    
+    combined_search_text = ' '.join(searchable_text)
+    
+    # Score each competitor
+    competitor_scores = {}
+    
+    for comp_key, comp_data in COMPETITORS.items():
+        score = 0
+        
+        for keyword in comp_data['detection_keywords']:
+            keyword_lower = keyword.lower()
+            if keyword_lower in combined_search_text:
+                if keyword.startswith('@'):
+                    score += 10
+                elif keyword.startswith('#'):
+                    score += 8
+                else:
+                    score += 5
+        
+        for username in comp_data['usernames']:
+            if username.lower() in combined_search_text:
+                score += 15
+        
+        if score > 0:
+            competitor_scores[comp_key] = score
+    
+    if competitor_scores:
+        best_match = max(competitor_scores.items(), key=lambda x: x[1])
+        if best_match[1] >= 5:
+            return best_match[0]
+    
+    return None
 
-def _fallback_engagement(posts: List[Dict[str, Any]]) -> Dict[str, Any]:
-    totals = dict(likes=0, comments=0, shares=0, views=0)
-    for p in posts:
-        totals["likes"]    += int(p.get("likesCount") or 0)
-        totals["comments"] += int(p.get("commentsCount") or 0)
-        totals["shares"]   += int(p.get("shareCount") or 0)
-        totals["views"]    += int(p.get("viewCount") or 0)
-    n = max(len(posts), 1)
-    rate = round(((totals["likes"] + totals["comments"]) / max(totals["views"], 1)) * 100, 2)
+def analyze_posts_for_competitor(posts):
+    """Analyze posts for competitive metrics"""
+    total_posts = len(posts)
+    total_engagement = 0
+    hashtags = []
+    content_types = {'image': 0, 'video': 0, 'carousel': 0, 'text': 0}
+    
+    for post in posts:
+        # Engagement metrics
+        engagement_fields = [
+            ['likesCount', 'likes', 'like_count'],
+            ['commentsCount', 'comments', 'comment_count'], 
+            ['sharesCount', 'shares', 'share_count']
+        ]
+        
+        post_engagement = 0
+        for field_group in engagement_fields:
+            for field in field_group:
+                if field in post and post[field]:
+                    try:
+                        post_engagement += int(post[field])
+                        break
+                    except (ValueError, TypeError):
+                        continue
+        
+        total_engagement += post_engagement
+        
+        # Hashtags
+        post_hashtags = []
+        if 'hashtags' in post and post['hashtags']:
+            post_hashtags.extend(post['hashtags'])
+        
+        text_content = post.get('text', '') or post.get('caption', '')
+        if text_content:
+            text_hashtags = re.findall(r'#\w+', str(text_content))
+            post_hashtags.extend([tag[1:] for tag in text_hashtags])
+        
+        hashtags.extend(post_hashtags)
+        
+        # Content type
+        if (post.get('videoUrl') or post.get('video') or 
+            post.get('type') == 'video'):
+            content_types['video'] += 1
+        elif (post.get('images') and len(post.get('images', [])) > 1):
+            content_types['carousel'] += 1
+        elif (post.get('images') or post.get('imageUrl')):
+            content_types['image'] += 1
+        else:
+            content_types['text'] += 1
+    
+    avg_engagement = total_engagement / max(total_posts, 1)
+    hashtag_counter = Counter(hashtags)
+    top_hashtags = [f"#{tag}" for tag, count in hashtag_counter.most_common(10)]
+    
     return {
-        "totals": totals,
-        "averages": {k: round(v / n, 2) for k, v in totals.items()},
-        "engagement_rate_percent": rate,
-        "trend": []
+        'total_posts': total_posts,
+        'avg_engagement_per_post': round(avg_engagement, 2),
+        'total_engagement': total_engagement,
+        'top_hashtags': top_hashtags,
+        'content_distribution': content_types
     }
 
-def _fallback_moments(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    keys = ["hip-hop", "heritage", "anniversary", "streetwear", "collab", "hispanic", "community"]
-    out = []
-    for p in posts:
-        text = (p.get("caption") or p.get("description") or "")
-        lo = text.lower()
-        hits = [k for k in keys if k in lo]
-        if hits:
-            out.append({
-                "timestamp": p.get("timestamp"),
-                "labels": hits,
-                "summary": text[:220]
-            })
-    return out
-
-def _fallback_competitors(posts: List[Dict[str, Any]]) -> Dict[str, Any]:
-    # 11-brand minimal SOV using caption/description scan
-    from collections import Counter, defaultdict
-    brands = {
-        "Crooks & Castles": ["crooks & castles", "crooks and castles", "crooks"],
-        "Supreme": ["supreme"],
-        "BAPE": ["bape", "a bathing ape"],
-        "Kith": ["kith"],
-        "Palace": ["palace skateboards", "palace"],
-        "Fear of God": ["fear of god", "essentials"],
-        "Off-White": ["off-white", "off white"],
-        "Stüssy": ["stussy", "stüssy"],
-        "Billionaire Boys Club": ["billionaire boys club", "bbc icecream", "icecream"],
-        "Purple Brand": ["purple brand", "purpledenim"],
-        "Noah": ["noah ny", "noahny"],
+def assess_competitive_position(metrics, tier):
+    """Assess competitive position"""
+    if not metrics or metrics.get('total_posts', 0) == 0:
+        return 'insufficient_data'
+    
+    engagement_score = metrics.get('avg_engagement_per_post', 0)
+    
+    tier_benchmarks = {
+        'luxury': {'strong': 8000, 'moderate': 3000},
+        'heritage': {'strong': 5000, 'moderate': 2000},
+        'established': {'strong': 3000, 'moderate': 1000},
+        'emerging': {'strong': 2000, 'moderate': 500},
+        'legacy': {'strong': 1500, 'moderate': 600}
     }
-    counts = Counter()
-    agg = defaultdict(lambda: {"likes":0,"comments":0,"shares":0,"views":0,"posts":0})
-    for p in posts:
-        txt = (p.get("caption") or p.get("description") or "").lower()
-        owner = None
-        for b, aliases in brands.items():
-            if any(a in txt for a in aliases):
-                counts[b] += 1
-                if not owner:
-                    owner = b
-        if owner:
-            agg[owner]["likes"]    += int(p.get("likesCount") or 0)
-            agg[owner]["comments"] += int(p.get("commentsCount") or 0)
-            agg[owner]["shares"]   += int(p.get("shareCount") or 0)
-            agg[owner]["views"]    += int(p.get("viewCount") or 0)
-            agg[owner]["posts"]    += 1
-    total = max(sum(counts.values()), 1)
-    sov = [{"brand": b, "mentions": n, "share_pct": round(100.0 * n / total, 2)} for b, n in counts.most_common()]
-    be  = []
-    for b, v in agg.items():
-        posts_n = max(v["posts"], 1)
-        be.append({
-            "brand": b,
-            "avg_engagement": round((v["likes"]+v["comments"]+v["shares"]) / posts_n, 2),
-            "avg_views": round(v["views"] / posts_n, 2),
-            "posts": v["posts"]
-        })
-    be.sort(key=lambda x: (-x["avg_engagement"], -x["avg_views"]))
-    return {"share_of_voice": sov, "brand_engagement": be, "trending_terms": [], "weekly_trend": []}
+    
+    benchmark = tier_benchmarks.get(tier, {'strong': 1000, 'moderate': 500})
+    
+    if engagement_score >= benchmark['strong']:
+        return 'strong'
+    elif engagement_score >= benchmark['moderate']:
+        return 'moderate'
+    else:
+        return 'developing'
 
-def _calendar_views_fallback() -> Dict[str, List[Dict[str, Any]]]:
-    # Empty but valid structure to keep the UI alive if calendar_engine is absent.
-    return {k: [] for k in ("7_day_view", "30_day_view", "60_day_view", "90_day_view")}
+def analyze_content_strategy(metrics):
+    """Analyze content strategy"""
+    if not metrics or not metrics.get('content_distribution'):
+        return 'insufficient_data'
+    
+    content_dist = metrics['content_distribution']
+    total_content = sum(content_dist.values())
+    
+    if total_content == 0:
+        return 'no_data'
+    
+    video_ratio = content_dist.get('video', 0) / total_content
+    carousel_ratio = content_dist.get('carousel', 0) / total_content
+    
+    if video_ratio > 0.6:
+        return 'video_dominant'
+    elif video_ratio > 0.4:
+        return 'video_focused'
+    elif carousel_ratio > 0.4:
+        return 'carousel_focused'
+    elif video_ratio > 0.2 and carousel_ratio > 0.2:
+        return 'mixed_media'
+    else:
+        return 'image_focused'
 
-# -----------------------------------------------------------------------------
-# Routes
-# -----------------------------------------------------------------------------
-@app.route("/")
-def dashboard():
-    # Template must exist: templates/index.html
-    return render_template("index.html")
+def generate_brand_comparison(competitor_key):
+    """Generate brand comparison"""
+    competitor_info = COMPETITORS[competitor_key]
+    all_data = auto_detect_and_analyze_competitors()
+    
+    competitor_data = all_data.get(competitor_key, {})
+    crooks_data = all_data.get('crooks_castles', {})
+    
+    if not competitor_data or not competitor_data.get('metrics'):
+        return {
+            'competitor': competitor_info,
+            'comparison': 'no_data',
+            'message': f'No posts detected for {competitor_info["name"]} in your data files'
+        }
+    
+    return {
+        'competitor': competitor_info,
+        'competitor_posts_detected': competitor_data.get('posts_found', 0),
+        'crooks_posts_detected': crooks_data.get('posts_found', 0),
+        'metrics_comparison': {
+            'crooks_castles': crooks_data.get('metrics', {}),
+            'competitor': competitor_data.get('metrics', {})
+        }
+    }
 
-# Route index (debug)
-@app.get("/api/_routes")
-def api_routes():
-    rules = []
-    for rule in app.url_map.iter_rules():
-        methods = ",".join(sorted(m for m in rule.methods if m not in ("HEAD","OPTIONS")))
-        rules.append({"rule": str(rule), "methods": methods, "endpoint": rule.endpoint})
-    return jsonify({"routes": sorted(rules, key=lambda x: x["rule"])})
+def generate_competitive_insights():
+    """Generate competitive insights"""
+    all_competitor_data = auto_detect_and_analyze_competitors()
+    
+    insights = {
+        'competitors_detected': len([k for k, v in all_competitor_data.items() if v.get('posts_found', 0) > 0]),
+        'market_leaders': [],
+        'strategic_recommendations': []
+    }
+    
+    if not all_competitor_data:
+        insights['strategic_recommendations'] = [
+            'Upload JSONL files containing competitor social media data'
+        ]
+        return insights
+    
+    # Engagement rankings
+    engagement_rankings = []
+    for comp_key, data in all_competitor_data.items():
+        if data.get('posts_found', 0) > 0:
+            metrics = data.get('metrics', {})
+            engagement = metrics.get('avg_engagement_per_post', 0)
+            engagement_rankings.append((comp_key, data['name'], engagement, data['tier']))
+    
+    engagement_rankings.sort(key=lambda x: x[2], reverse=True)
+    
+    insights['market_leaders'] = [
+        {'name': name, 'engagement': eng, 'tier': tier} 
+        for _, name, eng, tier in engagement_rankings[:3]
+    ]
+    
+    if len(all_competitor_data) > 0:
+        insights['strategic_recommendations'] = [
+            f"Successfully detected {insights['competitors_detected']} competitors in your data",
+            "Monitor top performers for content strategy insights"
+        ]
+    
+    return insights
 
-@app.get("/api/ping")
-def api_ping():
-    return jsonify({"ok": True, "time": datetime.utcnow().isoformat() + "Z"})
-
-# ---------- Intelligence ----------
-@app.get("/api/intelligence")
-def api_intelligence():
-    try:
-        # Use your data_processor if present; otherwise fallback
-        posts = _collect_posts() if _dp_load is None else (
-            (_dp_load(os.path.join(BASE_DIR, "dataset_instagram-hashtag-scraper_2025-09-21_13-10-57-668.jsonl")) or []) +
-            (_dp_load(os.path.join(BASE_DIR, "dataset_tiktok-scraper_2025-09-21_13-33-25-969.jsonl")) or [])
-        )
-        hashtags = _dp_hashtags(posts) if _dp_hashtags else _fallback_hashtags(posts)
-        engagement = _dp_eng(posts) if _dp_eng else _fallback_engagement(posts)
-        moments = _dp_moments(posts) if _dp_moments else _fallback_moments(posts)
-
-        return jsonify({
-            "posts_count": len(posts),
-            "engagement": engagement,
-            "hashtags": hashtags,
-            "cultural_moments": moments,
-            "generated_at": datetime.utcnow().isoformat() + "Z"
-        })
-    except Exception as e:
-        return _json_error("intelligence_failed", str(e))
-
-@app.get("/api/intelligence/competitors")
-def api_competitors():
-    try:
-        if _build_competitor_intel:
-            posts = _collect_posts()
-            intel = _build_competitor_intel(posts)  # our enhanced module supports posts arg
-            return jsonify(intel)
-        # fallback
-        posts = _collect_posts()
-        return jsonify(_fallback_competitors(posts))
-    except Exception as e:
-        return _json_error("competitors_failed", str(e))
-
-# ---------- Assets ----------
-@app.get("/api/assets")
-def api_assets():
-    try:
-        if _am_scan:
-            cat = _am_scan()  # should return list of asset dicts OR {"assets":[...]}
-            if isinstance(cat, dict) and "assets" in cat:
-                return jsonify(cat)
-            return jsonify({"assets": cat})
-        # minimal fallback: list files in uploads
-        assets = []
-        for root, _, files in os.walk(UPLOAD_DIR):
-            for fn in files:
-                if fn.startswith("."): continue
-                p = os.path.join(root, fn)
-                rel = os.path.relpath(p, BASE_DIR)
-                assets.append({
-                    "id": abs(hash(rel)) % (10**9),
-                    "filename": fn,
-                    "thumbnail": None,
-                    "size_bytes": os.path.getsize(p),
-                    "type": (os.path.splitext(fn)[1][1:].lower() or "file"),
-                })
-        return jsonify({"assets": assets})
-    except Exception as e:
-        return _json_error("assets_failed", str(e))
-
-@app.get("/api/assets/<asset_id>/download")
-def api_asset_download(asset_id):
-    try:
-        if _am_download:
-            return _am_download(asset_id)
-        # fallback: naive serve by filename hash -> not secure, encourage using asset_manager
-        return _json_error("download_unavailable", "Use asset_manager.serve_file_download()"), 404
-    except Exception as e:
-        return _json_error("download_failed", str(e))
-
-# ---------- Uploads ----------
-@app.post("/api/upload")
-def api_upload():
-    try:
-        files = request.files.getlist("files")
-        if not files:
-            return _json_error("no_files", "No files received", 400)
-        results = []
-        if _am_upload:
-            for f in files:
-                try:
-                    r = _am_upload(f)  # expected to return a dict with ok/asset info
-                    results.append(r if isinstance(r, dict) else {"ok": True, "detail": "uploaded"})
-                except Exception as e:
-                    results.append({"ok": False, "error": str(e), "filename": getattr(f, "filename", "")})
-        else:
-            # Minimal, safe save: /uploads/original_name (overwrites same name)
-            for f in files:
-                name = f.filename or "file"
-                safe = os.path.basename(name)
-                dest = os.path.join(UPLOAD_DIR, safe)
-                f.save(dest)
-                results.append({"ok": True, "filename": safe, "bytes": os.path.getsize(dest)})
-        return jsonify({"results": results})
-    except Exception as e:
-        return _json_error("upload_failed", str(e))
-
-# ---------- Calendar ----------
-@app.get("/api/calendar/<view>")
-def api_calendar(view):
-    try:
-        valid = {"7_day_view", "30_day_view", "60_day_view", "90_day_view"}
-        if view not in valid:
-            return _json_error("unknown_view", f"{view} not in {sorted(valid)}", 400)
-        data = _cal_views() if _cal_views else _calendar_views_fallback()
-        # Frontend expects {"events":[...]}
-        return jsonify({"events": data.get(view, [])})
-    except Exception as e:
-        return _json_error("calendar_failed", str(e))
-
-@app.get("/api/calendar/export.csv")
-def api_calendar_export():
-    # CSV export for business decks
-    try:
-        data = _cal_views() if _cal_views else _calendar_views_fallback()
-        rows = []
-        for k in ("7_day_view", "30_day_view", "60_day_view", "90_day_view"):
-            for ev in data.get(k, []):
-                rows.append({
-                    "range": k,
-                    "date": ev.get("date"),
-                    "title": ev.get("title"),
-                    "status": ev.get("status"),
-                    "deliverables": ", ".join(ev.get("deliverables") or []),
-                    "assets_mapped": ", ".join(ev.get("assets_mapped") or []),
-                    "cultural_context": ev.get("cultural_context") or "",
-                })
-        sio = io.StringIO()
-        writer = csv.DictWriter(sio, fieldnames=list(rows[0].keys()) if rows else
-                                ["range","date","title","status","deliverables","assets_mapped","cultural_context"])
-        writer.writeheader()
-        for r in rows: writer.writerow(r)
-        mem = io.BytesIO(sio.getvalue().encode("utf-8"))
-        return send_file(mem, mimetype="text/csv", as_attachment=True, download_name="calendar_export.csv")
-    except Exception as e:
-        return _json_error("calendar_export_failed", str(e))
-
-# ---------- Agency ----------
-@app.get("/api/agency")
-def api_agency():
-    try:
-        if _agency_snapshot:
-            snap = _agency_snapshot()
-            return jsonify(snap)
-        # minimal placeholder when module absent
-        return jsonify({"agencies": []})
-    except Exception as e:
-        return _json_error("agency_failed", str(e))
-
-@app.get("/api/agency/export.csv")
-def api_agency_export():
-    try:
-        if not _agency_snapshot:
-            return _json_error("export_unavailable", "agency_tracker not present", 400)
-        snap = _agency_snapshot()
-        agencies = snap.get("agencies", [])
-        rows = []
-        for a in agencies:
-            rows.append({
-                "name": a.get("name"),
-                "phase": a.get("phase"),
-                "monthly_budget": a.get("monthly_budget"),
-                "budget_used": a.get("budget_used"),
-                "on_time_delivery": a.get("on_time_delivery"),
-                "quality_score": a.get("quality_score"),
-                "current_deliverables": a.get("current_deliverables"),
-            })
-        sio = io.StringIO()
-        writer = csv.DictWriter(sio, fieldnames=list(rows[0].keys()) if rows else
-                                ["name","phase","monthly_budget","budget_used","on_time_delivery","quality_score","current_deliverables"])
-        writer.writeheader()
-        for r in rows: writer.writerow(r)
-        mem = io.BytesIO(sio.getvalue().encode("utf-8"))
-        return send_file(mem, mimetype="text/csv", as_attachment=True, download_name="agency_export.csv")
-    except Exception as e:
-        return _json_error("agency_export_failed", str(e))
-
-# ---------- Reports ----------
-@app.get("/api/reports/generate")
-def api_report_generate():
-    try:
-        posts = _collect_posts()
-        if _dp_report:
-            # Your data_processor can build a formatted report
-            content = _dp_report(posts)
-        else:
-            # Fallback: build a lean, exportable JSON
-            content = {
-                "generated_at": datetime.utcnow().isoformat() + "Z",
-                "posts_count": len(posts),
-                "engagement": _fallback_engagement(posts),
-                "hashtags": _fallback_hashtags(posts),
-                "cultural_moments": _fallback_moments(posts),
-            }
-        # Serve as a downloadable JSON file
-        mem = io.BytesIO(json.dumps(content, indent=2).encode("utf-8"))
-        return send_file(mem, mimetype="application/json", as_attachment=True,
-                         download_name="intelligence_report.json")
-    except Exception as e:
-        return _json_error("report_failed", str(e))
-
-# ---------- Optional: Planning APIs (only if content_planning is installed) ----------
-@app.route("/api/planning/campaigns", methods=["GET", "POST"])
-def api_planning_campaigns():
-    if request.method == "GET":
-        if not list_campaigns:
-            return jsonify([])
-        q = request.args.get("q", "").strip()
-        return jsonify(list_campaigns(prefix=q))
-    # POST
-    if not plan_campaign:
-        return _json_error("planning_unavailable", "content_planning not present", 400)
-    data = request.get_json(force=True, silent=True) or {}
-    try:
-        out = plan_campaign(
-            campaign=data["campaign"],
-            window_start=data["window_start"],
-            window_end=data["window_end"],
-            deliverables=data.get("deliverables", []),
-            assets_mapped=data.get("assets_mapped", []),
-            budget_allocation=float(data.get("budget_allocation", 0) or 0),
-            cultural_context=data.get("cultural_context", ""),
-            target_kpis=data.get("target_kpis", {}),
-            status=data.get("status", "planned"),
-        )
-        return jsonify(out)
-    except Exception as e:
-        return _json_error("planning_failed", str(e))
-
-@app.get("/api/planning/<campaign>/overview")
-def api_planning_overview(campaign):
-    if not campaign_overview:
-        return _json_error("planning_unavailable", "content_planning not present", 400)
-    try:
-        return jsonify(campaign_overview(campaign))
-    except Exception as e:
-        return _json_error("planning_failed", str(e))
-
-@app.route("/api/planning/milestones/<int:event_id>", methods=["PUT", "DELETE"])
-def api_planning_milestone(event_id):
-    if request.method == "DELETE":
-        return _json_error("use_calendar_delete", "Delete via calendar endpoint", 405)
-    if not (update_milestone_status or retitle_milestone):
-        return _json_error("planning_unavailable", "content_planning not present", 400)
-    data = request.get_json(force=True, silent=True) or {}
-    try:
-        if "status" in data and update_milestone_status:
-            return jsonify(update_milestone_status(event_id, data["status"]))
-        if "milestone" in data and retitle_milestone:
-            return jsonify(retitle_milestone(event_id, data["milestone"]))
-        return _json_error("no_action", "Provide 'status' or 'milestone' in body", 400)
-    except Exception as e:
-        return _json_error("planning_failed", str(e))
-
-# -----------------------------------------------------------------------------
-# API-first error handlers (avoid HTML in /api/* responses)
-# -----------------------------------------------------------------------------
-@app.errorhandler(404)
-def not_found(e):
-    if request.path.startswith("/api/"):
-        return _json_error("not_found", f"{request.path} not found", 404)
-    return render_template("index.html"), 200
-
-@app.errorhandler(500)
-def internal_err(e):
-    if request.path.startswith("/api/"):
-        return _json_error("server_error", "internal error", 500)
-    return render_template("index.html"), 200
-
-# -----------------------------------------------------------------------------
-# Gunicorn entrypoint (Render Start Command points at app:app)
-# -----------------------------------------------------------------------------
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_ENV') == 'development')
