@@ -84,7 +84,7 @@ except Exception as e:
     print(f"❌ SEPARATED_asset_manager failed: {e}")
     SEPARATED_ASSETS_AVAILABLE = False
 
-# Force enhanced_data_processor
+# Force enhanced_data_processor (correct name)
 try:
     from enhanced_data_processor import DataProcessor
     enhanced_processor = DataProcessor()
@@ -92,17 +92,32 @@ try:
     ENHANCED_PROCESSOR_AVAILABLE = True
 except Exception as e:
     print(f"❌ Enhanced data processor failed: {e}")
-    ENHANCED_PROCESSOR_AVAILABLE = False
+    try:
+        from data_processor import DataProcessor
+        enhanced_processor = DataProcessor()
+        print("⚠️ Using basic data processor")
+        ENHANCED_PROCESSOR_AVAILABLE = False
+    except Exception as e2:
+        print(f"❌ No data processor available: {e2}")
+        ENHANCED_PROCESSOR_AVAILABLE = False
 
-# Force content_planning_engine
+# Force Content_Planning_Engine (correct capitalization)
 try:
-    from content_planning_engine import ContentPlanningEngine
+    from Content_Planning_Engine import ContentPlanningEngine
     content_planner = ContentPlanningEngine()
     print("✅ Content planning engine loaded")
     CONTENT_PLANNER_AVAILABLE = True
 except Exception as e:
-    print(f"❌ Content planning engine failed: {e}")
-    CONTENT_PLANNER_AVAILABLE = False
+    print(f"❌ Content_Planning_Engine failed: {e}")
+    try:
+        # Try alternative import names
+        from content_planning_engine import ContentPlanningEngine
+        content_planner = ContentPlanningEngine()
+        print("✅ Content planning engine loaded (alternative import)")
+        CONTENT_PLANNER_AVAILABLE = True
+    except Exception as e2:
+        print(f"❌ No content planning engine available: {e2}")
+        CONTENT_PLANNER_AVAILABLE = False
 
 print(f"""
 🎯 ENHANCED MODULES STATUS:
