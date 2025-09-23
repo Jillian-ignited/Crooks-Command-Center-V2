@@ -1,7 +1,6 @@
 """
-FORCED DATA INTEGRATION - Crooks Command Center V2
-This version FORCES the app to use real data from JSONL files
-No more placeholder data - only real competitive intelligence
+Crooks Command Center V2 - Complete Application
+Preserves original frontend design with forced real data integration
 """
 
 from flask import Flask, render_template, jsonify, request, send_from_directory
@@ -11,6 +10,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 import glob
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,14 +55,11 @@ def force_load_real_data():
     logger.info(f"🎯 FORCED DATA LOAD: {len(all_data)} records from {len(files_found)} files")
     return all_data, files_found
 
-# FORCE LOAD DATA AT STARTUP
-REAL_DATA, DATA_FILES = force_load_real_data()
-
-def extract_real_competitors():
+def extract_real_competitors(data):
     """Extract real competitor brands from the data"""
     competitors = {}
     
-    for record in REAL_DATA:
+    for record in data:
         # Look for brand mentions in various fields
         text_fields = []
         
@@ -132,11 +129,11 @@ def extract_real_competitors():
     
     return competitors
 
-def extract_real_hashtags():
+def extract_real_hashtags(data):
     """Extract real trending hashtags from the data"""
     hashtag_counts = {}
     
-    for record in REAL_DATA:
+    for record in data:
         # Look for hashtags in various fields
         hashtag_fields = ['hashtags', 'tags', 'text', 'caption']
         
@@ -145,7 +142,6 @@ def extract_real_hashtags():
                 text = str(record[field]).lower()
                 
                 # Extract hashtags
-                import re
                 hashtags = re.findall(r'#(\w+)', text)
                 
                 for hashtag in hashtags:
@@ -157,13 +153,13 @@ def extract_real_hashtags():
     sorted_hashtags = sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)
     return sorted_hashtags[:10]
 
-def extract_real_insights():
+def extract_real_insights(data, files):
     """Extract real insights from the data"""
     insights = {
-        'total_posts': len(REAL_DATA),
+        'total_posts': len(data),
         'sentiment_analyzed': 0,
         'positive_sentiment': 0,
-        'data_sources': len(DATA_FILES),
+        'data_sources': len(files),
         'date_range': {'start': None, 'end': None},
         'top_content_types': {},
         'engagement_stats': {'total': 0, 'average': 0, 'posts_with_engagement': 0}
@@ -173,7 +169,7 @@ def extract_real_insights():
     sentiment_scores = []
     engagement_values = []
     
-    for record in REAL_DATA:
+    for record in data:
         # Extract dates
         date_fields = ['date', 'timestamp', 'created_at', 'published_at']
         for date_field in date_fields:
@@ -221,17 +217,18 @@ def extract_real_insights():
     
     return insights
 
-# FORCE LOAD ENHANCED MODULES WITH REAL DATA
-REAL_COMPETITORS = extract_real_competitors()
-REAL_HASHTAGS = extract_real_hashtags()
-REAL_INSIGHTS = extract_real_insights()
+# FORCE LOAD DATA AT STARTUP
+REAL_DATA, DATA_FILES = force_load_real_data()
+REAL_COMPETITORS = extract_real_competitors(REAL_DATA)
+REAL_HASHTAGS = extract_real_hashtags(REAL_DATA)
+REAL_INSIGHTS = extract_real_insights(REAL_DATA, DATA_FILES)
 
 logger.info(f"🎯 REAL DATA EXTRACTED:")
 logger.info(f"   - {len(REAL_COMPETITORS)} competitors found")
 logger.info(f"   - {len(REAL_HASHTAGS)} hashtags extracted")
 logger.info(f"   - {REAL_INSIGHTS['total_posts']} posts analyzed")
 
-# ENHANCED MODULE LOADING WITH FORCED REAL DATA
+# Enhanced module loading (optional - fallback to real data if modules fail)
 try:
     from DATA_FRESHNESS_validator import get_data_freshness
     data_freshness_available = True
@@ -241,14 +238,6 @@ except Exception as e:
     logger.warning(f"❌ DATA_FRESHNESS_validator failed: {e}")
 
 try:
-    from SOPHISTICATED_competitive_intelligence import get_competitor_analysis
-    competitive_intelligence_available = True
-    logger.info("✅ SOPHISTICATED_competitive_intelligence loaded")
-except Exception as e:
-    competitive_intelligence_available = False
-    logger.warning(f"❌ SOPHISTICATED_competitive_intelligence failed: {e}")
-
-try:
     from ENHANCED_calendar_engine import get_calendar
     enhanced_calendar_available = True
     logger.info("✅ ENHANCED_calendar_engine loaded")
@@ -256,45 +245,45 @@ except Exception as e:
     enhanced_calendar_available = False
     logger.warning(f"❌ ENHANCED_calendar_engine failed: {e}")
 
-try:
-    from REAL_DATA_agency_tracker import get_agency_status
-    real_agency_available = True
-    logger.info("✅ REAL_DATA_agency_tracker loaded")
-except Exception as e:
-    real_agency_available = False
-    logger.warning(f"❌ REAL_DATA_agency_tracker failed: {e}")
+# Fallback functions for missing modules
+def get_asset_stats():
+    return {
+        'total_assets': len(DATA_FILES),
+        'data_assets': len(DATA_FILES),
+        'media_assets': 0,
+        'categories': {'data': len(DATA_FILES), 'media': 0}
+    }
 
-try:
-    from SEPARATED_asset_manager import scan_assets
-    separated_assets_available = True
-    logger.info("✅ SEPARATED_asset_manager loaded")
-except Exception as e:
-    separated_assets_available = False
-    logger.warning(f"❌ SEPARATED_asset_manager failed: {e}")
-
-try:
-    from enhanced_data_processor import AutomaticDataProcessor
-    enhanced_processor = AutomaticDataProcessor()
-    enhanced_processor_available = True
-    logger.info("✅ Enhanced data processor loaded")
-except Exception as e:
-    enhanced_processor_available = False
-    logger.warning(f"❌ Enhanced data processor failed: {e}")
-
-try:
-    from Content_Planning_Engine import ContentPlanningEngine
-    content_planner = ContentPlanningEngine()
-    content_planner_available = True
-    logger.info("✅ Content planning engine loaded")
-except Exception as e:
-    content_planner_available = False
-    logger.warning(f"❌ Content planning engine failed: {e}")
-
-# ROUTES WITH FORCED REAL DATA
+def get_agency_status():
+    return {
+        'current_stage': 'Stage 2: Growth & Q4 Push',
+        'monthly_budget': 7500,
+        'progress': 75,
+        'deliverables': [
+            {
+                'title': 'Competitive Intelligence Platform',
+                'status': 'In Progress',
+                'due_date': '2025-10-01',
+                'assignee': 'Development Team'
+            },
+            {
+                'title': f'Analysis of {REAL_INSIGHTS["total_posts"]} Posts',
+                'status': 'Completed',
+                'due_date': '2025-09-23',
+                'assignee': 'Data Team'
+            },
+            {
+                'title': f'{len(REAL_COMPETITORS)} Competitor Tracking',
+                'status': 'Active',
+                'due_date': 'Ongoing',
+                'assignee': 'Intelligence Team'
+            }
+        ]
+    }
 
 @app.route('/')
 def dashboard():
-    """Main dashboard with embedded HTML"""
+    """Main dashboard with original frontend design"""
     return '''
 <!DOCTYPE html>
 <html lang="en">
@@ -484,6 +473,18 @@ def dashboard():
             border-radius: 0 8px 8px 0;
         }
         .priority-title {
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 0.5rem;
+        }
+        .recommendation {
+            background: rgba(255,107,107,0.1);
+            border-left: 4px solid #ff6b6b;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+        .recommendation-title {
             font-weight: bold;
             color: #ff6b6b;
             margin-bottom: 0.5rem;
@@ -694,8 +695,8 @@ def dashboard():
                     // Strategic recommendations
                     const recommendations = data.strategic_recommendations || [];
                     document.getElementById('strategic-recommendations').innerHTML = recommendations.map(rec => `
-                        <div class="priority-action">
-                            <div class="priority-title">${rec.title || rec.type || 'Recommendation'}</div>
+                        <div class="recommendation">
+                            <div class="recommendation-title">${rec.title || rec.type || 'Recommendation'}</div>
                             <div>${rec.description || rec.insight || 'No details available'}</div>
                         </div>
                     `).join('');
@@ -855,7 +856,7 @@ def api_overview():
     try:
         return jsonify({
             'data_sources': len(DATA_FILES),
-            'trust_score': 85,  # Based on data quality
+            'trust_score': 85,
             'total_assets': len(DATA_FILES),
             'upcoming_events': 3,
             'executive_summary': {
@@ -896,7 +897,7 @@ def api_intelligence():
             'strategic_recommendations': [
                 {
                     'title': 'HASHTAG MOMENTUM',
-                    'description': f'#{REAL_HASHTAGS[0][0]} showing {REAL_HASHTAGS[0][1]} mentions - capitalize on this trend'
+                    'description': f'{REAL_HASHTAGS[0][0]} showing {REAL_HASHTAGS[0][1]} mentions - capitalize on this trend'
                 } if REAL_HASHTAGS else {'title': 'DATA ANALYSIS', 'description': 'Analyzing competitive landscape'},
                 {
                     'title': 'COMPETITOR POSITIONING',
@@ -941,13 +942,19 @@ def api_competitors():
 
 @app.route('/api/calendar/<timeframe>')
 def api_calendar(timeframe):
-    """Calendar API with FORCED real content"""
+    """Calendar API with real content"""
     try:
         days = int(timeframe.replace('-day', '').replace('+', ''))
         
-        if content_planner_available:
-            calendar_data = content_planner.create_content_calendar(days)
+        if enhanced_calendar_available:
+            try:
+                calendar_data = get_calendar(days)
+            except:
+                calendar_data = None
         else:
+            calendar_data = None
+        
+        if not calendar_data:
             # Fallback with real data insights
             calendar_data = {
                 'campaigns': [
@@ -962,6 +969,7 @@ def api_calendar(timeframe):
                     }
                 ],
                 'total_budget': 1000 * (days // 7),
+                'active_campaigns': 1,
                 'cultural_moments': ['Hispanic Heritage Month', 'Fall/Winter 2025 Drop']
             }
         
@@ -974,35 +982,7 @@ def api_calendar(timeframe):
 def api_agency():
     """Agency API with real HVD data"""
     try:
-        if real_agency_available:
-            agency_data = get_agency_status()
-        else:
-            agency_data = {
-                'current_stage': 'Stage 2: Growth & Q4 Push',
-                'monthly_budget': 7500,
-                'progress': 75,
-                'deliverables': [
-                    {
-                        'title': 'Competitive Intelligence Platform',
-                        'status': 'In Progress',
-                        'due_date': '2025-10-01',
-                        'assignee': 'Development Team'
-                    },
-                    {
-                        'title': f'Analysis of {REAL_INSIGHTS["total_posts"]} Posts',
-                        'status': 'Completed',
-                        'due_date': '2025-09-23',
-                        'assignee': 'Data Team'
-                    },
-                    {
-                        'title': f'{len(REAL_COMPETITORS)} Competitor Tracking',
-                        'status': 'Active',
-                        'due_date': 'Ongoing',
-                        'assignee': 'Intelligence Team'
-                    }
-                ]
-            }
-        
+        agency_data = get_agency_status()
         return jsonify(agency_data)
     except Exception as e:
         logger.error(f"Error in api_agency: {e}")
@@ -1012,21 +992,18 @@ def api_agency():
 def api_assets():
     """Assets API with real file data"""
     try:
-        if separated_assets_available:
-            assets_data = scan_assets()
-        else:
-            assets_data = {
-                'data_assets': [
-                    {
-                        'name': os.path.basename(file),
-                        'type': 'JSONL',
-                        'size': f'{os.path.getsize(file) / 1024:.1f} KB' if os.path.exists(file) else 'Unknown',
-                        'records': len([r for r in REAL_DATA if r.get('_source_file') == os.path.basename(file)])
-                    } for file in DATA_FILES
-                ],
-                'media_assets': [],
-                'total_records': len(REAL_DATA)
-            }
+        assets_data = {
+            'data_assets': [
+                {
+                    'name': os.path.basename(file),
+                    'type': 'JSONL',
+                    'size': f'{os.path.getsize(file) / 1024:.1f} KB' if os.path.exists(file) else 'Unknown',
+                    'records': len([r for r in REAL_DATA if r.get('_source_file') == os.path.basename(file)])
+                } for file in DATA_FILES
+            ],
+            'media_assets': [],
+            'total_records': len(REAL_DATA)
+        }
         
         return jsonify(assets_data)
     except Exception as e:
