@@ -7,7 +7,58 @@ from collections import Counter, defaultdict
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
 import uuid
+import json
+import os
+from datetime import datetime
 
+# Define a function to load the calendar data from the JSON file
+def load_calendar_data():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, 'data', 'content_calendar.json')
+
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            return data.get("events", [])
+    except FileNotFoundError:
+        print(f"Error: The file {file_path} was not found.")
+        return []
+    except json.JSONDecodeError:
+        print(f"Error: The file {file_path} is not valid JSON.")
+        return []
+
+# Example of how to use this data to filter by date range
+def get_events_for_range(days):
+    events = load_calendar_data()
+    today = datetime.strptime("2025-09-23", "%Y-%m-%d").date() # Use datetime.now().date() in production
+    
+    end_date = today + timedelta(days=days)
+    
+    filtered_events = []
+    for event in events:
+        event_date = datetime.strptime(event["date"], "%Y-%m-%d").date()
+        if today <= event_date < end_date:
+            filtered_events.append(event)
+    
+    return filtered_events
+
+# Example Usage in a Flask route
+# from flask import Flask, render_template
+
+# app = Flask(__name__)
+
+# @app.route('/')
+# def home():
+#     seven_day_events = get_events_for_range(7)
+#     thirty_day_events = get_events_for_range(30)
+#     # And so on for 60 and 90+ days
+    
+#     return render_template('your_template.html', 
+#                            seven_day=seven_day_events, 
+#                            thirty_day=thirty_day_events)
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'crooks-castles-command-center-2025')
 app.config['UPLOAD_FOLDER'] = 'uploads'
