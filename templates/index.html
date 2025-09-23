@@ -1,1312 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crooks & Castles - Command Center</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-        }
-
-        .header {
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(20px);
-            padding: 1.2rem 2rem;
-            border-bottom: 3px solid #ff6b35;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .logo {
-            font-size: 2rem;
-            font-weight: 900;
-            color: #ff6b35;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            text-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .nav-tab {
-            padding: 0.8rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            border-radius: 8px;
-            color: #ffffff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .nav-tab:hover {
-            background: rgba(255, 107, 53, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .nav-tab.active {
-            background: linear-gradient(45deg, #ff6b35, #ff8f65);
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-        }
-
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-            min-height: calc(100vh - 120px);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .section-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #ff6b35, #ff8f65);
-            color: white;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-success {
-            background: linear-gradient(45deg, #10b981, #34d399);
-            color: white;
-        }
-
-        .btn-warning {
-            background: linear-gradient(45deg, #f59e0b, #fbbf24);
-            color: #000;
-        }
-
-        .btn-danger {
-            background: linear-gradient(45deg, #ef4444, #f87171);
-            color: white;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            margin-bottom: 2rem;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .card-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .grid {
-            display: grid;
-            gap: 2rem;
-        }
-
-        .grid-2 {
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        }
-
-        .grid-3 {
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 0.8rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #ffffff;
-            font-size: 0.9rem;
-        }
-
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: #ff6b35;
-            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .upload-zone {
-            border: 2px dashed rgba(255, 107, 53, 0.5);
-            border-radius: 12px;
-            padding: 3rem;
-            text-align: center;
-            background: rgba(255, 107, 53, 0.05);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upload-zone:hover {
-            border-color: #ff6b35;
-            background: rgba(255, 107, 53, 0.1);
-        }
-
-        .upload-zone.dragover {
-            border-color: #ff6b35;
-            background: rgba(255, 107, 53, 0.2);
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .table th, .table td {
-            padding: 0.8rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .table th {
-            background: rgba(255, 255, 255, 0.05);
-            font-weight: 600;
-            color: #ff6b35;
-        }
-
-        .table tr:hover {
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .status-badge {
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .status-active { background: #10b981; color: #fff; }
-        .status-pending { background: #f59e0b; color: #000; }
-        .status-completed { background: #8b5cf6; color: #fff; }
-        .status-cancelled { background: #ef4444; color: #fff; }
-        .status-in_progress { background: #3b82f6; color: #fff; }
-        .status-campaign { background: #ff6b35; color: #fff; }
-        .status-launch { background: #10b981; color: #fff; }
-        .status-meeting { background: #8b5cf6; color: #fff; }
-        .status-deadline { background: #ef4444; color: #fff; }
-        .status-review { background: #f59e0b; color: #000; }
-        .status-general { background: #6b7280; color: #fff; }
-
-        .priority-high { color: #ef4444; font-weight: 600; }
-        .priority-medium { color: #f59e0b; font-weight: 600; }
-        .priority-low { color: #10b981; font-weight: 600; }
-
-        .tier-luxury { background: linear-gradient(45deg, #ffd700, #ffed4a); color: #000; }
-        .tier-heritage { background: linear-gradient(45deg, #8b5cf6, #a78bfa); color: #fff; }
-        .tier-established { background: linear-gradient(45deg, #10b981, #34d399); color: #fff; }
-        .tier-emerging { background: linear-gradient(45deg, #3b82f6, #60a5fa); color: #fff; }
-        .tier-legacy { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: #000; }
-
-        .competitor-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .competitor-card:hover {
-            border-color: #ff6b35;
-            background: rgba(255, 107, 53, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .competitor-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .competitor-name {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .competitor-tier {
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-
-        .competitor-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #ff6b35;
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: #a0a0a0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: #a0a0a0;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 107, 53, 0.3);
-            border-top: 4px solid #ff6b35;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-        }
-
-        .modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border-radius: 16px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 500px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #a0a0a0;
-            cursor: pointer;
-        }
-
-        .close:hover {
-            color: #ffffff;
-        }
-
-        @media (max-width: 768px) {
-            .nav-tabs {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-            
-            .nav-tab {
-                padding: 0.6rem 1rem;
-                font-size: 0.8rem;
-            }
-            
-            .main-container {
-                padding: 1rem;
-            }
-            
-            .section-header {
-                flex-direction: column;
-                gap: 1rem;
-                align-items: flex-start;
-            }
-            
-            .grid-2, .grid-3 {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CROOKS & CASTLES — COMMAND CENTER V2</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <style>
+    :root{
+      --crooks-primary:#ff6b35; /* orange */
+      --crooks-secondary:#1a1a1a; /* bg */
+      --crooks-accent:#ffd700; /* gold */
+      --crooks-dark:#0d0d0d;
+      --crooks-light:#f5f5f5;
+      --crooks-success:#28a745;
+      --muted:#808080;
+      --card:#121212;
+      --border:#2a2a2a;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--crooks-secondary);color:var(--crooks-light);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    header{display:flex;align-items:center;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0d0d0d,#111)}
+    header .brand{font-weight:800;letter-spacing:.12em}
+    header .brand span{color:var(--crooks-primary)}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
+    .tabs button{border:1px solid var(--border);background:var(--card);color:var(--crooks-light);padding:10px 14px;border-radius:10px;cursor:pointer}
+    .tabs button.active{border-color:var(--crooks-primary);box-shadow:0 0 0 1px var(--crooks-primary) inset}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+    .card h3{margin:0 0 10px 0;font-size:14px;letter-spacing:.08em;color:#fff}
+    .meta{color:var(--muted);font-size:12px}
+    .two{grid-column:span 6}
+    .three{grid-column:span 4}
+    .full{grid-column:1/-1}
+    .pill{display:inline-block;border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px;margin:2px}
+    .asset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .asset{background:#0f0f0f;border:1px solid var(--border);border-radius:12px;padding:10px}
+    .asset .thumb{width:100%;aspect-ratio:1/1;background:#111;border:1px solid #222;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .asset .thumb img{width:100%;height:100%;object-fit:cover}
+    .kbar{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 8px}
+    .kbar .kpi{background:#101010;border:1px solid var(--border);padding:10px 12px;border-radius:10px}
+    .view-switch{display:flex;gap:8px;flex-wrap:wrap}
+    .view-switch button{border:1px solid var(--border);background:#0e0e0e;color:#fff;padding:8px 12px;border-radius:999px;cursor:pointer}
+    .view-switch button.active{border-color:var(--crooks-accent);color:var(--crooks-accent)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .ok{color:var(--crooks-success)}
+    .err{color:#ff4d4f}
+    .hidden{display:none}
+    .upload{border:1px dashed var(--border);background:#0e0e0e;padding:16px;border-radius:14px;text-align:center}
+    .upload.drag{border-color:var(--crooks-primary);background:rgba(255,107,53,.05)}
+    .progress{height:8px;background:#1b1b1b;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+    .progress>span{display:block;height:100%;width:0;background:var(--crooks-primary)}
+    a.btn{display:inline-flex;gap:8px;align-items:center;background:#111;border:1px solid var(--border);padding:8px 12px;border-radius:10px;text-decoration:none;color:#fff}
+    a.btn:hover{border-color:var(--crooks-primary)}
+    code,pre{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+  </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">Crooks & Castles</div>
-            <nav class="nav-tabs">
-                <button class="nav-tab active" onclick="switchTab(this, 'intelligence')">Intelligence</button>
-                <button class="nav-tab" onclick="switchTab(this, 'assets')">Assets</button>
-                <button class="nav-tab" onclick="switchTab(this, 'calendar')">Calendar</button>
-                <button class="nav-tab" onclick="switchTab(this, 'agency')">Agency</button>
-                <button class="nav-tab" onclick="switchTab(this, 'uploads')">Uploads</button>
-            </nav>
-        </div>
-    </header>
+  <header>
+    <div class="brand">CROOKS <span>&</span> CASTLES — COMMAND CENTER</div>
+    <span class="pill">V2</span>
+    <span class="pill">LIVE</span>
+  </header>
 
-    <div class="main-container">
-        <!-- INTELLIGENCE TAB -->
-        <div id="intelligence" class="tab-content active">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">📊 Competitive Intelligence</h1>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Real-time analysis of 11 key streetwear competitors</p>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button class="btn btn-primary" onclick="loadCompetitiveData()">🔄 Refresh Analysis</button>
-                </div>
-            </div>
-
-            <!-- Brand Comparison Selector -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">🎯 Head-to-Head Comparison</h2>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Select Competitor:</label>
-                    <select id="competitorSelect" class="form-select" onchange="loadBrandComparison()">
-                        <option value="">Choose a competitor...</option>
-                    </select>
-                </div>
-                <div id="comparisonResults" style="margin-top: 2rem; display: none;">
-                    <!-- Comparison results will appear here -->
-                </div>
-            </div>
-
-            <!-- Competitive Overview -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">🏆 Competitive Landscape</h2>
-                </div>
-                <div id="competitiveOverview" class="grid grid-3">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading competitive intelligence...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Strategic Insights -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">💡 Strategic Insights</h2>
-                </div>
-                <div id="strategicInsights">
-                    <!-- Strategic insights will appear here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ASSETS TAB -->
-        <div id="assets" class="tab-content">
-            <div class="section-header">
-                <h1 class="section-title">📁 Asset Library</h1>
-                <button class="btn btn-primary" onclick="openModal('assetModal')">➕ Add Asset</button>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Recent Assets</h2>
-                </div>
-                <div id="assetsList">
-                    <!-- Assets will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- CALENDAR TAB -->
-        <div id="calendar" class="tab-content">
-            <div class="section-header">
-                <h1 class="section-title">📅 Strategic Calendar</h1>
-                <button class="btn btn-primary" onclick="openModal('eventModal')">➕ Add Event</button>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Upcoming Events</h2>
-                </div>
-                <div id="calendarEvents">
-                    <!-- Calendar events will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- AGENCY TAB -->
-        <div id="agency" class="tab-content">
-            <div class="section-header">
-                <h1 class="section-title">🎯 Agency Tracking</h1>
-                <button class="btn btn-primary" onclick="openModal('deliverableModal')">➕ Add Deliverable</button>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Agency Deliverables</h2>
-                </div>
-                <div id="agencyDeliverables">
-                    <!-- Agency deliverables will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- UPLOADS TAB -->
-        <div id="uploads" class="tab-content">
-            <div class="section-header">
-                <h1 class="section-title">⬆️ File Management</h1>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Upload Files</h2>
-                </div>
-                <div class="upload-zone" id="uploadZone">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
-                    <h3>Upload JSONL, Images, Videos, Documents</h3>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">
-                        Drag & drop files here or click to select
-                    </p>
-                    <input type="file" id="fileInput" style="display: none;" multiple>
-                </div>
-                <div id="uploadProgress" style="margin-top: 1rem; display: none;">
-                    <!-- Upload progress will appear here -->
-                </div>
-            </div>
-        </div>
+  <div class="wrap">
+    <div class="tabs">
+      <button class="active" data-tab="intel">INTELLIGENCE</button>
+      <button data-tab="assets">ASSETS</button>
+      <button data-tab="calendar">CALENDAR</button>
+      <button data-tab="agency">AGENCY</button>
+      <button data-tab="upload">UPLOAD</button>
+      <span class="muted">Status: <span id="app-status" class="ok">connected</span></span>
     </div>
 
-    <!-- MODALS -->
-    <!-- Asset Modal -->
-    <div id="assetModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Add Asset</h2>
-                <button class="close" onclick="closeModal('assetModal')">&times;</button>
-            </div>
-            <form id="assetForm">
-                <div class="form-group">
-                    <label class="form-label">File</label>
-                    <input type="file" id="assetFile" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea id="assetDescription" class="form-textarea" placeholder="Describe this asset..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tags</label>
-                    <input type="text" id="assetTags" class="form-input" placeholder="design, logo, campaign">
-                </div>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('assetModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Upload Asset</button>
-                </div>
-            </form>
+    <!-- INTELLIGENCE -->
+    <section id="tab-intel" class="grid">
+      <div class="two card">
+        <h3>OVERVIEW</h3>
+        <div id="intel-overview" class="kbar"></div>
+        <div class="meta">Data source: Instagram/TikTok JSONL + competitor scan</div>
+      </div>
+      <div class="three card">
+        <h3>TOP HASHTAGS</h3>
+        <div id="hashtags" class="asset-grid"></div>
+      </div>
+      <div class="three card">
+        <h3>CULTURAL MOMENTS</h3>
+        <div id="moments" class="asset-grid"></div>
+      </div>
+      <div class="full card">
+        <h3>COMPETITORS — SHARE OF VOICE & ENGAGEMENT</h3>
+        <div id="comp-voice" class="asset-grid"></div>
+      </div>
+      <div class="full card">
+        <h3>DEBUG / RAW</h3>
+        <pre id="intel-debug" class="meta"></pre>
+      </div>
+    </section>
+
+    <!-- ASSETS -->
+    <section id="tab-assets" class="grid hidden">
+      <div class="full card">
+        <div class="row" style="justify-content:space-between;">
+          <h3>ASSET LIBRARY</h3>
+          <a class="btn" href="/api/assets" target="_blank"><i class="fa fa-arrow-up-right-from-square"></i>Open JSON</a>
         </div>
-    </div>
+        <div id="asset-grid" class="asset-grid"></div>
+      </div>
+    </section>
 
-    <!-- Event Modal -->
-    <div id="eventModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Add Calendar Event</h2>
-                <button class="close" onclick="closeModal('eventModal')">&times;</button>
-            </div>
-            <form id="eventForm">
-                <div class="form-group">
-                    <label class="form-label">Event Title</label>
-                    <input type="text" id="eventTitle" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea id="eventDescription" class="form-textarea"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Event Type</label>
-                    <select id="eventType" class="form-select">
-                        <option value="campaign">Campaign</option>
-                        <option value="launch">Product Launch</option>
-                        <option value="meeting">Meeting</option>
-                        <option value="deadline">Deadline</option>
-                        <option value="review">Review</option>
-                        <option value="general">General</option>
-                    </select>
-                </div>
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" id="eventStartDate" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">End Date</label>
-                        <input type="date" id="eventEndDate" class="form-input">
-                    </div>
-                </div>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('eventModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Event</button>
-                </div>
-            </form>
+    <!-- CALENDAR -->
+    <section id="tab-calendar" class="grid hidden">
+      <div class="full card">
+        <div class="row" style="justify-content:space-between;">
+          <h3>STRATEGIC CALENDAR</h3>
+          <div class="view-switch">
+            <button class="active" data-view="7_day_view">7 DAY</button>
+            <button data-view="30_day_view">30</button>
+            <button data-view="60_day_view">60</button>
+            <button data-view="90_day_view">90</button>
+          </div>
         </div>
-    </div>
+        <div id="calendar-events" class="asset-grid"></div>
+      </div>
+    </section>
 
-    <!-- Deliverable Modal -->
-    <div id="deliverableModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Add Agency Deliverable</h2>
-                <button class="close" onclick="closeModal('deliverableModal')">&times;</button>
-            </div>
-            <form id="deliverableForm">
-                <div class="form-group">
-                    <label class="form-label">Deliverable Name</label>
-                    <input type="text" id="deliverableName" class="form-input" required>
-                </div>
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label class="form-label">Phase</label>
-                        <select id="deliverablePhase" class="form-select">
-                            <option value="1">Phase 1</option>
-                            <option value="2">Phase 2</option>
-                            <option value="3">Phase 3</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Status</label>
-                        <select id="deliverableStatus" class="form-select">
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label class="form-label">Due Date</label>
-                        <input type="date" id="deliverableDueDate" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Assigned To</label>
-                        <input type="text" id="deliverableAssignedTo" class="form-input">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Notes</label>
-                    <textarea id="deliverableNotes" class="form-textarea"></textarea>
-                </div>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('deliverableModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Deliverable</button>
-                </div>
-            </form>
+    <!-- AGENCY -->
+    <section id="tab-agency" class="grid hidden">
+      <div class="two card">
+        <h3>PERFORMANCE</h3>
+        <div id="agency-kpis" class="kbar"></div>
+      </div>
+      <div class="two card">
+        <h3>PROJECTS</h3>
+        <div id="agency-projects" class="asset-grid"></div>
+      </div>
+      <div class="full card">
+        <h3>DELIVERABLES</h3>
+        <div id="agency-deliverables" class="asset-grid"></div>
+      </div>
+    </section>
+
+    <!-- UPLOAD -->
+    <section id="tab-upload" class="grid hidden">
+      <div class="full card">
+        <h3>UPLOADS</h3>
+        <div id="drop" class="upload">
+          <p class="muted">Drag & drop, or click to browse. Images / videos / docs up to 100MB.</p>
+          <input id="picker" type="file" multiple accept="image/*,video/*,.jsonl,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt" style="display:none" />
+          <button id="browse" class="btn"><i class="fa fa-folder-open"></i>Browse Files</button>
         </div>
-    </div>
+        <div class="progress" style="margin-top:12px;"><span id="bar"></span></div>
+        <div id="upload-log" class="meta" style="margin-top:8px;"></div>
+        <div id="uploaded" class="asset-grid" style="margin-top:12px;"></div>
+      </div>
+    </section>
+  </div>
 
-    <script>
-        // Global state
-        let competitorsData = {};
-        let currentData = {
-            assets: [],
-            events: [],
-            deliverables: []
-        };
-
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            setupFileUpload();
-            loadCompetitiveData();
-            loadAssets();
-            loadCalendarEvents();
-            loadAgencyDeliverables();
-        });
-
-        // Tab switching
-        function switchTab(button, tabId) {
-            // Update nav tabs
-            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-            button.classList.add('active');
-
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-        }
-
-        // Modal functions
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
-
-        // COMPETITIVE INTELLIGENCE FUNCTIONS
-        async function loadCompetitiveData() {
-            try {
-                // Load competitors
-                const competitorsResponse = await fetch('/api/competitors');
-                competitorsData = await competitorsResponse.json();
-                populateCompetitorDropdown();
-
-                // Load competitive analysis
-                const analysisResponse = await fetch('/api/competitive-analysis');
-                const analysisData = await analysisResponse.json();
-                renderCompetitiveOverview(analysisData);
-
-                // Load strategic insights
-                const insightsResponse = await fetch('/api/competitive-insights');
-                const insightsData = await insightsResponse.json();
-                renderStrategicInsights(insightsData);
-
-            } catch (error) {
-                console.error('Error loading competitive data:', error);
-                document.getElementById('competitiveOverview').innerHTML = 
-                    '<div class="loading">Error loading competitive data. Please check your JSONL files.</div>';
-            }
-        }
-
-        function populateCompetitorDropdown() {
-            const select = document.getElementById('competitorSelect');
-            select.innerHTML = '<option value="">Choose a competitor...</option>';
-            
-            Object.entries(competitorsData).forEach(([key, competitor]) => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = competitor.name;
-                select.appendChild(option);
-            });
-        }
-
-        function renderCompetitiveOverview(analysisData) {
-            const container = document.getElementById('competitiveOverview');
-            
-            if (Object.keys(analysisData).length === 0) {
-                container.innerHTML = `
-                    <div class="loading" style="grid-column: 1 / -1;">
-                        <h3>No Competitive Data Available</h3>
-                        <p>Upload JSONL files with competitor data to see competitive intelligence.</p>
-                        <p style="font-size: 0.9rem; margin-top: 1rem; color: #a0a0a0;">
-                            Files are auto-detected by content - no naming required!
-                        </p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = '';
-
-            Object.entries(analysisData).forEach(([key, data]) => {
-                const card = document.createElement('div');
-                card.className = 'competitor-card';
-                
-                const tierClass = `tier-${data.tier}`;
-                const positionColor = data.competitive_position === 'strong' ? '#10b981' : 
-                                    data.competitive_position === 'moderate' ? '#f59e0b' : '#ef4444';
-                
-                card.innerHTML = `
-                    <div class="competitor-header">
-                        <div class="competitor-name">${data.name}</div>
-                        <div class="competitor-tier ${tierClass}">${data.tier}</div>
-                    </div>
-                    
-                    <div class="competitor-stats">
-                        <div class="stat-item">
-                            <span class="stat-value">${data.metrics.avg_engagement_per_post?.toLocaleString() || 'N/A'}</span>
-                            <span class="stat-label">Avg Engagement</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">${data.posts_found || 0}</span>
-                            <span class="stat-label">Posts Analyzed</span>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 1rem; text-align: center;">
-                        <div style="color: ${positionColor}; font-weight: 600; text-transform: capitalize;">
-                            ${data.competitive_position.replace('_', ' ')} Position
-                        </div>
-                        <div style="font-size: 0.9rem; color: #a0a0a0; margin-top: 0.3rem; text-transform: capitalize;">
-                            ${data.content_strategy.replace('_', ' ')} Strategy
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(card);
-            });
-        }
-
-        async function loadBrandComparison() {
-            const selectedCompetitor = document.getElementById('competitorSelect').value;
-            const resultsDiv = document.getElementById('comparisonResults');
-            
-            if (!selectedCompetitor) {
-                resultsDiv.style.display = 'none';
-                return;
-            }
-
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading comparison...</p></div>';
-
-            try {
-                const response = await fetch(`/api/brand-comparison/${selectedCompetitor}`);
-                const comparisonData = await response.json();
-                renderBrandComparison(comparisonData);
-            } catch (error) {
-                console.error('Error loading brand comparison:', error);
-                resultsDiv.innerHTML = '<div class="loading">Error loading comparison data.</div>';
-            }
-        }
-
-        function renderBrandComparison(data) {
-            const container = document.getElementById('comparisonResults');
-            
-            if (data.comparison === 'no_data') {
-                container.innerHTML = `<div class="loading">${data.message}</div>`;
-                return;
-            }
-
-            const crooksMetrics = data.metrics_comparison.crooks_castles;
-            const competitorMetrics = data.metrics_comparison.competitor;
-
-            container.innerHTML = `
-                <div class="grid grid-2">
-                    <div class="card">
-                        <h3 style="color: #ff6b35; margin-bottom: 1rem;">Crooks & Castles</h3>
-                        <div class="stat-item">
-                            <span class="stat-value">${crooksMetrics.avg_engagement_per_post?.toLocaleString() || 'N/A'}</span>
-                            <span class="stat-label">Avg Engagement</span>
-                        </div>
-                        <div style="margin-top: 0.5rem;">
-                            <strong>Posts Analyzed:</strong> ${data.crooks_posts_detected}
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <h3 style="color: #ff6b35; margin-bottom: 1rem;">${data.competitor.name}</h3>
-                        <div class="stat-item">
-                            <span class="stat-value">${competitorMetrics.avg_engagement_per_post?.toLocaleString() || 'N/A'}</span>
-                            <span class="stat-label">Avg Engagement</span>
-                        </div>
-                        <div style="margin-top: 0.5rem;">
-                            <strong>Posts Analyzed:</strong> ${data.competitor_posts_detected}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderStrategicInsights(insights) {
-            const container = document.getElementById('strategicInsights');
-            
-            let html = '';
-            
-            if (insights.market_leaders && insights.market_leaders.length > 0) {
-                html += `
-                    <h4 style="color: #ff6b35; margin-bottom: 1rem;">🏆 Market Leaders</h4>
-                    ${insights.market_leaders.map((leader, index) => `
-                        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
-                            ${index + 1}. ${leader.name} - ${leader.engagement.toLocaleString()} avg engagement (${leader.tier} tier)
-                        </div>
-                    `).join('')}
-                `;
-            }
-            
-            if (insights.strategic_recommendations && insights.strategic_recommendations.length > 0) {
-                html += `
-                    <h4 style="color: #ff6b35; margin: 2rem 0 1rem 0;">💡 Strategic Recommendations</h4>
-                    ${insights.strategic_recommendations.map(rec => `
-                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px;">
-                            ${rec}
-                        </div>
-                    `).join('')}
-                `;
-            }
-            
-            if (html === '') {
-                html = '<div class="loading">Upload competitor JSONL files to see strategic insights.</div>';
-            }
-            
-            container.innerHTML = html;
-        }
-
-        // ASSET MANAGEMENT FUNCTIONS
-        async function loadAssets() {
-            try {
-                const response = await fetch('/api/assets');
-                const assets = await response.json();
-                renderAssets(assets);
-            } catch (error) {
-                console.error('Error loading assets:', error);
-                document.getElementById('assetsList').innerHTML = '<div class="loading">Error loading assets.</div>';
-            }
-        }
-
-        function renderAssets(assets) {
-            const container = document.getElementById('assetsList');
-            
-            if (assets.length === 0) {
-                container.innerHTML = '<div class="loading">No assets uploaded yet.</div>';
-                return;
-            }
-
-            const tableHTML = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Filename</th>
-                            <th>Type</th>
-                            <th>Size</th>
-                            <th>Uploaded</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${assets.map(asset => `
-                            <tr>
-                                <td>${asset.original_filename}</td>
-                                <td>${asset.file_type || 'Unknown'}</td>
-                                <td>${formatFileSize(asset.file_size)}</td>
-                                <td>${formatDate(asset.created_at)}</td>
-                                <td>
-                                    <a href="/uploads/${asset.filename}" target="_blank" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">View</a>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            
-            container.innerHTML = tableHTML;
-        }
-
-        // CALENDAR FUNCTIONS
-        async function loadCalendarEvents() {
-            try {
-                const response = await fetch('/api/calendar/events');
-                const events = await response.json();
-                renderCalendarEvents(events);
-            } catch (error) {
-                console.error('Error loading calendar events:', error);
-                document.getElementById('calendarEvents').innerHTML = '<div class="loading">Error loading events.</div>';
-            }
-        }
-
-        function renderCalendarEvents(events) {
-            const container = document.getElementById('calendarEvents');
-            
-            if (events.length === 0) {
-                container.innerHTML = '<div class="loading">No events scheduled.</div>';
-                return;
-            }
-
-            const tableHTML = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Event</th>
-                            <th>Type</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Created By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${events.map(event => `
-                            <tr>
-                                <td>
-                                    <strong>${event.title}</strong>
-                                    ${event.description ? `<br><small style="color: #a0a0a0;">${event.description}</small>` : ''}
-                                </td>
-                                <td><span class="status-badge status-${event.event_type}">${event.event_type}</span></td>
-                                <td>${formatDate(event.start_date)}</td>
-                                <td>${event.end_date ? formatDate(event.end_date) : '-'}</td>
-                                <td>${event.created_by || '-'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            
-            container.innerHTML = tableHTML;
-        }
-
-        // AGENCY FUNCTIONS
-        async function loadAgencyDeliverables() {
-            try {
-                const response = await fetch('/api/agency/deliverables');
-                const deliverables = await response.json();
-                renderAgencyDeliverables(deliverables);
-            } catch (error) {
-                console.error('Error loading agency deliverables:', error);
-                document.getElementById('agencyDeliverables').innerHTML = '<div class="loading">Error loading deliverables.</div>';
-            }
-        }
-
-        function renderAgencyDeliverables(deliverables) {
-            const container = document.getElementById('agencyDeliverables');
-            
-            if (deliverables.length === 0) {
-                container.innerHTML = '<div class="loading">No deliverables added yet.</div>';
-                return;
-            }
-
-            const tableHTML = `
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Deliverable</th>
-                            <th>Phase</th>
-                            <th>Status</th>
-                            <th>Due Date</th>
-                            <th>Assigned To</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${deliverables.map(deliverable => `
-                            <tr>
-                                <td>
-                                    <strong>${deliverable.deliverable_name}</strong>
-                                    ${deliverable.notes ? `<br><small style="color: #a0a0a0;">${deliverable.notes}</small>` : ''}
-                                </td>
-                                <td>Phase ${deliverable.phase}</td>
-                                <td><span class="status-badge status-${deliverable.status}">${deliverable.status.replace('_', ' ')}</span></td>
-                                <td>${deliverable.due_date ? formatDate(deliverable.due_date) : '-'}</td>
-                                <td>${deliverable.assigned_to || '-'}</td>
-                                <td>
-                                    <button class="btn btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" 
-                                            onclick="updateDeliverableStatus(${deliverable.id}, 'completed')">✓ Complete</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            
-            container.innerHTML = tableHTML;
-        }
-
-        async function updateDeliverableStatus(deliverableId, status) {
-            try {
-                const response = await fetch(`/api/agency/deliverables/${deliverableId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status: status })
-                });
-
-                if (response.ok) {
-                    loadAgencyDeliverables(); // Reload the list
-                }
-            } catch (error) {
-                console.error('Error updating deliverable:', error);
-            }
-        }
-
-        // FILE UPLOAD FUNCTIONS
-        function setupFileUpload() {
-            const uploadZone = document.getElementById('uploadZone');
-            const fileInput = document.getElementById('fileInput');
-
-            uploadZone.addEventListener('click', () => fileInput.click());
-            uploadZone.addEventListener('dragover', handleDragOver);
-            uploadZone.addEventListener('dragleave', handleDragLeave);
-            uploadZone.addEventListener('drop', handleDrop);
-            fileInput.addEventListener('change', handleFileSelect);
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.currentTarget.classList.add('dragover');
-        }
-
-        function handleDragLeave(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('dragover');
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            uploadFiles(files);
-        }
-
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            uploadFiles(files);
-        }
-
-        async function uploadFiles(files) {
-            const progressDiv = document.getElementById('uploadProgress');
-            progressDiv.style.display = 'block';
-            progressDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Uploading files...</p></div>';
-
-            for (let file of files) {
-                await uploadSingleFile(file);
-            }
-
-            progressDiv.innerHTML = '<div style="color: #10b981; text-align: center; padding: 1rem;">✅ Upload complete!</div>';
-            setTimeout(() => {
-                progressDiv.style.display = 'none';
-            }, 3000);
-
-            // Reload data if JSONL files were uploaded
-            if (Array.from(files).some(file => file.name.endsWith('.jsonl'))) {
-                loadCompetitiveData();
-            }
-            loadAssets();
-        }
-
-        async function uploadSingleFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Upload failed: ${response.status}`);
-                }
-
-                return await response.json();
-            } catch (error) {
-                console.error('Error uploading file:', error);
-                return null;
-            }
-        }
-
-        // FORM HANDLERS
-        document.getElementById('assetForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData();
-            formData.append('file', document.getElementById('assetFile').files[0]);
-            formData.append('description', document.getElementById('assetDescription').value);
-            formData.append('tags', document.getElementById('assetTags').value);
-
-            try {
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    closeModal('assetModal');
-                    document.getElementById('assetForm').reset();
-                    loadAssets();
-                }
-            } catch (error) {
-                console.error('Error uploading asset:', error);
-            }
-        });
-
-        document.getElementById('eventForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const eventData = {
-                title: document.getElementById('eventTitle').value,
-                description: document.getElementById('eventDescription').value,
-                event_type: document.getElementById('eventType').value,
-                start_date: document.getElementById('eventStartDate').value,
-                end_date: document.getElementById('eventEndDate').value
-            };
-
-            try {
-                const response = await fetch('/api/calendar/events', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(eventData)
-                });
-
-                if (response.ok) {
-                    closeModal('eventModal');
-                    document.getElementById('eventForm').reset();
-                    loadCalendarEvents();
-                }
-            } catch (error) {
-                console.error('Error creating event:', error);
-            }
-        });
-
-        document.getElementById('deliverableForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const deliverableData = {
-                deliverable_name: document.getElementById('deliverableName').value,
-                phase: parseInt(document.getElementById('deliverablePhase').value),
-                status: document.getElementById('deliverableStatus').value,
-                due_date: document.getElementById('deliverableDueDate').value,
-                assigned_to: document.getElementById('deliverableAssignedTo').value,
-                notes: document.getElementById('deliverableNotes').value
-            };
-
-            try {
-                const response = await fetch('/api/agency/deliverables', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(deliverableData)
-                });
-
-                if (response.ok) {
-                    closeModal('deliverableModal');
-                    document.getElementById('deliverableForm').reset();
-                    loadAgencyDeliverables();
-                }
-            } catch (error) {
-                console.error('Error creating deliverable:', error);
-            }
-        });
-
-        // UTILITY FUNCTIONS
-        function formatFileSize(bytes) {
-            if (!bytes) return 'Unknown';
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(1024));
-            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        // Close modals when clicking outside
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                e.target.classList.remove('active');
-            }
-        });
-    </script>
+  <script src="/static/js/app.js?v=ccv2-20250923-frontend-recover"></script>
 </body>
 </html>
