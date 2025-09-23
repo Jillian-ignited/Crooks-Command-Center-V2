@@ -306,3 +306,502 @@ def api_agency_export():
                             (pr.due_date.isoformat() if pr.due_date else '')])
         return Response(buf.getvalue(), mimetype='text/csv',
                         headers={'Content-Disposition':'attachment; filename=agency_export.csv'})
+# ADD THIS TO YOUR EXISTING app.py (don't replace, just add)
+
+# 11 Competitor Intelligence Database
+COMPETITORS = {
+    'supreme': {
+        'name': 'Supreme',
+        'tier': 'luxury',
+        'target_audience': 'hype-collectors',
+        'price_range': 'premium',
+        'instagram_handle': '@supremenewyork',
+        'tiktok_handle': '@supreme',
+        'key_strengths': ['exclusivity', 'drops', 'celebrity_endorsements'],
+        'content_style': 'minimal_aesthetic'
+    },
+    'stussy': {
+        'name': 'Stussy', 
+        'tier': 'heritage',
+        'target_audience': 'streetwear-og',
+        'price_range': 'mid-premium',
+        'instagram_handle': '@stussy',
+        'tiktok_handle': '@stussy',
+        'key_strengths': ['heritage', 'surf_culture', 'authenticity'],
+        'content_style': 'lifestyle_focused'
+    },
+    'hellstar': {
+        'name': 'Hellstar',
+        'tier': 'emerging',
+        'target_audience': 'gen-z-alt',
+        'price_range': 'mid-tier',
+        'instagram_handle': '@hellstar',
+        'tiktok_handle': '@hellstar',
+        'key_strengths': ['viral_content', 'influencer_network', 'trending'],
+        'content_style': 'edgy_viral'
+    },
+    'godspeed': {
+        'name': 'Godspeed',
+        'tier': 'emerging',
+        'target_audience': 'streetwear-purist',
+        'price_range': 'mid-tier',
+        'instagram_handle': '@godspeed',
+        'tiktok_handle': '@godspeed',
+        'key_strengths': ['quality', 'community', 'craftsmanship'],
+        'content_style': 'product_focused'
+    },
+    'fog_essentials': {
+        'name': 'Fear of God Essentials',
+        'tier': 'luxury',
+        'target_audience': 'minimalist-luxury',
+        'price_range': 'premium',
+        'instagram_handle': '@fearofgodessentials',
+        'tiktok_handle': '@fearofgod',
+        'key_strengths': ['designer_backing', 'quality', 'minimalism'],
+        'content_style': 'luxury_minimal'
+    },
+    'smoke_rise': {
+        'name': 'Smoke Rise',
+        'tier': 'established',
+        'target_audience': 'urban-contemporary',
+        'price_range': 'mid-tier',
+        'instagram_handle': '@smokerise',
+        'tiktok_handle': '@smokerise',
+        'key_strengths': ['urban_culture', 'music_ties', 'accessibility'],
+        'content_style': 'urban_lifestyle'
+    },
+    'reason_clothing': {
+        'name': 'Reason Clothing',
+        'tier': 'established',
+        'target_audience': 'urban-lifestyle',
+        'price_range': 'accessible',
+        'instagram_handle': '@reasonclothing',
+        'tiktok_handle': '@reasonclothing',
+        'key_strengths': ['affordability', 'variety', 'consistency'],
+        'content_style': 'diverse_content'
+    },
+    'lrg': {
+        'name': 'LRG',
+        'tier': 'heritage',
+        'target_audience': 'skatewear-culture',
+        'price_range': 'accessible',
+        'instagram_handle': '@lrgclothing',
+        'tiktok_handle': '@lrg',
+        'key_strengths': ['heritage', 'skate_culture', 'authenticity'],
+        'content_style': 'skate_lifestyle'
+    },
+    'diamond_supply': {
+        'name': 'Diamond Supply Co.',
+        'tier': 'established',
+        'target_audience': 'skate-culture',
+        'price_range': 'mid-tier',
+        'instagram_handle': '@diamondsupplyco',
+        'tiktok_handle': '@diamondsupply',
+        'key_strengths': ['skate_heritage', 'iconic_logo', 'collaborations'],
+        'content_style': 'skate_focused'
+    },
+    'ed_hardy': {
+        'name': 'Ed Hardy',
+        'tier': 'legacy',
+        'target_audience': 'nostalgic-revival',
+        'price_range': 'mid-tier',
+        'instagram_handle': '@edhardyofficial',
+        'tiktok_handle': '@edhardy',
+        'key_strengths': ['nostalgia', 'tattoo_culture', 'y2k_revival'],
+        'content_style': 'retro_revival'
+    },
+    'von_dutch': {
+        'name': 'Von Dutch',
+        'tier': 'legacy',
+        'target_audience': 'y2k-revival',
+        'price_range': 'premium',
+        'instagram_handle': '@vondutchoriginals',
+        'tiktok_handle': '@vondutch',
+        'key_strengths': ['iconic_status', 'celebrity_history', 'y2k_trend'],
+        'content_style': 'celebrity_focused'
+    }
+}
+
+# ADD THESE API ROUTES TO YOUR EXISTING app.py
+
+@app.route('/api/competitors')
+def get_competitors():
+    """Get all competitor data"""
+    return jsonify(COMPETITORS)
+
+@app.route('/api/competitive-analysis')
+def competitive_analysis():
+    """Generate competitive analysis from your Apify data"""
+    try:
+        # Process your real JSONL data files
+        analysis_data = process_competitor_data()
+        return jsonify(analysis_data)
+    except Exception as e:
+        return jsonify({'error': 'Unable to process data', 'details': str(e)}), 500
+
+@app.route('/api/brand-comparison/<competitor_key>')
+def brand_comparison(competitor_key):
+    """Head-to-head comparison with specific competitor"""
+    if competitor_key not in COMPETITORS:
+        return jsonify({'error': 'Competitor not found'}), 404
+    
+    try:
+        comparison_data = generate_brand_comparison(competitor_key)
+        return jsonify(comparison_data)
+    except Exception as e:
+        return jsonify({'error': 'Unable to generate comparison', 'details': str(e)}), 500
+
+@app.route('/api/competitive-insights')
+def competitive_insights():
+    """Get strategic insights based on competitive analysis"""
+    try:
+        insights = generate_competitive_insights()
+        return jsonify(insights)
+    except Exception as e:
+        return jsonify({'error': 'Unable to generate insights', 'details': str(e)}), 500
+
+# HELPER FUNCTIONS - ADD THESE TO YOUR app.py
+
+def process_competitor_data():
+    """Process your real Apify JSONL files for competitive intelligence"""
+    competitor_metrics = {}
+    
+    # Process each competitor's data from your JSONL files
+    for comp_key, comp_info in COMPETITORS.items():
+        # Look for JSONL files that match this competitor
+        competitor_files = find_competitor_files(comp_key, comp_info)
+        
+        if competitor_files:
+            metrics = analyze_competitor_files(competitor_files)
+            competitor_metrics[comp_key] = {
+                'name': comp_info['name'],
+                'tier': comp_info['tier'],
+                'metrics': metrics,
+                'competitive_position': assess_competitive_position(metrics, comp_info['tier']),
+                'key_strengths': comp_info['key_strengths'],
+                'content_strategy': analyze_content_strategy(metrics)
+            }
+    
+    return competitor_metrics
+
+def find_competitor_files(comp_key, comp_info):
+    """Find JSONL files that belong to this competitor"""
+    competitor_files = []
+    
+    # Search in uploads directory for files matching this competitor
+    upload_dir = app.config['UPLOAD_FOLDER']
+    if os.path.exists(upload_dir):
+        for filename in os.listdir(upload_dir):
+            if filename.endswith('.jsonl'):
+                # Check if filename contains competitor identifiers
+                filename_lower = filename.lower()
+                brand_name_lower = comp_info['name'].lower().replace(' ', '_')
+                
+                if (comp_key in filename_lower or 
+                    brand_name_lower in filename_lower or
+                    comp_info['instagram_handle'].replace('@', '') in filename_lower):
+                    competitor_files.append(os.path.join(upload_dir, filename))
+    
+    return competitor_files
+
+def analyze_competitor_files(file_paths):
+    """Analyze competitor JSONL files to extract metrics"""
+    total_posts = 0
+    total_engagement = 0
+    hashtags = []
+    posting_dates = []
+    content_types = {'image': 0, 'video': 0, 'carousel': 0}
+    
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            post = json.loads(line)
+                            total_posts += 1
+                            
+                            # Extract engagement metrics
+                            likes = post.get('likesCount', 0) or post.get('likes', 0)
+                            comments = post.get('commentsCount', 0) or post.get('comments', 0)
+                            shares = post.get('sharesCount', 0) or post.get('shares', 0)
+                            total_engagement += likes + comments + shares
+                            
+                            # Extract hashtags
+                            caption = post.get('text', '') or post.get('caption', '')
+                            if caption:
+                                hashtags.extend(re.findall(r'#\w+', caption))
+                            
+                            # Extract posting date
+                            post_date = post.get('timestamp') or post.get('date')
+                            if post_date:
+                                posting_dates.append(post_date)
+                            
+                            # Determine content type
+                            if post.get('videoUrl') or post.get('video'):
+                                content_types['video'] += 1
+                            elif post.get('images') and len(post.get('images', [])) > 1:
+                                content_types['carousel'] += 1
+                            else:
+                                content_types['image'] += 1
+                                
+                        except json.JSONDecodeError:
+                            continue
+        except FileNotFoundError:
+            continue
+    
+    # Calculate averages and insights
+    avg_engagement = total_engagement / max(total_posts, 1)
+    top_hashtags = [tag for tag, count in Counter(hashtags).most_common(10)]
+    
+    return {
+        'total_posts': total_posts,
+        'avg_engagement_per_post': round(avg_engagement, 2),
+        'total_engagement': total_engagement,
+        'top_hashtags': top_hashtags,
+        'content_distribution': content_types,
+        'posting_frequency': calculate_posting_frequency(posting_dates),
+        'engagement_rate': calculate_engagement_rate(total_engagement, total_posts)
+    }
+
+def assess_competitive_position(metrics, tier):
+    """Assess competitive position based on metrics and tier"""
+    engagement_score = metrics.get('avg_engagement_per_post', 0)
+    
+    # Tier-based benchmarks
+    tier_benchmarks = {
+        'luxury': {'high': 5000, 'medium': 2000},
+        'heritage': {'high': 3000, 'medium': 1000},
+        'established': {'high': 2000, 'medium': 800},
+        'emerging': {'high': 1500, 'medium': 500},
+        'legacy': {'high': 1000, 'medium': 400}
+    }
+    
+    benchmark = tier_benchmarks.get(tier, {'high': 1000, 'medium': 500})
+    
+    if engagement_score >= benchmark['high']:
+        return 'strong'
+    elif engagement_score >= benchmark['medium']:
+        return 'moderate'
+    else:
+        return 'developing'
+
+def analyze_content_strategy(metrics):
+    """Analyze content strategy effectiveness"""
+    content_dist = metrics.get('content_distribution', {})
+    total_content = sum(content_dist.values())
+    
+    if total_content == 0:
+        return 'insufficient_data'
+    
+    video_ratio = content_dist.get('video', 0) / total_content
+    carousel_ratio = content_dist.get('carousel', 0) / total_content
+    
+    if video_ratio > 0.6:
+        return 'video_first'
+    elif video_ratio > 0.3 and carousel_ratio > 0.2:
+        return 'mixed_media'
+    elif carousel_ratio > 0.4:
+        return 'carousel_focused'
+    else:
+        return 'image_focused'
+
+def calculate_posting_frequency(dates):
+    """Calculate posting frequency from dates"""
+    if len(dates) < 2:
+        return 'insufficient_data'
+    
+    # This would need more sophisticated date parsing based on your data format
+    # For now, return posts per week estimation
+    posts_per_week = len(dates) / max(1, len(set(dates[:7])))  # Rough estimate
+    
+    if posts_per_week > 7:
+        return 'daily_plus'
+    elif posts_per_week > 3:
+        return 'regular'
+    elif posts_per_week > 1:
+        return 'weekly'
+    else:
+        return 'infrequent'
+
+def calculate_engagement_rate(total_engagement, total_posts):
+    """Calculate engagement rate category"""
+    avg_rate = total_engagement / max(total_posts, 1)
+    
+    if avg_rate > 5000:
+        return 'high'
+    elif avg_rate > 1000:
+        return 'medium'
+    else:
+        return 'low'
+
+def generate_brand_comparison(competitor_key):
+    """Generate detailed comparison with specific competitor"""
+    competitor_info = COMPETITORS[competitor_key]
+    competitor_files = find_competitor_files(competitor_key, competitor_info)
+    
+    if not competitor_files:
+        return {
+            'competitor': competitor_info,
+            'comparison': 'no_data',
+            'message': f'No data files found for {competitor_info["name"]}'
+        }
+    
+    # Get competitor metrics
+    competitor_metrics = analyze_competitor_files(competitor_files)
+    
+    # Get Crooks & Castles metrics (from your own data)
+    crooks_files = find_crooks_files()
+    crooks_metrics = analyze_competitor_files(crooks_files) if crooks_files else {}
+    
+    comparison = {
+        'competitor': competitor_info,
+        'metrics_comparison': {
+            'crooks_castles': crooks_metrics,
+            'competitor': competitor_metrics
+        },
+        'strategic_insights': generate_comparison_insights(crooks_metrics, competitor_metrics, competitor_info),
+        'recommended_actions': generate_comparison_recommendations(crooks_metrics, competitor_metrics, competitor_info)
+    }
+    
+    return comparison
+
+def find_crooks_files():
+    """Find your own Crooks & Castles data files"""
+    crooks_files = []
+    upload_dir = app.config['UPLOAD_FOLDER']
+    
+    if os.path.exists(upload_dir):
+        for filename in os.listdir(upload_dir):
+            if filename.endswith('.jsonl'):
+                filename_lower = filename.lower()
+                if ('crooks' in filename_lower or 
+                    'castles' in filename_lower or
+                    'crooksandcastles' in filename_lower):
+                    crooks_files.append(os.path.join(upload_dir, filename))
+    
+    return crooks_files
+
+def generate_comparison_insights(crooks_metrics, competitor_metrics, competitor_info):
+    """Generate strategic insights from comparison"""
+    insights = []
+    
+    if not crooks_metrics or not competitor_metrics:
+        return ['Insufficient data for comparison']
+    
+    # Engagement comparison
+    crooks_engagement = crooks_metrics.get('avg_engagement_per_post', 0)
+    comp_engagement = competitor_metrics.get('avg_engagement_per_post', 0)
+    
+    if comp_engagement > crooks_engagement * 1.5:
+        insights.append(f"{competitor_info['name']} shows significantly higher engagement rates")
+    elif crooks_engagement > comp_engagement * 1.5:
+        insights.append(f"Strong engagement advantage over {competitor_info['name']}")
+    
+    # Content strategy comparison
+    crooks_strategy = analyze_content_strategy(crooks_metrics)
+    comp_strategy = analyze_content_strategy(competitor_metrics)
+    
+    if crooks_strategy != comp_strategy:
+        insights.append(f"Different content strategies: Crooks uses {crooks_strategy}, {competitor_info['name']} uses {comp_strategy}")
+    
+    # Hashtag strategy
+    crooks_hashtags = set(crooks_metrics.get('top_hashtags', []))
+    comp_hashtags = set(competitor_metrics.get('top_hashtags', []))
+    common_hashtags = crooks_hashtags.intersection(comp_hashtags)
+    
+    if len(common_hashtags) > 3:
+        insights.append(f"High hashtag overlap suggests competing for similar audiences")
+    
+    return insights
+
+def generate_comparison_recommendations(crooks_metrics, competitor_metrics, competitor_info):
+    """Generate actionable recommendations"""
+    recommendations = []
+    
+    if not crooks_metrics or not competitor_metrics:
+        return ['Upload more data files for detailed recommendations']
+    
+    # Engagement recommendations
+    comp_engagement = competitor_metrics.get('avg_engagement_per_post', 0)
+    crooks_engagement = crooks_metrics.get('avg_engagement_per_post', 0)
+    
+    if comp_engagement > crooks_engagement:
+        recommendations.append(f"Study {competitor_info['name']}'s high-performing content formats")
+    
+    # Content strategy recommendations
+    comp_content = competitor_metrics.get('content_distribution', {})
+    crooks_content = crooks_metrics.get('content_distribution', {})
+    
+    comp_video_ratio = comp_content.get('video', 0) / max(sum(comp_content.values()), 1)
+    crooks_video_ratio = crooks_content.get('video', 0) / max(sum(crooks_content.values()), 1)
+    
+    if comp_video_ratio > crooks_video_ratio + 0.2:
+        recommendations.append("Consider increasing video content ratio to match competitor performance")
+    
+    # Hashtag recommendations
+    comp_hashtags = competitor_metrics.get('top_hashtags', [])
+    unique_comp_hashtags = [tag for tag in comp_hashtags[:5] if tag not in crooks_metrics.get('top_hashtags', [])]
+    
+    if unique_comp_hashtags:
+        recommendations.append(f"Test competitor hashtags: {', '.join(unique_comp_hashtags[:3])}")
+    
+    return recommendations[:5]  # Top 5 recommendations
+
+def generate_competitive_insights():
+    """Generate overall competitive landscape insights"""
+    all_competitor_data = process_competitor_data()
+    
+    insights = {
+        'market_leaders': [],
+        'emerging_threats': [],
+        'content_trends': {},
+        'opportunity_gaps': [],
+        'strategic_recommendations': []
+    }
+    
+    # Identify market leaders by engagement
+    engagement_rankings = []
+    for comp_key, data in all_competitor_data.items():
+        metrics = data.get('metrics', {})
+        engagement = metrics.get('avg_engagement_per_post', 0)
+        engagement_rankings.append((comp_key, data['name'], engagement, data['tier']))
+    
+    engagement_rankings.sort(key=lambda x: x[2], reverse=True)
+    
+    # Top 3 by engagement
+    insights['market_leaders'] = [
+        {'name': name, 'engagement': eng, 'tier': tier} 
+        for _, name, eng, tier in engagement_rankings[:3]
+    ]
+    
+    # Emerging threats (high engagement in emerging/established tiers)
+    insights['emerging_threats'] = [
+        {'name': name, 'engagement': eng} 
+        for _, name, eng, tier in engagement_rankings 
+        if tier in ['emerging', 'established'] and eng > 1000
+    ][:3]
+    
+    # Content trends analysis
+    video_performers = []
+    for comp_key, data in all_competitor_data.items():
+        strategy = data.get('metrics', {}).get('content_distribution', {})
+        total = sum(strategy.values())
+        if total > 0:
+            video_ratio = strategy.get('video', 0) / total
+            if video_ratio > 0.5:
+                video_performers.append(data['name'])
+    
+    insights['content_trends']['video_first_brands'] = video_performers
+    
+    # Strategic recommendations
+    if len(all_competitor_data) > 0:
+        insights['strategic_recommendations'] = [
+            "Monitor emerging competitors with high engagement growth",
+            "Analyze content strategies of top-performing brands in your tier",
+            "Consider video-first approach if competitors are outperforming",
+            "Track hashtag trends across competitive landscape",
+            "Benchmark posting frequency against tier leaders"
+        ]
+    
+    return insights
