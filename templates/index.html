@@ -1,165 +1,1870 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="Cache-Control" content="no-store" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CROOKS & CASTLES — COMMAND CENTER V2</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-  <style>
-    :root{
-      --crooks-primary:#ff6b35; /* orange */
-      --crooks-secondary:#1a1a1a; /* bg */
-      --crooks-accent:#ffd700; /* gold */
-      --crooks-dark:#0d0d0d;
-      --crooks-light:#f5f5f5;
-      --crooks-success:#28a745;
-      --muted:#808080;
-      --card:#121212;
-      --border:#2a2a2a;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--crooks-secondary);color:var(--crooks-light);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    header{display:flex;align-items:center;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0d0d0d,#111)}
-    header .brand{font-weight:800;letter-spacing:.12em}
-    header .brand span{color:var(--crooks-primary)}
-    .wrap{max-width:1200px;margin:0 auto;padding:18px}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
-    .tabs button{border:1px solid var(--border);background:var(--card);color:var(--crooks-light);padding:10px 14px;border-radius:10px;cursor:pointer}
-    .tabs button.active{border-color:var(--crooks-primary);box-shadow:0 0 0 1px var(--crooks-primary) inset}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
-    .card h3{margin:0 0 10px 0;font-size:14px;letter-spacing:.08em;color:#fff}
-    .meta{color:var(--muted);font-size:12px}
-    .two{grid-column:span 6}
-    .three{grid-column:span 4}
-    .full{grid-column:1/-1}
-    .pill{display:inline-block;border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px;margin:2px}
-    .asset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-    .asset{background:#0f0f0f;border:1px solid var(--border);border-radius:12px;padding:10px}
-    .asset .thumb{width:100%;aspect-ratio:1/1;background:#111;border:1px solid #222;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .asset .thumb img{width:100%;height:100%;object-fit:cover}
-    .kbar{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 8px}
-    .kbar .kpi{background:#101010;border:1px solid var(--border);padding:10px 12px;border-radius:10px}
-    .view-switch{display:flex;gap:8px;flex-wrap:wrap}
-    .view-switch button{border:1px solid var(--border);background:#0e0e0e;color:#fff;padding:8px 12px;border-radius:999px;cursor:pointer}
-    .view-switch button.active{border-color:var(--crooks-accent);color:var(--crooks-accent)}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .muted{color:var(--muted)}
-    .ok{color:var(--crooks-success)}
-    .err{color:#ff4d4f}
-    .hidden{display:none}
-    .upload{border:1px dashed var(--border);background:#0e0e0e;padding:16px;border-radius:14px;text-align:center}
-    .upload.drag{border-color:var(--crooks-primary);background:rgba(255,107,53,.05)}
-    .progress{height:8px;background:#1b1b1b;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
-    .progress>span{display:block;height:100%;width:0;background:var(--crooks-primary)}
-    a.btn{display:inline-flex;gap:8px;align-items:center;background:#111;border:1px solid var(--border);padding:8px 12px;border-radius:10px;text-decoration:none;color:#fff}
-    a.btn:hover{border-color:var(--crooks-primary)}
-    code,pre{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crooks & Castles - Command Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 1.2rem 2rem;
+            border-bottom: 3px solid #ff6b35;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ff6b35;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-tab {
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 107, 53, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(45deg, #ff6b35, #ff8f65);
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: calc(100vh - 120px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b35, #ff8f65);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ef4444, #f87171);
+            color: white;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-view-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .calendar-view-toggle button {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .calendar-view-toggle button.active {
+            background: #ff6b35;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-day {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            min-height: 100px;
+            position: relative;
+        }
+
+        .calendar-day-number {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .calendar-event {
+            background: #ff6b35;
+            color: white;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-bottom: 0.2rem;
+            cursor: pointer;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th, .table td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            vertical-align: top;
+        }
+
+        .table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            color: #ff6b35;
+        }
+
+        .table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-active { background: #10b981; color: #fff; }
+        .status-pending { background: #f59e0b; color: #000; }
+        .status-completed { background: #8b5cf6; color: #fff; }
+        .status-cancelled { background: #ef4444; color: #fff; }
+        .status-in_progress { background: #3b82f6; color: #fff; }
+        .status-campaign { background: #ff6b35; color: #fff; }
+        .status-launch { background: #10b981; color: #fff; }
+        .status-meeting { background: #8b5cf6; color: #fff; }
+        .status-deadline { background: #ef4444; color: #fff; }
+        .status-review { background: #f59e0b; color: #000; }
+        .status-general { background: #6b7280; color: #fff; }
+
+        .tier-luxury { background: linear-gradient(45deg, #ffd700, #ffed4a); color: #000; }
+        .tier-heritage { background: linear-gradient(45deg, #8b5cf6, #a78bfa); color: #fff; }
+        .tier-established { background: linear-gradient(45deg, #10b981, #34d399); color: #fff; }
+        .tier-emerging { background: linear-gradient(45deg, #3b82f6, #60a5fa); color: #fff; }
+        .tier-legacy { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: #000; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b35, #ff8f65);
+            transition: width 0.3s ease;
+        }
+
+        .content-creator {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #a0a0a0;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #ffffff;
+        }
+
+        .crooks-row {
+            background: rgba(255, 107, 53, 0.15);
+            border-left: 4px solid #ff6b35;
+        }
+
+        .phase-tracker {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+        }
+
+        .phase-step {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            position: relative;
+        }
+
+        .phase-step.completed {
+            color: #10b981;
+        }
+
+        .phase-step.active {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        .phase-step.pending {
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .nav-tab {
+                padding: 0.6rem 1rem;
+                font-size: 0.8rem;
+            }
+            
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <div class="brand">CROOKS <span>&</span> CASTLES — COMMAND CENTER</div>
-    <span class="pill">V2</span>
-    <span class="pill">LIVE</span>
-  </header>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Crooks & Castles</div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab(this, 'overview')">Overview</button>
+                <button class="nav-tab" onclick="switchTab(this, 'intelligence')">Intelligence</button>
+                <button class="nav-tab" onclick="switchTab(this, 'calendar')">Calendar</button>
+                <button class="nav-tab" onclick="switchTab(this, 'content')">Content</button>
+                <button class="nav-tab" onclick="switchTab(this, 'agency')">Agency</button>
+                <button class="nav-tab" onclick="switchTab(this, 'assets')">Assets</button>
+            </nav>
+        </div>
+    </header>
 
-  <div class="wrap">
-    <div class="tabs">
-      <button class="active" data-tab="intel">INTELLIGENCE</button>
-      <button data-tab="assets">ASSETS</button>
-      <button data-tab="calendar">CALENDAR</button>
-      <button data-tab="agency">AGENCY</button>
-      <button data-tab="upload">UPLOAD</button>
-      <span class="muted">Status: <span id="app-status" class="ok">connected</span></span>
+    <div class="main-container">
+        <!-- OVERVIEW TAB -->
+        <div id="overview" class="tab-content active">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Executive Overview</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Strategic command center for Crooks & Castles brand operations</p>
+                </div>
+                <button class="btn btn-primary" onclick="refreshDashboard()">🔄 Refresh Dashboard</button>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="grid grid-4">
+                <div class="metric-card">
+                    <div class="metric-value">8.5K</div>
+                    <div class="metric-label">Avg Engagement</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">156</div>
+                    <div class="metric-label">Posts Analyzed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">12</div>
+                    <div class="metric-label">Active Campaigns</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">85%</div>
+                    <div class="metric-label">Deliverable Progress</div>
+                </div>
+            </div>
+
+            <!-- Executive Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Executive Summary</h2>
+                    <span style="color: #a0a0a0; font-size: 0.9rem;">Last updated: Today</span>
+                </div>
+                <div id="executiveSummary">
+                    <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                        <strong>Brand Position:</strong> Crooks & Castles maintains strong heritage positioning in luxury streetwear segment, ranking #4 among key competitors with 8.5K average engagement.
+                    </div>
+                    
+                    <h4 style="color: #ff6b35; margin: 1.5rem 0 1rem 0;">Key Strategic Insights</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            📈 <strong>Growth Opportunity:</strong> Limited drop campaigns show 40% higher engagement than regular posts
+                        </li>
+                        <li style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            🎯 <strong>Competitive Edge:</strong> Heritage brand story differentiates from newer luxury streetwear brands
+                        </li>
+                        <li style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            🚀 <strong>Expansion Focus:</strong> High-profile collaborations could capture luxury market share from Supreme/Off-White
+                        </li>
+                        <li style="padding: 0.5rem 0;">
+                            ⚡ <strong>Content Strategy:</strong> Behind-the-scenes content and founder stories drive highest authentic engagement
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Recent Activity & Alerts -->
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                    </div>
+                    <div id="recentActivity">
+                        <div style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>🎯 New campaign: "Heritage Drop"</span>
+                                <span style="color: #a0a0a0; font-size: 0.8rem;">2 hours ago</span>
+                            </div>
+                        </div>
+                        <div style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>📊 Competitor analysis updated</span>
+                                <span style="color: #a0a0a0; font-size: 0.8rem;">4 hours ago</span>
+                            </div>
+                        </div>
+                        <div style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>✅ Phase 2 deliverables completed</span>
+                                <span style="color: #a0a0a0; font-size: 0.8rem;">1 day ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Priority Alerts</h2>
+                    </div>
+                    <div id="priorityAlerts">
+                        <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <strong>URGENT:</strong> Q4 campaign creative due in 3 days
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <strong>ATTENTION:</strong> Supreme launched similar concept - review positioning
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <strong>OPPORTUNITY:</strong> Viral TikTok trend aligns with brand values
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INTELLIGENCE TAB -->
+        <div id="intelligence" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Competitive Intelligence</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Streetwear market analysis and competitor tracking</p>
+                </div>
+                <button class="btn btn-primary" onclick="refreshIntelligence()">🔄 Refresh Analysis</button>
+            </div>
+
+            <!-- Market Position Overview -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Streetwear Market Position</h2>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>Tier</th>
+                                <th>Avg Engagement</th>
+                                <th>Content Strategy</th>
+                                <th>Market Position</th>
+                                <th>Key Differentiator</th>
+                            </tr>
+                        </thead>
+                        <tbody id="competitorTable">
+                            <tr class="crooks-row">
+                                <td><strong style="color: #ff6b35;">Crooks & Castles</strong><br><small style="color: #ff6b35;">YOUR BRAND</small></td>
+                                <td><span class="tier-badge tier-heritage">Heritage</span></td>
+                                <td style="color: #f59e0b; font-weight: 700;">8,500</td>
+                                <td>Luxury streetwear with heritage story</td>
+                                <td style="color: #10b981;">Strong</td>
+                                <td>OG streetwear authenticity</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Supreme</strong></td>
+                                <td><span class="tier-badge tier-luxury">Luxury</span></td>
+                                <td style="color: #10b981; font-weight: 700;">15,000</td>
+                                <td>Limited drops & hype culture</td>
+                                <td style="color: #10b981;">Dominant</td>
+                                <td>Scarcity model mastery</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Off-White</strong></td>
+                                <td><span class="tier-badge tier-luxury">Luxury</span></td>
+                                <td style="color: #10b981; font-weight: 700;">12,500</td>
+                                <td>High fashion meets street</td>
+                                <td style="color: #10b981;">Strong</td>
+                                <td>Runway to streetwear bridge</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fear of God</strong></td>
+                                <td><span class="tier-badge tier-luxury">Luxury</span></td>
+                                <td style="color: #f59e0b; font-weight: 700;">9,800</td>
+                                <td>Minimalist luxury aesthetic</td>
+                                <td style="color: #10b981;">Strong</td>
+                                <td>Celebrity endorsements</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Stussy</strong></td>
+                                <td><span class="tier-badge tier-established">Established</span></td>
+                                <td style="color: #ef4444; font-weight: 700;">6,200</td>
+                                <td>Surf/skate heritage</td>
+                                <td style="color: #f59e0b;">Moderate</td>
+                                <td>California lifestyle brand</td>
+                            </tr>
+                            <tr>
+                                <td><strong>BAPE</strong></td>
+                                <td><span class="tier-badge tier-established">Established</span></td>
+                                <td style="color: #f59e0b; font-weight: 700;">7,800</td>
+                                <td>Japanese streetwear culture</td>
+                                <td style="color: #f59e0b;">Moderate</td>
+                                <td>Ape head iconography</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Trend Analysis -->
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Trending Content Types</h2>
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Limited Drop Announcements</span>
+                                <span style="color: #10b981;">+40%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 85%;"></div></div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Behind-the-Scenes Content</span>
+                                <span style="color: #10b981;">+25%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 70%;"></div></div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Celebrity/Influencer Collabs</span>
+                                <span style="color: #10b981;">+35%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 60%;"></div></div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Heritage/Archive Content</span>
+                                <span style="color: #ff6b35;">+15%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 45%;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Strategic Recommendations</h2>
+                    </div>
+                    <div>
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <strong>Priority 1:</strong> Leverage heritage story in limited drop campaigns to compete with Supreme's scarcity model
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <strong>Priority 2:</strong> Develop celebrity partnership strategy targeting A-list hip-hop artists
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <strong>Priority 3:</strong> Create archive collection showcasing original designs and brand evolution
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CALENDAR TAB -->
+        <div id="calendar" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Strategic Calendar</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Campaign timeline and event management</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('eventModal')">➕ Add Event</button>
+            </div>
+
+            <div class="calendar-nav">
+                <div>
+                    <button class="btn btn-secondary" onclick="previousMonth()">‹ Previous</button>
+                    <span id="currentMonth" style="margin: 0 1rem; font-weight: 600; font-size: 1.1rem;">December 2024</span>
+                    <button class="btn btn-secondary" onclick="nextMonth()">Next ›</button>
+                </div>
+                <div class="calendar-view-toggle">
+                    <button class="active" onclick="setCalendarView('month')">Month</button>
+                    <button onclick="setCalendarView('week')">Week</button>
+                    <button onclick="setCalendarView('list')">List</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="calendarView">
+                    <!-- Calendar will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Upcoming Events & Deadlines</h2>
+                </div>
+                <div id="upcomingEvents">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventsTableBody">
+                            <!-- Events will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT TAB -->
+        <div id="content" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Content Creation</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Campaign development and content planning</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('contentModal')">🎨 Create Content</button>
+            </div>
+
+            <!-- Content Creator -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Campaign Builder</h2>
+                </div>
+                <div class="content-creator">
+                    <div class="grid grid-2">
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">Campaign Type</label>
+                                <select id="campaignType" class="form-select">
+                                    <option value="">Select campaign type...</option>
+                                    <option value="limited_drop">Limited Drop</option>
+                                    <option value="seasonal">Seasonal Collection</option>
+                                    <option value="collaboration">Brand Collaboration</option>
+                                    <option value="heritage">Heritage Archive</option>
+                                    <option value="lifestyle">Lifestyle Content</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Target Audience</label>
+                                <select id="targetAudience" class="form-select">
+                                    <option value="">Select audience...</option>
+                                    <option value="luxury_collectors">Luxury Collectors</option>
+                                    <option value="streetwear_enthusiasts">Streetwear Enthusiasts</option>
+                                    <option value="fashion_forward">Fashion Forward</option>
+                                    <option value="hip_hop_culture">Hip-Hop Culture</option>
+                                    <option value="heritage_fans">Heritage Fans</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Content Pillars</label>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <input type="checkbox" id="pillar_exclusivity"> Exclusivity
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <input type="checkbox" id="pillar_heritage"> Heritage
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <input type="checkbox" id="pillar_luxury"> Luxury
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <input type="checkbox" id="pillar_street"> Street Culture
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
+                                        <input type="checkbox" id="pillar_lifestyle"> Lifestyle
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">Campaign Message</label>
+                                <textarea id="campaignMessage" class="form-textarea" placeholder="Core message and brand story..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Key Hashtags</label>
+                                <input type="text" id="campaignHashtags" class="form-input" placeholder="#CrooksAndCastles #LuxuryStreetWear">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <button class="btn btn-primary" onclick="generateCampaign()">🚀 Generate Campaign</button>
+                        <button class="btn btn-secondary" onclick="previewCampaign()">👀 Preview</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Campaigns -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Active Campaigns</h2>
+                </div>
+                <div id="activeCampaigns">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Campaign</th>
+                                <th>Type</th>
+                                <th>Progress</th>
+                                <th>Launch Date</th>
+                                <th>Performance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaignsTableBody">
+                            <!-- Campaigns will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- AGENCY TAB -->
+        <div id="agency" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Agency Partnership</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Deliverable tracking and phase management</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('deliverableModal')">➕ Add Deliverable</button>
+            </div>
+
+            <!-- Phase Overview -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Project Phases</h2>
+                </div>
+                <div class="phase-tracker">
+                    <div class="phase-step completed">
+                        <div style="font-weight: 600;">Phase 1</div>
+                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Discovery & Strategy</div>
+                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 0.3rem;">✓ Completed</div>
+                    </div>
+                    <div class="phase-step active">
+                        <div style="font-weight: 600;">Phase 2</div>
+                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Creative Development</div>
+                        <div style="font-size: 0.7rem; color: #ff6b35; margin-top: 0.3rem;">📍 In Progress</div>
+                    </div>
+                    <div class="phase-step pending">
+                        <div style="font-weight: 600;">Phase 3</div>
+                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Launch & Activation</div>
+                        <div style="font-size: 0.7rem; color: #6b7280; margin-top: 0.3rem;">⏳ Pending</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deliverables Tracking -->
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Phase Commitments vs Completion</h2>
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Phase 1 (Strategy)</span>
+                                <span style="color: #10b981;">100% Complete</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">8/8 deliverables completed</div>
+                        </div>
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Phase 2 (Creative)</span>
+                                <span style="color: #f59e0b;">75% Complete</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 75%;"></div></div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">9/12 deliverables completed</div>
+                        </div>
+                        
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Phase 3 (Launch)</span>
+                                <span style="color: #6b7280;">0% Complete</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 0%;"></div></div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">0/6 deliverables completed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Critical Path Items</h2>
+                    </div>
+                    <div>
+                        <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <div style="font-weight: 600; color: #ef4444;">OVERDUE</div>
+                            <div>Creative concepts (Phase 2)</div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: 2 days ago</div>
+                        </div>
+                        
+                        <div style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <div style="font-weight: 600; color: #f59e0b;">DUE SOON</div>
+                            <div>Final campaign assets</div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: Tomorrow</div>
+                        </div>
+                        
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <div style="font-weight: 600; color: #10b981;">ON TRACK</div>
+                            <div>Social media templates</div>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: Next week</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Deliverables -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">All Deliverables</h2>
+                </div>
+                <div id="deliverablesTable">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Deliverable</th>
+                                <th>Phase</th>
+                                <th>Assigned To</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deliverablesTableBody">
+                            <!-- Deliverables will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ASSETS TAB -->
+        <div id="assets" class="tab-content">
+            <div class="section-header">
+                <h1 class="section-title">Asset Library</h1>
+                <button class="btn btn-primary" onclick="openModal('assetModal')">➕ Add Asset</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Brand Assets</h2>
+                </div>
+                <div id="assetsList">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Asset Name</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assetsTableBody">
+                            <!-- Assets will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- INTELLIGENCE -->
-    <section id="tab-intel" class="grid">
-      <div class="two card">
-        <h3>OVERVIEW</h3>
-        <div id="intel-overview" class="kbar"></div>
-        <div class="meta">Data source: Instagram/TikTok JSONL + competitor scan</div>
-      </div>
-      <div class="three card">
-        <h3>TOP HASHTAGS</h3>
-        <div id="hashtags" class="asset-grid"></div>
-      </div>
-      <div class="three card">
-        <h3>CULTURAL MOMENTS</h3>
-        <div id="moments" class="asset-grid"></div>
-      </div>
-      <div class="full card">
-        <h3>COMPETITORS — SHARE OF VOICE & ENGAGEMENT</h3>
-        <div id="comp-voice" class="asset-grid"></div>
-      </div>
-      <div class="full card">
-        <h3>DEBUG / RAW</h3>
-        <pre id="intel-debug" class="meta"></pre>
-      </div>
-    </section>
-
-    <!-- ASSETS -->
-    <section id="tab-assets" class="grid hidden">
-      <div class="full card">
-        <div class="row" style="justify-content:space-between;">
-          <h3>ASSET LIBRARY</h3>
-          <a class="btn" href="/api/assets" target="_blank"><i class="fa fa-arrow-up-right-from-square"></i>Open JSON</a>
+    <!-- MODALS -->
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Calendar Event</h2>
+                <button class="close" onclick="closeModal('eventModal')">&times;</button>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Event Title</label>
+                    <input type="text" id="eventTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Event Type</label>
+                    <select id="eventType" class="form-select">
+                        <option value="campaign">Campaign Launch</option>
+                        <option value="deadline">Creative Deadline</option>
+                        <option value="meeting">Strategy Meeting</option>
+                        <option value="review">Campaign Review</option>
+                        <option value="launch">Product Launch</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="eventDescription" class="form-textarea"></textarea>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" id="eventStartDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Date</label>
+                    <input type="date" id="eventEndDate" class="form-input">
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('eventModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitEventForm()">Add Event</button>
+            </div>
         </div>
-        <div id="asset-grid" class="asset-grid"></div>
-      </div>
-    </section>
+    </div>
 
-    <!-- CALENDAR -->
-    <section id="tab-calendar" class="grid hidden">
-      <div class="full card">
-        <div class="row" style="justify-content:space-between;">
-          <h3>STRATEGIC CALENDAR</h3>
-          <div class="view-switch">
-            <button class="active" data-view="7_day_view">7 DAY</button>
-            <button data-view="30_day_view">30</button>
-            <button data-view="60_day_view">60</button>
-            <button data-view="90_day_view">90</button>
-          </div>
+    <!-- Content Modal -->
+    <div id="contentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Content</h2>
+                <button class="close" onclick="closeModal('contentModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Content Type</label>
+                <select id="contentTypeModal" class="form-select">
+                    <option value="post">Social Media Post</option>
+                    <option value="campaign">Full Campaign</option>
+                    <option value="story">Brand Story</option>
+                    <option value="announcement">Product Announcement</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Content Title</label>
+                <input type="text" id="contentTitle" class="form-input" placeholder="Enter content title...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Content Body</label>
+                <textarea id="contentBody" class="form-textarea" placeholder="Write your content here..."></textarea>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Target Platform</label>
+                    <select id="contentPlatform" class="form-select">
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="twitter">Twitter/X</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="all">All Platforms</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select id="contentPriority" class="form-select">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('contentModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitContentForm()">Create Content</button>
+            </div>
         </div>
-        <div id="calendar-events" class="asset-grid"></div>
-      </div>
-    </section>
+    </div>
 
-    <!-- AGENCY -->
-    <section id="tab-agency" class="grid hidden">
-      <div class="two card">
-        <h3>PERFORMANCE</h3>
-        <div id="agency-kpis" class="kbar"></div>
-      </div>
-      <div class="two card">
-        <h3>PROJECTS</h3>
-        <div id="agency-projects" class="asset-grid"></div>
-      </div>
-      <div class="full card">
-        <h3>DELIVERABLES</h3>
-        <div id="agency-deliverables" class="asset-grid"></div>
-      </div>
-    </section>
-
-    <!-- UPLOAD -->
-    <section id="tab-upload" class="grid hidden">
-      <div class="full card">
-        <h3>UPLOADS</h3>
-        <div id="drop" class="upload">
-          <p class="muted">Drag & drop, or click to browse. Images / videos / docs up to 100MB.</p>
-          <input id="picker" type="file" multiple accept="image/*,video/*,.jsonl,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt" style="display:none" />
-          <button id="browse" class="btn"><i class="fa fa-folder-open"></i>Browse Files</button>
+    <!-- Deliverable Modal -->
+    <div id="deliverableModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Deliverable</h2>
+                <button class="close" onclick="closeModal('deliverableModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Deliverable Name</label>
+                <input type="text" id="deliverableName" class="form-input" required>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Phase</label>
+                    <select id="deliverablePhase" class="form-select">
+                        <option value="1">Phase 1 - Discovery & Strategy</option>
+                        <option value="2">Phase 2 - Creative Development</option>
+                        <option value="3">Phase 3 - Launch & Activation</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="deliverableStatus" class="form-select">
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="review">Under Review</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" id="deliverableDueDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Assigned To</label>
+                    <input type="text" id="deliverableAssignedTo" class="form-input" placeholder="Agency team member">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea id="deliverableNotes" class="form-textarea" placeholder="Additional details..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deliverableModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitDeliverableForm()">Add Deliverable</button>
+            </div>
         </div>
-        <div class="progress" style="margin-top:12px;"><span id="bar"></span></div>
-        <div id="upload-log" class="meta" style="margin-top:8px;"></div>
-        <div id="uploaded" class="asset-grid" style="margin-top:12px;"></div>
-      </div>
-    </section>
-  </div>
+    </div>
 
-  <script src="/static/js/app.js?v=ccv2-20250923-frontend-recover"></script>
+    <!-- Asset Modal -->
+    <div id="assetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Asset</h2>
+                <button class="close" onclick="closeModal('assetModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Asset Name</label>
+                <input type="text" id="assetName" class="form-input" required>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Asset Type</label>
+                    <select id="assetType" class="form-select">
+                        <option value="logo">Logo</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                        <option value="document">Document</option>
+                        <option value="template">Template</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select id="assetCategory" class="form-select">
+                        <option value="branding">Branding</option>
+                        <option value="campaign">Campaign</option>
+                        <option value="product">Product</option>
+                        <option value="social">Social Media</option>
+                        <option value="print">Print Materials</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="assetDescription" class="form-textarea"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">URL/Link</label>
+                <input type="url" id="assetUrl" class="form-input" placeholder="https://...">
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('assetModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssetForm()">Add Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        const APP = {
+            initialized: false,
+            currentCalendarView: 'month',
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear(),
+            data: {
+                events: [],
+                content: [],
+                deliverables: [],
+                assets: [],
+                campaigns: []
+            }
+        };
+
+        // Utility Functions
+        function safeGetElement(id) {
+            const element = document.getElementById(id);
+            if (!element) console.warn(`Element ${id} not found`);
+            return element;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short', 
+                    day: 'numeric'
+                });
+            } catch (error) {
+                return 'Invalid Date';
+            }
+        }
+
+        function getStorageKey(key) {
+            return `crooks_${key}`;
+        }
+
+        function loadData(key) {
+            try {
+                const data = localStorage.getItem(getStorageKey(key));
+                return data ? JSON.parse(data) : [];
+            } catch (error) {
+                console.error(`Error loading ${key}:`, error);
+                return [];
+            }
+        }
+
+        function saveData(key, data) {
+            try {
+                localStorage.setItem(getStorageKey(key), JSON.stringify(data));
+                return true;
+            } catch (error) {
+                console.error(`Error saving ${key}:`, error);
+                return false;
+            }
+        }
+
+        // Initialize Application
+        function initializeApp() {
+            try {
+                console.log('Initializing Crooks & Castles Command Center...');
+                
+                // Load all data
+                APP.data.events = loadData('events');
+                APP.data.content = loadData('content');
+                APP.data.deliverables = loadData('deliverables');
+                APP.data.assets = loadData('assets');
+                APP.data.campaigns = loadData('campaigns');
+                
+                // Initialize views
+                renderCalendar();
+                renderUpcomingEvents();
+                renderActiveCampaigns();
+                renderDeliverables();
+                renderAssets();
+                
+                APP.initialized = true;
+                console.log('Command Center initialized successfully');
+                
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+            }
+        }
+
+        // Tab Management
+        function switchTab(button, tabId) {
+            try {
+                document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+                button.classList.add('active');
+
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                const targetTab = safeGetElement(tabId);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                    
+                    // Refresh data when switching to certain tabs
+                    if (tabId === 'calendar') renderCalendar();
+                    if (tabId === 'agency') renderDeliverables();
+                }
+            } catch (error) {
+                console.error('Error switching tabs:', error);
+            }
+        }
+
+        // Modal Management
+        function openModal(modalId) {
+            const modal = safeGetElement(modalId);
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            const modal = safeGetElement(modalId);
+            if (modal) modal.classList.remove('active');
+        }
+
+        // Dashboard Functions
+        function refreshDashboard() {
+            console.log('Refreshing dashboard...');
+            // Simulate refresh delay
+            setTimeout(() => {
+                console.log('Dashboard refreshed');
+            }, 1000);
+        }
+
+        function refreshIntelligence() {
+            console.log('Refreshing competitive intelligence...');
+            // Update competitive analysis
+            setTimeout(() => {
+                console.log('Intelligence refreshed');
+            }, 1000);
+        }
+
+        // Calendar Functions
+        function renderCalendar() {
+            const calendarView = safeGetElement('calendarView');
+            if (!calendarView) return;
+            
+            if (APP.currentCalendarView === 'month') {
+                renderMonthView(calendarView);
+            } else if (APP.currentCalendarView === 'week') {
+                renderWeekView(calendarView);
+            } else {
+                renderListView(calendarView);
+            }
+            
+            updateCalendarHeader();
+        }
+
+        function renderMonthView(container) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            const firstDay = new Date(APP.currentYear, APP.currentMonth, 1);
+            const lastDay = new Date(APP.currentYear, APP.currentMonth + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            let calendarHTML = `
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: rgba(255,255,255,0.1); margin-bottom: 1rem;">
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Sun</div>
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Mon</div>
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Tue</div>
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Wed</div>
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Thu</div>
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Fri</div>
+                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Sat</div>
+                </div>
+                <div class="calendar-grid">
+            `;
+            
+            const currentDate = new Date(startDate);
+            for (let week = 0; week < 6; week++) {
+                for (let day = 0; day < 7; day++) {
+                    const isCurrentMonth = currentDate.getMonth() === APP.currentMonth;
+                    const dayEvents = APP.data.events.filter(event => {
+                        const eventDate = new Date(event.start_date);
+                        return eventDate.toDateString() === currentDate.toDateString();
+                    });
+                    
+                    calendarHTML += `
+                        <div class="calendar-day ${!isCurrentMonth ? 'style="opacity: 0.3;"' : ''}">
+                            <div class="calendar-day-number">${currentDate.getDate()}</div>
+                            ${dayEvents.map(event => `
+                                <div class="calendar-event" onclick="viewEvent('${event.id}')">${event.title}</div>
+                            `).join('')}
+                        </div>
+                    `;
+                    
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            }
+            
+            calendarHTML += '</div>';
+            container.innerHTML = calendarHTML;
+        }
+
+        function renderWeekView(container) {
+            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #a0a0a0;">Week view coming soon...</div>';
+        }
+
+        function renderListView(container) {
+            const upcomingEvents = APP.data.events
+                .filter(event => new Date(event.start_date) >= new Date())
+                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+                .slice(0, 10);
+                
+            const listHTML = upcomingEvents.length ? upcomingEvents.map(event => `
+                <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="viewEvent('${event.id}')">
+                    <div style="font-weight: 600;">${event.title}</div>
+                    <div style="color: #a0a0a0; font-size: 0.9rem; margin-top: 0.3rem;">
+                        ${formatDate(event.start_date)} - ${event.event_type}
+                    </div>
+                    ${event.description ? `<div style="color: #ccc; font-size: 0.8rem; margin-top: 0.3rem;">${event.description}</div>` : ''}
+                </div>
+            `).join('') : '<div style="text-align: center; padding: 2rem; color: #a0a0a0;">No upcoming events</div>';
+            
+            container.innerHTML = listHTML;
+        }
+
+        function updateCalendarHeader() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            const currentMonth = safeGetElement('currentMonth');
+            if (currentMonth) {
+                currentMonth.textContent = `${monthNames[APP.currentMonth]} ${APP.currentYear}`;
+            }
+        }
+
+        function setCalendarView(view) {
+            APP.currentCalendarView = view;
+            document.querySelectorAll('.calendar-view-toggle button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderCalendar();
+        }
+
+        function previousMonth() {
+            if (APP.currentMonth === 0) {
+                APP.currentMonth = 11;
+                APP.currentYear--;
+            } else {
+                APP.currentMonth--;
+            }
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            if (APP.currentMonth === 11) {
+                APP.currentMonth = 0;
+                APP.currentYear++;
+            } else {
+                APP.currentMonth++;
+            }
+            renderCalendar();
+        }
+
+        function renderUpcomingEvents() {
+            const tbody = safeGetElement('eventsTableBody');
+            if (!tbody) return;
+            
+            const upcomingEvents = APP.data.events
+                .filter(event => new Date(event.start_date) >= new Date())
+                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+                .slice(0, 5);
+            
+            if (upcomingEvents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 2rem;">No upcoming events</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = upcomingEvents.map(event => `
+                <tr>
+                    <td><strong>${event.title}</strong></td>
+                    <td><span class="status-badge status-${event.event_type}">${event.event_type}</span></td>
+                    <td>${formatDate(event.start_date)}</td>
+                    <td><span class="status-badge status-active">Active</span></td>
+                    <td>High</td>
+                </tr>
+            `).join('');
+        }
+
+        // Content Functions
+        function generateCampaign() {
+            const campaignType = safeGetElement('campaignType')?.value;
+            const targetAudience = safeGetElement('targetAudience')?.value;
+            const message = safeGetElement('campaignMessage')?.value;
+            
+            if (!campaignType || !targetAudience) {
+                alert('Please select campaign type and target audience');
+                return;
+            }
+            
+            // Generate campaign based on selections
+            const campaignId = Date.now();
+            const campaign = {
+                id: campaignId,
+                type: campaignType,
+                audience: targetAudience,
+                message: message,
+                created_at: new Date().toISOString(),
+                status: 'draft',
+                progress: 0
+            };
+            
+            APP.data.campaigns.push(campaign);
+            saveData('campaigns', APP.data.campaigns);
+            renderActiveCampaigns();
+            
+            alert('Campaign generated successfully!');
+        }
+
+        function previewCampaign() {
+            alert('Campaign preview coming soon...');
+        }
+
+        function renderActiveCampaigns() {
+            const tbody = safeGetElement('campaignsTableBody');
+            if (!tbody) return;
+            
+            if (APP.data.campaigns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No active campaigns</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = APP.data.campaigns.map(campaign => `
+                <tr>
+                    <td><strong>Campaign ${campaign.id}</strong></td>
+                    <td><span class="status-badge status-${campaign.type}">${campaign.type}</span></td>
+                    <td>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${campaign.progress}%;"></div></div>
+                        ${campaign.progress}%
+                    </td>
+                    <td>${formatDate(campaign.launch_date)}</td>
+                    <td><span class="status-badge status-${campaign.status}">${campaign.status}</span></td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Agency Functions
+        function renderDeliverables() {
+            const tbody = safeGetElement('deliverablesTableBody');
+            if (!tbody) return;
+            
+            if (APP.data.deliverables.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No deliverables added yet</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = APP.data.deliverables.map((deliverable, index) => `
+                <tr>
+                    <td><strong>${deliverable.name}</strong></td>
+                    <td>Phase ${deliverable.phase}</td>
+                    <td>${deliverable.assigned_to || '-'}</td>
+                    <td>${formatDate(deliverable.due_date)}</td>
+                    <td><span class="status-badge status-${deliverable.status}">${deliverable.status.replace('_', ' ')}</span></td>
+                    <td>
+                        <button class="btn btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="updateDeliverableStatus(${index}, 'completed')">Complete</button>
+                        <button class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-left: 0.5rem;" onclick="deleteDeliverable(${index})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateDeliverableStatus(index, status) {
+            if (APP.data.deliverables[index]) {
+                APP.data.deliverables[index].status = status;
+                APP.data.deliverables[index].updated_at = new Date().toISOString();
+                saveData('deliverables', APP.data.deliverables);
+                renderDeliverables();
+            }
+        }
+
+        function deleteDeliverable(index) {
+            if (confirm('Are you sure you want to delete this deliverable?')) {
+                APP.data.deliverables.splice(index, 1);
+                saveData('deliverables', APP.data.deliverables);
+                renderDeliverables();
+            }
+        }
+
+        // Asset Functions
+        function renderAssets() {
+            const tbody = safeGetElement('assetsTableBody');
+            if (!tbody) return;
+            
+            if (APP.data.assets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 2rem;">No assets added yet</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = APP.data.assets.map((asset, index) => `
+                <tr>
+                    <td><strong>${asset.name}</strong></td>
+                    <td><span class="status-badge status-${asset.type}">${asset.type}</span></td>
+                    <td>${asset.category}</td>
+                    <td>${formatDate(asset.created_at)}</td>
+                    <td>
+                        ${asset.url ? `<a href="${asset.url}" target="_blank" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">View</a>` : ''}
+                        <button class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-left: 0.5rem;" onclick="deleteAsset(${index})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteAsset(index) {
+            if (confirm('Are you sure you want to delete this asset?')) {
+                APP.data.assets.splice(index, 1);
+                saveData('assets', APP.data.assets);
+                renderAssets();
+            }
+        }
+
+        // Form Handlers
+        function submitEventForm() {
+            try {
+                const title = safeGetElement('eventTitle')?.value;
+                const type = safeGetElement('eventType')?.value;
+                const description = safeGetElement('eventDescription')?.value;
+                const startDate = safeGetElement('eventStartDate')?.value;
+                const endDate = safeGetElement('eventEndDate')?.value;
+                
+                if (!title || !startDate) {
+                    alert('Please fill in required fields');
+                    return;
+                }
+                
+                const event = {
+                    id: Date.now(),
+                    title,
+                    event_type: type,
+                    description,
+                    start_date: startDate,
+                    end_date: endDate,
+                    created_at: new Date().toISOString()
+                };
+                
+                APP.data.events.push(event);
+                saveData('events', APP.data.events);
+                
+                closeModal('eventModal');
+                renderCalendar();
+                renderUpcomingEvents();
+                
+                // Reset form
+                ['eventTitle', 'eventDescription', 'eventStartDate', 'eventEndDate'].forEach(id => {
+                    const el = safeGetElement(id);
+                    if (el) el.value = '';
+                });
+                
+            } catch (error) {
+                console.error('Error creating event:', error);
+                alert('Error creating event');
+            }
+        }
+
+        function submitContentForm() {
+            try {
+                const type = safeGetElement('contentTypeModal')?.value;
+                const title = safeGetElement('contentTitle')?.value;
+                const body = safeGetElement('contentBody')?.value;
+                const platform = safeGetElement('contentPlatform')?.value;
+                const priority = safeGetElement('contentPriority')?.value;
+                
+                if (!title || !body) {
+                    alert('Please fill in required fields');
+                    return;
+                }
+                
+                const content = {
+                    id: Date.now(),
+                    type,
+                    title,
+                    body,
+                    platform,
+                    priority,
+                    status: 'draft',
+                    created_at: new Date().toISOString()
+                };
+                
+                APP.data.content.push(content);
+                saveData('content', APP.data.content);
+                
+                closeModal('contentModal');
+                alert('Content created successfully!');
+                
+                // Reset form
+                ['contentTitle', 'contentBody'].forEach(id => {
+                    const el = safeGetElement(id);
+                    if (el) el.value = '';
+                });
+                
+            } catch (error) {
+                console.error('Error creating content:', error);
+                alert('Error creating content');
+            }
+        }
+
+        function submitDeliverableForm() {
+            try {
+                const name = safeGetElement('deliverableName')?.value;
+                const phase = safeGetElement('deliverablePhase')?.value;
+                const status = safeGetElement('deliverableStatus')?.value;
+                const dueDate = safeGetElement('deliverableDueDate')?.value;
+                const assignedTo = safeGetElement('deliverableAssignedTo')?.value;
+                const notes = safeGetElement('deliverableNotes')?.value;
+                
+                if (!name) {
+                    alert('Please enter deliverable name');
+                    return;
+                }
+                
+                const deliverable = {
+                    id: Date.now(),
+                    name,
+                    phase: parseInt(phase),
+                    status,
+                    due_date: dueDate,
+                    assigned_to: assignedTo,
+                    notes,
+                    created_at: new Date().toISOString()
+                };
+                
+                APP.data.deliverables.push(deliverable);
+                saveData('deliverables', APP.data.deliverables);
+                
+                closeModal('deliverableModal');
+                renderDeliverables();
+                
+                // Reset form
+                ['deliverableName', 'deliverableDueDate', 'deliverableAssignedTo', 'deliverableNotes'].forEach(id => {
+                    const el = safeGetElement(id);
+                    if (el) el.value = '';
+                });
+                
+            } catch (error) {
+                console.error('Error creating deliverable:', error);
+                alert('Error creating deliverable');
+            }
+        }
+
+        function submitAssetForm() {
+            try {
+                const name = safeGetElement('assetName')?.value;
+                const type = safeGetElement('assetType')?.value;
+                const category = safeGetElement('assetCategory')?.value;
+                const description = safeGetElement('assetDescription')?.value;
+                const url = safeGetElement('assetUrl')?.value;
+                
+                if (!name) {
+                    alert('Please enter asset name');
+                    return;
+                }
+                
+                const asset = {
+                    id: Date.now(),
+                    name,
+                    type,
+                    category,
+                    description,
+                    url,
+                    created_at: new Date().toISOString()
+                };
+                
+                APP.data.assets.push(asset);
+                saveData('assets', APP.data.assets);
+                
+                closeModal('assetModal');
+                renderAssets();
+                
+                // Reset form
+                ['assetName', 'assetDescription', 'assetUrl'].forEach(id => {
+                    const el = safeGetElement(id);
+                    if (el) el.value = '';
+                });
+                
+            } catch (error) {
+                console.error('Error creating asset:', error);
+                alert('Error creating asset');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+
+        // Initialize when DOM loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+        // Global error handling
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e.error);
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled Promise Rejection:', e.reason);
+        });
+    </script>
 </body>
 </html>
