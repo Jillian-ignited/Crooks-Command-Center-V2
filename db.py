@@ -1,4 +1,4 @@
-# DB bootstrap & models — Postgres if DATABASE_URL set; else SQLite
+# DB bootstrap & models — Postgres via psycopg3 if DATABASE_URL set; else SQLite
 import os
 from datetime import date, datetime
 from sqlalchemy import (
@@ -7,9 +7,36 @@ from sqlalchemy import (
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.pool import NullPool
 
+def _sa_url_from_env(url: str) -> str:
+    """
+    Accepts Render-style DATABASE_URL like:
+      - postgres://user:pass@host:5432/dbname
+    Converts to SQLAlchemy/psycopg3 url:
+      - postgresql+psycopg://user:pass@host:5432/dbname
+    """
+    if not url:
+        return ""
+    # normalize scheme
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    # enforce psycopg (v3) driver
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
-if DATABASE_URL:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=3, max_overflow=5)
+SA_URL = _sa_url_from_env(DATABASE_URL)
+
+if SA_URL:
+    # psycopg3 driver
+    engine = create_engine(
+        SA_URL,
+        pool_pre_ping=True,
+        pool_size=3,
+        max_overflow=5,
+        # If your DB enforces SSL only, uncomment next line:
+        # connect_args={"sslmode": "require"},
+    )
 else:
     os.makedirs("data", exist_ok=True)
     engine = create_engine("sqlite:///data/crooks.db", poolclass=NullPool)
@@ -26,7 +53,6 @@ class Asset(Base):
     type = Column(String(32))
     thumbnail = Column(String(512))
     created_at = Column(DateTime, default=datetime.utcnow)
-
     def as_dict(self):
         return {
             "id": self.id, "filename": self.filename, "path": self.rel_path,
