@@ -32,7 +32,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -73,7 +73,7 @@
         }
 
         .main-container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 2rem;
             min-height: calc(100vh - 120px);
@@ -144,6 +144,11 @@
         .btn-danger {
             background: linear-gradient(45deg, #ef4444, #f87171);
             color: white;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
         }
 
         .card {
@@ -238,6 +243,7 @@
             min-height: 100px;
         }
 
+        /* Campaign Planning Calendar */
         .calendar-nav {
             display: flex;
             justify-content: space-between;
@@ -245,12 +251,12 @@
             margin-bottom: 2rem;
         }
 
-        .calendar-view-toggle {
+        .planning-period {
             display: flex;
             gap: 0.5rem;
         }
 
-        .calendar-view-toggle button {
+        .planning-period button {
             padding: 0.5rem 1rem;
             background: rgba(255, 255, 255, 0.1);
             border: none;
@@ -260,39 +266,158 @@
             font-size: 0.8rem;
         }
 
-        .calendar-view-toggle button.active {
+        .planning-period button.active {
             background: #ff6b35;
         }
 
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 1px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
+        .campaign-timeline {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
         }
 
-        .calendar-day {
+        .timeline-header {
+            display: grid;
+            grid-template-columns: 200px repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-week {
+            text-align: center;
+            font-weight: 600;
+            color: #ff6b35;
+            font-size: 0.9rem;
+        }
+
+        .campaign-row {
+            display: grid;
+            grid-template-columns: 200px repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+        }
+
+        .campaign-name {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .campaign-block {
+            background: linear-gradient(45deg, #ff6b35, #ff8f65);
+            padding: 0.5rem;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .campaign-block.content-creation {
+            background: linear-gradient(45deg, #3b82f6, #60a5fa);
+        }
+
+        .campaign-block.review {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+        }
+
+        .campaign-block.launch {
+            background: linear-gradient(45deg, #10b981, #34d399);
+        }
+
+        /* Asset Management */
+        .asset-library {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .asset-sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .asset-main {
+            flex: 1;
+        }
+
+        .asset-filter {
+            margin-bottom: 1rem;
+        }
+
+        .filter-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ff6b35;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+            cursor: pointer;
+        }
+
+        .filter-option input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .asset-card {
             background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            min-height: 100px;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
         }
 
-        .calendar-day-number {
+        .asset-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            text-transform: uppercase;
         }
 
-        .calendar-event {
-            background: #ff6b35;
+        .asset-status.approved {
+            background: #10b981;
             color: white;
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            margin-bottom: 0.2rem;
-            cursor: pointer;
+        }
+
+        .asset-status.pending {
+            background: #f59e0b;
+            color: black;
+        }
+
+        .asset-status.rejected {
+            background: #ef4444;
+            color: white;
+        }
+
+        .asset-status.draft {
+            background: #6b7280;
+            color: white;
         }
 
         .table {
@@ -332,18 +457,10 @@
         .status-completed { background: #8b5cf6; color: #fff; }
         .status-cancelled { background: #ef4444; color: #fff; }
         .status-in_progress { background: #3b82f6; color: #fff; }
-        .status-campaign { background: #ff6b35; color: #fff; }
-        .status-launch { background: #10b981; color: #fff; }
-        .status-meeting { background: #8b5cf6; color: #fff; }
-        .status-deadline { background: #ef4444; color: #fff; }
         .status-review { background: #f59e0b; color: #000; }
-        .status-general { background: #6b7280; color: #fff; }
-
-        .tier-luxury { background: linear-gradient(45deg, #ffd700, #ffed4a); color: #000; }
-        .tier-heritage { background: linear-gradient(45deg, #8b5cf6, #a78bfa); color: #fff; }
-        .tier-established { background: linear-gradient(45deg, #10b981, #34d399); color: #fff; }
-        .tier-emerging { background: linear-gradient(45deg, #3b82f6, #60a5fa); color: #fff; }
-        .tier-legacy { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: #000; }
+        .status-approved { background: #10b981; color: #fff; }
+        .status-rejected { background: #ef4444; color: #fff; }
+        .status-draft { background: #6b7280; color: #fff; }
 
         .progress-bar {
             width: 100%;
@@ -358,13 +475,6 @@
             height: 100%;
             background: linear-gradient(90deg, #ff6b35, #ff8f65);
             transition: width 0.3s ease;
-        }
-
-        .content-creator {
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .modal {
@@ -389,7 +499,7 @@
             border-radius: 16px;
             padding: 2rem;
             width: 90%;
-            max-width: 600px;
+            max-width: 700px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             max-height: 80vh;
             overflow-y: auto;
@@ -420,15 +530,13 @@
             color: #ffffff;
         }
 
-        .crooks-row {
-            background: rgba(255, 107, 53, 0.15);
-            border-left: 4px solid #ff6b35;
-        }
-
         .phase-tracker {
             display: flex;
             justify-content: space-between;
             margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 1rem;
         }
 
         .phase-step {
@@ -449,6 +557,26 @@
 
         .phase-step.pending {
             color: #6b7280;
+        }
+
+        .deliverable-details {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .asset-requirement {
+            background: rgba(255, 107, 53, 0.1);
+            border-left: 3px solid #ff6b35;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+        }
+
+        .asset-requirement.completed {
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: #10b981;
         }
 
         @media (max-width: 768px) {
@@ -476,7 +604,16 @@
                 grid-template-columns: 1fr;
             }
 
-            .calendar-grid {
+            .asset-library {
+                flex-direction: column;
+            }
+
+            .asset-sidebar {
+                width: 100%;
+            }
+
+            .timeline-header,
+            .campaign-row {
                 grid-template-columns: 1fr;
             }
         }
@@ -488,11 +625,12 @@
             <div class="logo">Crooks & Castles</div>
             <nav class="nav-tabs">
                 <button class="nav-tab active" onclick="switchTab(this, 'overview')">Overview</button>
+                <button class="nav-tab" onclick="switchTab(this, 'planning')">Campaign Planning</button>
                 <button class="nav-tab" onclick="switchTab(this, 'intelligence')">Intelligence</button>
-                <button class="nav-tab" onclick="switchTab(this, 'calendar')">Calendar</button>
-                <button class="nav-tab" onclick="switchTab(this, 'content')">Content</button>
-                <button class="nav-tab" onclick="switchTab(this, 'agency')">Agency</button>
-                <button class="nav-tab" onclick="switchTab(this, 'assets')">Assets</button>
+                <button class="nav-tab" onclick="switchTab(this, 'content')">Content Hub</button>
+                <button class="nav-tab" onclick="switchTab(this, 'agency')">Agency Workflow</button>
+                <button class="nav-tab" onclick="switchTab(this, 'media')">Media Assets</button>
+                <button class="nav-tab" onclick="switchTab(this, 'data')">Data Assets</button>
             </nav>
         </div>
     </header>
@@ -502,84 +640,79 @@
         <div id="overview" class="tab-content active">
             <div class="section-header">
                 <div>
-                    <h1 class="section-title">Executive Overview</h1>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Strategic command center for Crooks & Castles brand operations</p>
+                    <h1 class="section-title">Executive Dashboard</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">30/60/90 day rolling campaign overview</p>
                 </div>
-                <button class="btn btn-primary" onclick="refreshDashboard()">🔄 Refresh Dashboard</button>
+                <button class="btn btn-primary" onclick="refreshDashboard()">Refresh Dashboard</button>
             </div>
 
             <!-- Key Metrics -->
             <div class="grid grid-4">
                 <div class="metric-card">
-                    <div class="metric-value">8.5K</div>
-                    <div class="metric-label">Avg Engagement</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">156</div>
-                    <div class="metric-label">Posts Analyzed</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value">12</div>
+                    <div class="metric-value" id="activeCampaignsCount">6</div>
                     <div class="metric-label">Active Campaigns</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">85%</div>
-                    <div class="metric-label">Deliverable Progress</div>
+                    <div class="metric-value" id="pendingApprovalsCount">12</div>
+                    <div class="metric-label">Pending Approvals</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="upcomingDeadlinesCount">8</div>
+                    <div class="metric-label">Upcoming Deadlines</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="teamCollaboratorsCount">5</div>
+                    <div class="metric-label">Team Collaborators</div>
                 </div>
             </div>
 
-            <!-- Executive Summary -->
+            <!-- 30/60/90 Day Pipeline -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Executive Summary</h2>
-                    <span style="color: #a0a0a0; font-size: 0.9rem;">Last updated: Today</span>
+                    <h2 class="card-title">Campaign Pipeline Overview</h2>
                 </div>
-                <div id="executiveSummary">
-                    <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                        <strong>Brand Position:</strong> Crooks & Castles maintains strong heritage positioning in luxury streetwear segment, ranking #4 among key competitors with 8.5K average engagement.
+                <div class="grid grid-3">
+                    <div style="text-align: center; padding: 1.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                        <h3 style="color: #10b981; margin-bottom: 1rem;">Next 30 Days</h3>
+                        <div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">4 Campaigns</div>
+                        <div style="color: #a0a0a0;">Heritage Drop, Holiday Collection, Influencer Collab, Product Launch</div>
                     </div>
-                    
-                    <h4 style="color: #ff6b35; margin: 1.5rem 0 1rem 0;">Key Strategic Insights</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            📈 <strong>Growth Opportunity:</strong> Limited drop campaigns show 40% higher engagement than regular posts
-                        </li>
-                        <li style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            🎯 <strong>Competitive Edge:</strong> Heritage brand story differentiates from newer luxury streetwear brands
-                        </li>
-                        <li style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            🚀 <strong>Expansion Focus:</strong> High-profile collaborations could capture luxury market share from Supreme/Off-White
-                        </li>
-                        <li style="padding: 0.5rem 0;">
-                            ⚡ <strong>Content Strategy:</strong> Behind-the-scenes content and founder stories drive highest authentic engagement
-                        </li>
-                    </ul>
+                    <div style="text-align: center; padding: 1.5rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+                        <h3 style="color: #f59e0b; margin-bottom: 1rem;">Next 60 Days</h3>
+                        <div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">3 Campaigns</div>
+                        <div style="color: #a0a0a0;">Spring Preview, Celebrity Partnership, Limited Edition</div>
+                    </div>
+                    <div style="text-align: center; padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                        <h3 style="color: #3b82f6; margin-bottom: 1rem;">Next 90 Days</h3>
+                        <div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">2 Campaigns</div>
+                        <div style="color: #a0a0a0;">Summer Collection, Brand Evolution</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Recent Activity & Alerts -->
+            <!-- Recent Activity & Collaboration -->
             <div class="grid grid-2">
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Recent Activity</h2>
+                        <h2 class="card-title">Team Activity</h2>
                     </div>
-                    <div id="recentActivity">
+                    <div id="teamActivity">
                         <div style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span>🎯 New campaign: "Heritage Drop"</span>
-                                <span style="color: #a0a0a0; font-size: 0.8rem;">2 hours ago</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><strong>Sarah (Creative)</strong> uploaded hero images for Heritage Drop</span>
+                                <span style="color: #a0a0a0; font-size: 0.8rem;">2h ago</span>
                             </div>
                         </div>
                         <div style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span>📊 Competitor analysis updated</span>
-                                <span style="color: #a0a0a0; font-size: 0.8rem;">4 hours ago</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><strong>Agency</strong> submitted Phase 2 deliverables for review</span>
+                                <span style="color: #a0a0a0; font-size: 0.8rem;">4h ago</span>
                             </div>
                         </div>
                         <div style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span>✅ Phase 2 deliverables completed</span>
-                                <span style="color: #a0a0a0; font-size: 0.8rem;">1 day ago</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><strong>Marketing</strong> approved Holiday Collection content calendar</span>
+                                <span style="color: #a0a0a0; font-size: 0.8rem;">1d ago</span>
                             </div>
                         </div>
                     </div>
@@ -587,18 +720,146 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Priority Alerts</h2>
+                        <h2 class="card-title">Critical Actions</h2>
                     </div>
-                    <div id="priorityAlerts">
+                    <div id="criticalActions">
                         <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <strong>URGENT:</strong> Q4 campaign creative due in 3 days
+                            <strong>URGENT:</strong> Heritage Drop assets need final approval (due tomorrow)
+                            <div style="margin-top: 0.5rem;">
+                                <button class="btn btn-success btn-small">Review Assets</button>
+                            </div>
                         </div>
                         <div style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <strong>ATTENTION:</strong> Supreme launched similar concept - review positioning
+                            <strong>PENDING:</strong> Influencer collaboration contracts awaiting signature
+                            <div style="margin-top: 0.5rem;">
+                                <button class="btn btn-secondary btn-small">View Contracts</button>
+                            </div>
                         </div>
                         <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <strong>OPPORTUNITY:</strong> Viral TikTok trend aligns with brand values
+                            <strong>OPPORTUNITY:</strong> Holiday shopping trends favor luxury streetwear
+                            <div style="margin-top: 0.5rem;">
+                                <button class="btn btn-primary btn-small">Plan Campaign</button>
+                            </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAMPAIGN PLANNING TAB -->
+        <div id="planning" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Campaign Planning Calendar</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">30/60/90 day rolling content and campaign planning</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('campaignModal')">New Campaign</button>
+            </div>
+
+            <div class="calendar-nav">
+                <div>
+                    <button class="btn btn-secondary" onclick="previousPeriod()">← Previous</button>
+                    <span id="currentPeriod" style="margin: 0 1rem; font-weight: 600; font-size: 1.1rem;">December 2024 - February 2025</span>
+                    <button class="btn btn-secondary" onclick="nextPeriod()">Next →</button>
+                </div>
+                <div class="planning-period">
+                    <button class="active" onclick="setPlanningView('30')">30 Days</button>
+                    <button onclick="setPlanningView('60')">60 Days</button>
+                    <button onclick="setPlanningView('90')">90 Days</button>
+                    <button onclick="setPlanningView('quarter')">Quarter View</button>
+                </div>
+            </div>
+
+            <!-- Campaign Timeline -->
+            <div class="campaign-timeline">
+                <div class="timeline-header">
+                    <div style="font-weight: 600;">Campaign</div>
+                    <div class="timeline-week">Week 1<br><small>Dec 2-8</small></div>
+                    <div class="timeline-week">Week 2<br><small>Dec 9-15</small></div>
+                    <div class="timeline-week">Week 3<br><small>Dec 16-22</small></div>
+                    <div class="timeline-week">Week 4<br><small>Dec 23-29</small></div>
+                    <div class="timeline-week">Week 5<br><small>Dec 30-Jan 5</small></div>
+                    <div class="timeline-week">Week 6<br><small>Jan 6-12</small></div>
+                </div>
+                
+                <div class="campaign-row">
+                    <div class="campaign-name">Heritage Drop</div>
+                    <div class="campaign-block content-creation">Content Creation</div>
+                    <div class="campaign-block review">Review & Approval</div>
+                    <div class="campaign-block launch">Launch</div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                </div>
+                
+                <div class="campaign-row">
+                    <div class="campaign-name">Holiday Collection</div>
+                    <div></div>
+                    <div class="campaign-block content-creation">Creative Dev</div>
+                    <div class="campaign-block content-creation">Asset Creation</div>
+                    <div class="campaign-block review">Final Review</div>
+                    <div class="campaign-block launch">Holiday Launch</div>
+                    <div></div>
+                </div>
+                
+                <div class="campaign-row">
+                    <div class="campaign-name">Influencer Collab</div>
+                    <div class="campaign-block">Planning</div>
+                    <div class="campaign-block">Contracts</div>
+                    <div class="campaign-block content-creation">Content Shoot</div>
+                    <div class="campaign-block content-creation">Post Production</div>
+                    <div class="campaign-block review">Approval</div>
+                    <div class="campaign-block launch">Go Live</div>
+                </div>
+            </div>
+
+            <!-- Content Opportunities -->
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Marketing Opportunities</h2>
+                    </div>
+                    <div>
+                        <div class="asset-requirement">
+                            <strong>Black Friday (Nov 29)</strong> - Limited drops perform 40% better during this period
+                            <div style="margin-top: 0.5rem;">
+                                <button class="btn btn-primary btn-small" onclick="createOpportunityCampaign('black-friday')">Plan Campaign</button>
+                            </div>
+                        </div>
+                        <div class="asset-requirement">
+                            <strong>New Year Reset (Jan 1-15)</strong> - Heritage/authenticity content resonates strongly
+                            <div style="margin-top: 0.5rem;">
+                                <button class="btn btn-secondary btn-small" onclick="createOpportunityCampaign('new-year')">Explore</button>
+                            </div>
+                        </div>
+                        <div class="asset-requirement">
+                            <strong>Fashion Week (Feb 10-18)</strong> - High-fashion streetwear crossover opportunity
+                            <div style="margin-top: 0.5rem;">
+                                <button class="btn btn-secondary btn-small" onclick="createOpportunityCampaign('fashion-week')">Plan Ahead</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Content Calendar</h2>
+                    </div>
+                    <div id="contentCalendarPreview">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Platform</th>
+                                    <th>Content Type</th>
+                                    <th>Campaign</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contentCalendarBody">
+                                <!-- Content calendar items will be populated here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -609,12 +870,11 @@
             <div class="section-header">
                 <div>
                     <h1 class="section-title">Competitive Intelligence</h1>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Streetwear market analysis and competitor tracking</p>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Market analysis and strategic positioning</p>
                 </div>
-                <button class="btn btn-primary" onclick="refreshIntelligence()">🔄 Refresh Analysis</button>
+                <button class="btn btn-primary" onclick="refreshIntelligence()">Refresh Analysis</button>
             </div>
 
-            <!-- Market Position Overview -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Streetwear Market Position</h2>
@@ -624,378 +884,231 @@
                         <thead>
                             <tr>
                                 <th>Brand</th>
-                                <th>Tier</th>
+                                <th>Market Tier</th>
                                 <th>Avg Engagement</th>
                                 <th>Content Strategy</th>
-                                <th>Market Position</th>
-                                <th>Key Differentiator</th>
+                                <th>Key Strength</th>
+                                <th>Opportunity Gap</th>
                             </tr>
                         </thead>
-                        <tbody id="competitorTable">
-                            <tr class="crooks-row">
-                                <td><strong style="color: #ff6b35;">Crooks & Castles</strong><br><small style="color: #ff6b35;">YOUR BRAND</small></td>
-                                <td><span class="tier-badge tier-heritage">Heritage</span></td>
-                                <td style="color: #f59e0b; font-weight: 700;">8,500</td>
-                                <td>Luxury streetwear with heritage story</td>
-                                <td style="color: #10b981;">Strong</td>
-                                <td>OG streetwear authenticity</td>
+                        <tbody>
+                            <tr style="background: rgba(255, 107, 53, 0.1); border-left: 3px solid #ff6b35;">
+                                <td><strong style="color: #ff6b35;">Crooks & Castles</strong><br><small>YOUR BRAND</small></td>
+                                <td><span style="background: #8b5cf6; color: white; padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.8rem;">Heritage</span></td>
+                                <td style="color: #f59e0b; font-weight: 700;">8.5K</td>
+                                <td>Authentic streetwear legacy</td>
+                                <td>OG credibility & heritage story</td>
+                                <td>Limited drop exclusivity model</td>
                             </tr>
                             <tr>
                                 <td><strong>Supreme</strong></td>
-                                <td><span class="tier-badge tier-luxury">Luxury</span></td>
-                                <td style="color: #10b981; font-weight: 700;">15,000</td>
-                                <td>Limited drops & hype culture</td>
-                                <td style="color: #10b981;">Dominant</td>
-                                <td>Scarcity model mastery</td>
+                                <td><span style="background: #ffd700; color: black; padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.8rem;">Luxury</span></td>
+                                <td style="color: #10b981; font-weight: 700;">15.2K</td>
+                                <td>Scarcity-driven hype culture</td>
+                                <td>Drop model mastery</td>
+                                <td>Heritage authenticity</td>
                             </tr>
                             <tr>
                                 <td><strong>Off-White</strong></td>
-                                <td><span class="tier-badge tier-luxury">Luxury</span></td>
-                                <td style="color: #10b981; font-weight: 700;">12,500</td>
-                                <td>High fashion meets street</td>
-                                <td style="color: #10b981;">Strong</td>
-                                <td>Runway to streetwear bridge</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Fear of God</strong></td>
-                                <td><span class="tier-badge tier-luxury">Luxury</span></td>
-                                <td style="color: #f59e0b; font-weight: 700;">9,800</td>
-                                <td>Minimalist luxury aesthetic</td>
-                                <td style="color: #10b981;">Strong</td>
-                                <td>Celebrity endorsements</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Stussy</strong></td>
-                                <td><span class="tier-badge tier-established">Established</span></td>
-                                <td style="color: #ef4444; font-weight: 700;">6,200</td>
-                                <td>Surf/skate heritage</td>
-                                <td style="color: #f59e0b;">Moderate</td>
-                                <td>California lifestyle brand</td>
-                            </tr>
-                            <tr>
-                                <td><strong>BAPE</strong></td>
-                                <td><span class="tier-badge tier-established">Established</span></td>
-                                <td style="color: #f59e0b; font-weight: 700;">7,800</td>
-                                <td>Japanese streetwear culture</td>
-                                <td style="color: #f59e0b;">Moderate</td>
-                                <td>Ape head iconography</td>
+                                <td><span style="background: #ffd700; color: black; padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.8rem;">Luxury</span></td>
+                                <td style="color: #10b981; font-weight: 700;">12.8K</td>
+                                <td>High fashion crossover</td>
+                                <td>Runway-to-street pipeline</td>
+                                <td>Street credibility depth</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Trend Analysis -->
             <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Trending Content Types</h2>
-                    </div>
-                    <div>
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Limited Drop Announcements</span>
-                                <span style="color: #10b981;">+40%</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 85%;"></div></div>
-                        </div>
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Behind-the-Scenes Content</span>
-                                <span style="color: #10b981;">+25%</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 70%;"></div></div>
-                        </div>
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Celebrity/Influencer Collabs</span>
-                                <span style="color: #10b981;">+35%</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 60%;"></div></div>
-                        </div>
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Heritage/Archive Content</span>
-                                <span style="color: #ff6b35;">+15%</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 45%;"></div></div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Strategic Recommendations</h2>
                     </div>
                     <div>
                         <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <strong>Priority 1:</strong> Leverage heritage story in limited drop campaigns to compete with Supreme's scarcity model
+                            <strong>Priority 1:</strong> Leverage OG heritage in limited drop campaigns to compete with Supreme's exclusivity
                         </div>
                         <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <strong>Priority 2:</strong> Develop celebrity partnership strategy targeting A-list hip-hop artists
+                            <strong>Priority 2:</strong> Develop celebrity endorsement strategy targeting authentic hip-hop culture
                         </div>
                         <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <strong>Priority 3:</strong> Create archive collection showcasing original designs and brand evolution
+                            <strong>Priority 3:</strong> Create archive collection highlighting brand evolution and cultural impact
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Market Trends</h2>
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Heritage Brand Stories</span>
+                                <span style="color: #10b981;">↑ 45%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 85%;"></div></div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Limited Edition Drops</span>
+                                <span style="color: #10b981;">↑ 32%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 70%;"></div></div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Celebrity Collaborations</span>
+                                <span style="color: #10b981;">↑ 28%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 60%;"></div></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- CALENDAR TAB -->
-        <div id="calendar" class="tab-content">
-            <div class="section-header">
-                <div>
-                    <h1 class="section-title">Strategic Calendar</h1>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Campaign timeline and event management</p>
-                </div>
-                <button class="btn btn-primary" onclick="openModal('eventModal')">➕ Add Event</button>
-            </div>
-
-            <div class="calendar-nav">
-                <div>
-                    <button class="btn btn-secondary" onclick="previousMonth()">‹ Previous</button>
-                    <span id="currentMonth" style="margin: 0 1rem; font-weight: 600; font-size: 1.1rem;">December 2024</span>
-                    <button class="btn btn-secondary" onclick="nextMonth()">Next ›</button>
-                </div>
-                <div class="calendar-view-toggle">
-                    <button class="active" onclick="setCalendarView('month')">Month</button>
-                    <button onclick="setCalendarView('week')">Week</button>
-                    <button onclick="setCalendarView('list')">List</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div id="calendarView">
-                    <!-- Calendar will be rendered here -->
-                </div>
-            </div>
-
-            <!-- Upcoming Events -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Upcoming Events & Deadlines</h2>
-                </div>
-                <div id="upcomingEvents">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Event</th>
-                                <th>Type</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Priority</th>
-                            </tr>
-                        </thead>
-                        <tbody id="eventsTableBody">
-                            <!-- Events will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- CONTENT TAB -->
+        <!-- CONTENT HUB TAB -->
         <div id="content" class="tab-content">
             <div class="section-header">
                 <div>
-                    <h1 class="section-title">Content Creation</h1>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Campaign development and content planning</p>
+                    <h1 class="section-title">Content Creation Hub</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Collaborative content development and approval</p>
                 </div>
-                <button class="btn btn-primary" onclick="openModal('contentModal')">🎨 Create Content</button>
+                <button class="btn btn-primary" onclick="openModal('contentModal')">Create Content</button>
             </div>
 
-            <!-- Content Creator -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Campaign Builder</h2>
+            <div class="grid grid-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="contentInDevelopment">8</div>
+                    <div class="metric-label">In Development</div>
                 </div>
-                <div class="content-creator">
-                    <div class="grid grid-2">
-                        <div>
-                            <div class="form-group">
-                                <label class="form-label">Campaign Type</label>
-                                <select id="campaignType" class="form-select">
-                                    <option value="">Select campaign type...</option>
-                                    <option value="limited_drop">Limited Drop</option>
-                                    <option value="seasonal">Seasonal Collection</option>
-                                    <option value="collaboration">Brand Collaboration</option>
-                                    <option value="heritage">Heritage Archive</option>
-                                    <option value="lifestyle">Lifestyle Content</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Target Audience</label>
-                                <select id="targetAudience" class="form-select">
-                                    <option value="">Select audience...</option>
-                                    <option value="luxury_collectors">Luxury Collectors</option>
-                                    <option value="streetwear_enthusiasts">Streetwear Enthusiasts</option>
-                                    <option value="fashion_forward">Fashion Forward</option>
-                                    <option value="hip_hop_culture">Hip-Hop Culture</option>
-                                    <option value="heritage_fans">Heritage Fans</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Content Pillars</label>
-                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <input type="checkbox" id="pillar_exclusivity"> Exclusivity
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <input type="checkbox" id="pillar_heritage"> Heritage
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <input type="checkbox" id="pillar_luxury"> Luxury
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <input type="checkbox" id="pillar_street"> Street Culture
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 0.3rem;">
-                                        <input type="checkbox" id="pillar_lifestyle"> Lifestyle
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="form-group">
-                                <label class="form-label">Campaign Message</label>
-                                <textarea id="campaignMessage" class="form-textarea" placeholder="Core message and brand story..."></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Key Hashtags</label>
-                                <input type="text" id="campaignHashtags" class="form-input" placeholder="#CrooksAndCastles #LuxuryStreetWear">
-                            </div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 1.5rem;">
-                        <button class="btn btn-primary" onclick="generateCampaign()">🚀 Generate Campaign</button>
-                        <button class="btn btn-secondary" onclick="previewCampaign()">👀 Preview</button>
-                    </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="contentPendingApproval">5</div>
+                    <div class="metric-label">Pending Approval</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="contentScheduled">12</div>
+                    <div class="metric-label">Scheduled</div>
                 </div>
             </div>
 
-            <!-- Active Campaigns -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Active Campaigns</h2>
+                    <h2 class="card-title">Content Pipeline</h2>
+                    <div>
+                        <button class="btn btn-secondary btn-small" onclick="filterContent('all')">All</button>
+                        <button class="btn btn-secondary btn-small" onclick="filterContent('pending')">Pending</button>
+                        <button class="btn btn-secondary btn-small" onclick="filterContent('approved')">Approved</button>
+                    </div>
                 </div>
-                <div id="activeCampaigns">
+                <div id="contentPipeline">
                     <table class="table">
                         <thead>
                             <tr>
+                                <th>Content</th>
                                 <th>Campaign</th>
-                                <th>Type</th>
-                                <th>Progress</th>
-                                <th>Launch Date</th>
-                                <th>Performance</th>
+                                <th>Creator</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="campaignsTableBody">
-                            <!-- Campaigns will be populated here -->
+                        <tbody id="contentPipelineBody">
+                            <!-- Content pipeline items will be populated here -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- AGENCY TAB -->
+        <!-- AGENCY WORKFLOW TAB -->
         <div id="agency" class="tab-content">
             <div class="section-header">
                 <div>
-                    <h1 class="section-title">Agency Partnership</h1>
-                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Deliverable tracking and phase management</p>
+                    <h1 class="section-title">Agency Workflow</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Phase-based deliverable tracking and asset requirements</p>
                 </div>
-                <button class="btn btn-primary" onclick="openModal('deliverableModal')">➕ Add Deliverable</button>
+                <button class="btn btn-primary" onclick="openModal('deliverableModal')">Add Deliverable</button>
             </div>
 
-            <!-- Phase Overview -->
+            <!-- Phase Progress -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Project Phases</h2>
+                    <h2 class="card-title">Project Phases & Asset Requirements</h2>
                 </div>
                 <div class="phase-tracker">
                     <div class="phase-step completed">
+                        <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">✓</div>
                         <div style="font-weight: 600;">Phase 1</div>
-                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Discovery & Strategy</div>
-                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 0.3rem;">✓ Completed</div>
+                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Strategy & Discovery</div>
+                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 0.3rem;">100% Complete</div>
                     </div>
                     <div class="phase-step active">
+                        <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">⚡</div>
                         <div style="font-weight: 600;">Phase 2</div>
                         <div style="font-size: 0.8rem; margin-top: 0.3rem;">Creative Development</div>
-                        <div style="font-size: 0.7rem; color: #ff6b35; margin-top: 0.3rem;">📍 In Progress</div>
+                        <div style="font-size: 0.7rem; color: #ff6b35; margin-top: 0.3rem;">75% Complete</div>
                     </div>
                     <div class="phase-step pending">
+                        <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">⏳</div>
                         <div style="font-weight: 600;">Phase 3</div>
-                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Launch & Activation</div>
-                        <div style="font-size: 0.7rem; color: #6b7280; margin-top: 0.3rem;">⏳ Pending</div>
+                        <div style="font-size: 0.8rem; margin-top: 0.3rem;">Production & Launch</div>
+                        <div style="font-size: 0.7rem; color: #6b7280; margin-top: 0.3rem;">Pending</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Deliverables Tracking -->
-            <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Phase Commitments vs Completion</h2>
-                    </div>
-                    <div>
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Phase 1 (Strategy)</span>
-                                <span style="color: #10b981;">100% Complete</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
-                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">8/8 deliverables completed</div>
-                        </div>
-                        
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Phase 2 (Creative)</span>
-                                <span style="color: #f59e0b;">75% Complete</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 75%;"></div></div>
-                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">9/12 deliverables completed</div>
-                        </div>
-                        
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span>Phase 3 (Launch)</span>
-                                <span style="color: #6b7280;">0% Complete</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: 0%;"></div></div>
-                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">0/6 deliverables completed</div>
-                        </div>
-                    </div>
+            <!-- Phase 2 Current Requirements -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Phase 2: Creative Development - Asset Requirements</h2>
                 </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Critical Path Items</h2>
+                <div class="grid grid-2">
+                    <div>
+                        <h4 style="color: #ff6b35; margin-bottom: 1rem;">Required Assets</h4>
+                        <div class="asset-requirement completed">
+                            <strong>✓ Brand Guidelines Document</strong>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Delivered: Dec 1, 2024 | Status: Approved</div>
+                        </div>
+                        <div class="asset-requirement completed">
+                            <strong>✓ Logo Variations & Usage</strong>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Delivered: Dec 3, 2024 | Status: Approved</div>
+                        </div>
+                        <div class="asset-requirement">
+                            <strong>⏳ Hero Campaign Visuals</strong>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: Dec 15, 2024 | Status: In Progress</div>
+                        </div>
+                        <div class="asset-requirement">
+                            <strong>⏳ Social Media Templates</strong>
+                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: Dec 18, 2024 | Status: Not Started</div>
+                        </div>
                     </div>
                     <div>
-                        <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <div style="font-weight: 600; color: #ef4444;">OVERDUE</div>
-                            <div>Creative concepts (Phase 2)</div>
-                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: 2 days ago</div>
+                        <h4 style="color: #f59e0b; margin-bottom: 1rem;">Pending Approval</h4>
+                        <div class="deliverable-details">
+                            <strong>Heritage Collection Concept Boards</strong>
+                            <div style="margin: 0.5rem 0; color: #a0a0a0;">Submitted by agency on Dec 10, 2024</div>
+                            <div style="margin: 0.5rem 0;">
+                                <button class="btn btn-success btn-small" onclick="approveDeliverable('concept-boards')">Approve</button>
+                                <button class="btn btn-danger btn-small" onclick="rejectDeliverable('concept-boards')">Request Changes</button>
+                            </div>
                         </div>
-                        
-                        <div style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <div style="font-weight: 600; color: #f59e0b;">DUE SOON</div>
-                            <div>Final campaign assets</div>
-                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: Tomorrow</div>
-                        </div>
-                        
-                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <div style="font-weight: 600; color: #10b981;">ON TRACK</div>
-                            <div>Social media templates</div>
-                            <div style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Due: Next week</div>
+                        <div class="deliverable-details">
+                            <strong>Influencer Partnership Strategy</strong>
+                            <div style="margin: 0.5rem 0; color: #a0a0a0;">Submitted by agency on Dec 12, 2024</div>
+                            <div style="margin: 0.5rem 0;">
+                                <button class="btn btn-success btn-small" onclick="approveDeliverable('influencer-strategy')">Approve</button>
+                                <button class="btn btn-danger btn-small" onclick="rejectDeliverable('influencer-strategy')">Request Changes</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Detailed Deliverables -->
+            <!-- Full Deliverables List -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">All Deliverables</h2>
@@ -1006,8 +1119,8 @@
                             <tr>
                                 <th>Deliverable</th>
                                 <th>Phase</th>
-                                <th>Assigned To</th>
                                 <th>Due Date</th>
+                                <th>Assigned To</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -1020,30 +1133,118 @@
             </div>
         </div>
 
-        <!-- ASSETS TAB -->
-        <div id="assets" class="tab-content">
+        <!-- MEDIA ASSETS TAB -->
+        <div id="media" class="tab-content">
             <div class="section-header">
-                <h1 class="section-title">Asset Library</h1>
-                <button class="btn btn-primary" onclick="openModal('assetModal')">➕ Add Asset</button>
+                <div>
+                    <h1 class="section-title">Media Asset Library</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Creative assets, brand materials, and campaign content</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('mediaAssetModal')">Upload Media Asset</button>
+            </div>
+
+            <div class="asset-library">
+                <div class="asset-sidebar">
+                    <div class="asset-filter">
+                        <div class="filter-group">
+                            <div class="filter-title">Asset Type</div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-images" checked> <label for="filter-images">Images</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-videos" checked> <label for="filter-videos">Videos</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-graphics" checked> <label for="filter-graphics">Graphics</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-logos" checked> <label for="filter-logos">Logos</label>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <div class="filter-title">Approval Status</div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-approved" checked> <label for="filter-approved">Approved</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-pending" checked> <label for="filter-pending">Pending Review</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-draft" checked> <label for="filter-draft">Draft</label>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <div class="filter-title">Campaign</div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-heritage" checked> <label for="filter-heritage">Heritage Drop</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-holiday" checked> <label for="filter-holiday">Holiday Collection</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="filter-influencer" checked> <label for="filter-influencer">Influencer Collab</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="asset-main">
+                    <div class="asset-grid" id="mediaAssetGrid">
+                        <!-- Media assets will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATA ASSETS TAB -->
+        <div id="data" class="tab-content">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Data Asset Library</h1>
+                    <p style="color: #a0a0a0; margin-top: 0.5rem;">Analytics data, research files, and intelligence documents</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('dataAssetModal')">Upload Data Asset</button>
+            </div>
+
+            <div class="grid grid-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="dataFilesCount">24</div>
+                    <div class="metric-label">Data Files</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="analyticsReportsCount">8</div>
+                    <div class="metric-label">Analytics Reports</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="researchFilesCount">12</div>
+                    <div class="metric-label">Research Files</div>
+                </div>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Brand Assets</h2>
+                    <h2 class="card-title">Data Assets</h2>
+                    <div>
+                        <button class="btn btn-secondary btn-small" onclick="filterDataAssets('all')">All Files</button>
+                        <button class="btn btn-secondary btn-small" onclick="filterDataAssets('json')">JSON/JSONL</button>
+                        <button class="btn btn-secondary btn-small" onclick="filterDataAssets('csv')">CSV/Excel</button>
+                        <button class="btn btn-secondary btn-small" onclick="filterDataAssets('pdf')">Reports</button>
+                    </div>
                 </div>
-                <div id="assetsList">
+                <div id="dataAssetsList">
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Asset Name</th>
+                                <th>Filename</th>
                                 <th>Type</th>
-                                <th>Category</th>
-                                <th>Last Updated</th>
+                                <th>Size</th>
+                                <th>Description</th>
+                                <th>Uploaded</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="assetsTableBody">
-                            <!-- Assets will be populated here -->
+                        <tbody id="dataAssetsTableBody">
+                            <!-- Data assets will be populated here -->
                         </tbody>
                     </table>
                 </div>
@@ -1052,46 +1253,50 @@
     </div>
 
     <!-- MODALS -->
-    <!-- Event Modal -->
-    <div id="eventModal" class="modal">
+    <!-- Campaign Modal -->
+    <div id="campaignModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Add Calendar Event</h2>
-                <button class="close" onclick="closeModal('eventModal')">&times;</button>
+                <h2 class="modal-title">Create New Campaign</h2>
+                <button class="close" onclick="closeModal('campaignModal')">&times;</button>
             </div>
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label">Event Title</label>
-                    <input type="text" id="eventTitle" class="form-input" required>
+                    <label class="form-label">Campaign Name</label>
+                    <input type="text" id="campaignName" class="form-input" placeholder="e.g. Heritage Drop Q1">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Event Type</label>
-                    <select id="eventType" class="form-select">
-                        <option value="campaign">Campaign Launch</option>
-                        <option value="deadline">Creative Deadline</option>
-                        <option value="meeting">Strategy Meeting</option>
-                        <option value="review">Campaign Review</option>
-                        <option value="launch">Product Launch</option>
+                    <label class="form-label">Campaign Type</label>
+                    <select id="campaignType" class="form-select">
+                        <option value="product-launch">Product Launch</option>
+                        <option value="seasonal">Seasonal Collection</option>
+                        <option value="collaboration">Brand Collaboration</option>
+                        <option value="limited-drop">Limited Drop</option>
+                        <option value="heritage">Heritage Campaign</option>
                     </select>
                 </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea id="eventDescription" class="form-textarea"></textarea>
             </div>
             <div class="grid grid-2">
                 <div class="form-group">
                     <label class="form-label">Start Date</label>
-                    <input type="date" id="eventStartDate" class="form-input" required>
+                    <input type="date" id="campaignStartDate" class="form-input">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">End Date</label>
-                    <input type="date" id="eventEndDate" class="form-input">
+                    <label class="form-label">Launch Date</label>
+                    <input type="date" id="campaignLaunchDate" class="form-input">
                 </div>
             </div>
+            <div class="form-group">
+                <label class="form-label">Campaign Description</label>
+                <textarea id="campaignDescription" class="form-textarea" placeholder="Campaign objectives, target audience, key messages..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Team Collaborators</label>
+                <input type="text" id="campaignCollaborators" class="form-input" placeholder="Sarah (Creative), Mike (Marketing), Agency Team...">
+            </div>
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('eventModal')">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitEventForm()">Add Event</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('campaignModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCampaignForm()">Create Campaign</button>
             </div>
         </div>
     </div>
@@ -1103,47 +1308,54 @@
                 <h2 class="modal-title">Create Content</h2>
                 <button class="close" onclick="closeModal('contentModal')">&times;</button>
             </div>
-            <div class="form-group">
-                <label class="form-label">Content Type</label>
-                <select id="contentTypeModal" class="form-select">
-                    <option value="post">Social Media Post</option>
-                    <option value="campaign">Full Campaign</option>
-                    <option value="story">Brand Story</option>
-                    <option value="announcement">Product Announcement</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Content Title</label>
-                <input type="text" id="contentTitle" class="form-input" placeholder="Enter content title...">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Content Body</label>
-                <textarea id="contentBody" class="form-textarea" placeholder="Write your content here..."></textarea>
-            </div>
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label">Target Platform</label>
-                    <select id="contentPlatform" class="form-select">
-                        <option value="instagram">Instagram</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="twitter">Twitter/X</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="all">All Platforms</option>
+                    <label class="form-label">Content Type</label>
+                    <select id="contentType" class="form-select">
+                        <option value="social-post">Social Media Post</option>
+                        <option value="hero-image">Hero Image</option>
+                        <option value="product-shot">Product Photography</option>
+                        <option value="lifestyle">Lifestyle Content</option>
+                        <option value="behind-scenes">Behind the Scenes</option>
+                        <option value="campaign-asset">Campaign Asset</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Priority</label>
-                    <select id="contentPriority" class="form-select">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
+                    <label class="form-label">Associated Campaign</label>
+                    <select id="contentCampaign" class="form-select">
+                        <option value="">Select campaign...</option>
+                        <option value="heritage-drop">Heritage Drop</option>
+                        <option value="holiday-collection">Holiday Collection</option>
+                        <option value="influencer-collab">Influencer Collaboration</option>
                     </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Content Title</label>
+                <input type="text" id="contentTitle" class="form-input" placeholder="Brief description of content">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Content Brief</label>
+                <textarea id="contentBrief" class="form-textarea" placeholder="Detailed brief, requirements, key messages..."></textarea>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Assigned Creator</label>
+                    <select id="contentCreator" class="form-select">
+                        <option value="">Select creator...</option>
+                        <option value="sarah-creative">Sarah (In-house Creative)</option>
+                        <option value="agency-team">Agency Team</option>
+                        <option value="freelancer">External Freelancer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" id="contentDueDate" class="form-input">
                 </div>
             </div>
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('contentModal')">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitContentForm()">Create Content</button>
+                <button type="button" class="btn btn-primary" onclick="submitContentForm()">Create Content Brief</button>
             </div>
         </div>
     </div>
@@ -1152,30 +1364,30 @@
     <div id="deliverableModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Add Deliverable</h2>
+                <h2 class="modal-title">Add Agency Deliverable</h2>
                 <button class="close" onclick="closeModal('deliverableModal')">&times;</button>
             </div>
             <div class="form-group">
                 <label class="form-label">Deliverable Name</label>
-                <input type="text" id="deliverableName" class="form-input" required>
+                <input type="text" id="deliverableName" class="form-input" placeholder="e.g. Brand Guidelines Document">
             </div>
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label">Phase</label>
+                    <label class="form-label">Project Phase</label>
                     <select id="deliverablePhase" class="form-select">
-                        <option value="1">Phase 1 - Discovery & Strategy</option>
+                        <option value="1">Phase 1 - Strategy & Discovery</option>
                         <option value="2">Phase 2 - Creative Development</option>
-                        <option value="3">Phase 3 - Launch & Activation</option>
+                        <option value="3">Phase 3 - Production & Launch</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Status</label>
                     <select id="deliverableStatus" class="form-select">
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="review">Under Review</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
+                        <option value="not-started">Not Started</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="pending-review">Pending Review</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Changes Requested</option>
                     </select>
                 </div>
             </div>
@@ -1190,8 +1402,8 @@
                 </div>
             </div>
             <div class="form-group">
-                <label class="form-label">Notes</label>
-                <textarea id="deliverableNotes" class="form-textarea" placeholder="Additional details..."></textarea>
+                <label class="form-label">Asset Requirements</label>
+                <textarea id="deliverableRequirements" class="form-textarea" placeholder="Specific asset requirements, file types, dimensions, etc."></textarea>
             </div>
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('deliverableModal')">Cancel</button>
@@ -1200,50 +1412,97 @@
         </div>
     </div>
 
-    <!-- Asset Modal -->
-    <div id="assetModal" class="modal">
+    <!-- Media Asset Modal -->
+    <div id="mediaAssetModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Add Asset</h2>
-                <button class="close" onclick="closeModal('assetModal')">&times;</button>
+                <h2 class="modal-title">Upload Media Asset</h2>
+                <button class="close" onclick="closeModal('mediaAssetModal')">&times;</button>
             </div>
             <div class="form-group">
                 <label class="form-label">Asset Name</label>
-                <input type="text" id="assetName" class="form-input" required>
+                <input type="text" id="mediaAssetName" class="form-input" placeholder="e.g. Heritage Drop Hero Image">
             </div>
             <div class="grid grid-2">
                 <div class="form-group">
                     <label class="form-label">Asset Type</label>
-                    <select id="assetType" class="form-select">
-                        <option value="logo">Logo</option>
+                    <select id="mediaAssetType" class="form-select">
                         <option value="image">Image</option>
                         <option value="video">Video</option>
-                        <option value="document">Document</option>
+                        <option value="graphic">Graphic Design</option>
+                        <option value="logo">Logo/Branding</option>
                         <option value="template">Template</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Category</label>
-                    <select id="assetCategory" class="form-select">
-                        <option value="branding">Branding</option>
-                        <option value="campaign">Campaign</option>
-                        <option value="product">Product</option>
-                        <option value="social">Social Media</option>
-                        <option value="print">Print Materials</option>
+                    <label class="form-label">Campaign</label>
+                    <select id="mediaAssetCampaign" class="form-select">
+                        <option value="">Select campaign...</option>
+                        <option value="heritage-drop">Heritage Drop</option>
+                        <option value="holiday-collection">Holiday Collection</option>
+                        <option value="influencer-collab">Influencer Collaboration</option>
                     </select>
                 </div>
             </div>
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea id="assetDescription" class="form-textarea"></textarea>
+                <textarea id="mediaAssetDescription" class="form-textarea" placeholder="Usage, specifications, notes..."></textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">URL/Link</label>
-                <input type="url" id="assetUrl" class="form-input" placeholder="https://...">
+                <label class="form-label">File URL or Link</label>
+                <input type="url" id="mediaAssetUrl" class="form-input" placeholder="https://...">
             </div>
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('assetModal')">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitAssetForm()">Add Asset</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('mediaAssetModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitMediaAssetForm()">Upload Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Asset Modal -->
+    <div id="dataAssetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Upload Data Asset</h2>
+                <button class="close" onclick="closeModal('dataAssetModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">File Name</label>
+                <input type="text" id="dataAssetName" class="form-input" placeholder="e.g. competitor_analysis_q4_2024.json">
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">File Type</label>
+                    <select id="dataAssetType" class="form-select">
+                        <option value="json">JSON/JSONL</option>
+                        <option value="csv">CSV</option>
+                        <option value="excel">Excel</option>
+                        <option value="pdf">PDF Report</option>
+                        <option value="document">Document</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Data Category</label>
+                    <select id="dataAssetCategory" class="form-select">
+                        <option value="analytics">Analytics Data</option>
+                        <option value="research">Market Research</option>
+                        <option value="competitor">Competitor Intelligence</option>
+                        <option value="social">Social Media Data</option>
+                        <option value="sales">Sales Data</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="dataAssetDescription" class="form-textarea" placeholder="Data source, collection method, key insights..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">File URL or Location</label>
+                <input type="text" id="dataAssetLocation" class="form-input" placeholder="File path, URL, or storage location">
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('dataAssetModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitDataAssetForm()">Upload Data Asset</button>
             </div>
         </div>
     </div>
@@ -1252,15 +1511,13 @@
         // Application State
         const APP = {
             initialized: false,
-            currentCalendarView: 'month',
-            currentMonth: new Date().getMonth(),
-            currentYear: new Date().getFullYear(),
+            currentPlanningPeriod: 90,
             data: {
-                events: [],
+                campaigns: [],
                 content: [],
                 deliverables: [],
-                assets: [],
-                campaigns: []
+                mediaAssets: [],
+                dataAssets: []
             }
         };
 
@@ -1285,13 +1542,9 @@
             }
         }
 
-        function getStorageKey(key) {
-            return `crooks_${key}`;
-        }
-
         function loadData(key) {
             try {
-                const data = localStorage.getItem(getStorageKey(key));
+                const data = localStorage.getItem(`crooks_${key}`);
                 return data ? JSON.parse(data) : [];
             } catch (error) {
                 console.error(`Error loading ${key}:`, error);
@@ -1301,7 +1554,7 @@
 
         function saveData(key, data) {
             try {
-                localStorage.setItem(getStorageKey(key), JSON.stringify(data));
+                localStorage.setItem(`crooks_${key}`, JSON.stringify(data));
                 return true;
             } catch (error) {
                 console.error(`Error saving ${key}:`, error);
@@ -1315,30 +1568,154 @@
                 console.log('Initializing Crooks & Castles Command Center...');
                 
                 // Load all data
-                APP.data.events = loadData('events');
+                APP.data.campaigns = loadData('campaigns');
                 APP.data.content = loadData('content');
                 APP.data.deliverables = loadData('deliverables');
-                APP.data.assets = loadData('assets');
-                APP.data.campaigns = loadData('campaigns');
+                APP.data.mediaAssets = loadData('mediaAssets');
+                APP.data.dataAssets = loadData('dataAssets');
+                
+                // Initialize sample data if empty
+                initializeSampleData();
                 
                 // Initialize views
-                renderCalendar();
-                renderUpcomingEvents();
-                renderActiveCampaigns();
+                updateDashboardMetrics();
+                renderContentCalendar();
+                renderContentPipeline();
                 renderDeliverables();
-                renderAssets();
+                renderMediaAssets();
+                renderDataAssets();
                 
                 APP.initialized = true;
                 console.log('Command Center initialized successfully');
                 
             } catch (error) {
                 console.error('Failed to initialize app:', error);
+                showInitializationError(error);
             }
+        }
+
+        function initializeSampleData() {
+            // Initialize with sample data if arrays are empty
+            if (APP.data.campaigns.length === 0) {
+                APP.data.campaigns = [
+                    {
+                        id: 1,
+                        name: 'Heritage Drop',
+                        type: 'limited-drop',
+                        status: 'active',
+                        start_date: '2024-12-01',
+                        launch_date: '2024-12-22',
+                        collaborators: 'Sarah (Creative), Agency Team'
+                    },
+                    {
+                        id: 2,
+                        name: 'Holiday Collection',
+                        type: 'seasonal',
+                        status: 'planning',
+                        start_date: '2024-12-15',
+                        launch_date: '2025-01-05',
+                        collaborators: 'Marketing Team, Agency'
+                    }
+                ];
+                saveData('campaigns', APP.data.campaigns);
+            }
+
+            if (APP.data.deliverables.length === 0) {
+                APP.data.deliverables = [
+                    {
+                        id: 1,
+                        name: 'Brand Guidelines Document',
+                        phase: 1,
+                        status: 'approved',
+                        due_date: '2024-12-01',
+                        assigned_to: 'Agency Team',
+                        requirements: 'Complete brand guidelines including logo usage, colors, typography'
+                    },
+                    {
+                        id: 2,
+                        name: 'Heritage Collection Concept Boards',
+                        phase: 2,
+                        status: 'pending-review',
+                        due_date: '2024-12-15',
+                        assigned_to: 'Creative Director',
+                        requirements: 'Visual concept boards for heritage campaign direction'
+                    }
+                ];
+                saveData('deliverables', APP.data.deliverables);
+            }
+
+            if (APP.data.mediaAssets.length === 0) {
+                APP.data.mediaAssets = [
+                    {
+                        id: 1,
+                        name: 'Heritage Drop Hero Image',
+                        type: 'image',
+                        campaign: 'heritage-drop',
+                        status: 'approved',
+                        description: 'Main hero image for Heritage Drop campaign',
+                        url: '#',
+                        created_at: '2024-12-10'
+                    },
+                    {
+                        id: 2,
+                        name: 'Logo Variations Pack',
+                        type: 'logo',
+                        campaign: 'general',
+                        status: 'approved',
+                        description: 'Complete logo variations and usage guidelines',
+                        url: '#',
+                        created_at: '2024-12-01'
+                    }
+                ];
+                saveData('mediaAssets', APP.data.mediaAssets);
+            }
+
+            if (APP.data.dataAssets.length === 0) {
+                APP.data.dataAssets = [
+                    {
+                        id: 1,
+                        name: 'competitor_analysis_q4_2024.json',
+                        type: 'json',
+                        category: 'competitor',
+                        size: '2.1 MB',
+                        description: 'Q4 competitive intelligence data for streetwear market',
+                        location: 'data/competitor/',
+                        created_at: '2024-12-01'
+                    },
+                    {
+                        id: 2,
+                        name: 'social_media_analytics_nov.csv',
+                        type: 'csv',
+                        category: 'social',
+                        size: '847 KB',
+                        description: 'November social media performance metrics',
+                        location: 'data/social/',
+                        created_at: '2024-12-05'
+                    }
+                ];
+                saveData('dataAssets', APP.data.dataAssets);
+            }
+        }
+
+        function showInitializationError(error) {
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center; padding: 2rem;">
+                    <div style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 2rem; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3); max-width: 500px;">
+                        <h2 style="margin-bottom: 1rem;">Initialization Error</h2>
+                        <p style="margin-bottom: 1.5rem;">Application failed to initialize: ${error.message}</p>
+                        <button onclick="location.reload()" style="padding: 0.8rem 1.5rem; background: #ff6b35; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Reload Application</button>
+                    </div>
+                </div>
+            `;
         }
 
         // Tab Management
         function switchTab(button, tabId) {
             try {
+                if (!button || !tabId) {
+                    throw new Error('Invalid tab switching parameters');
+                }
+
                 document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
                 button.classList.add('active');
 
@@ -1347,12 +1724,34 @@
                 if (targetTab) {
                     targetTab.classList.add('active');
                     
-                    // Refresh data when switching to certain tabs
-                    if (tabId === 'calendar') renderCalendar();
-                    if (tabId === 'agency') renderDeliverables();
+                    // Refresh data for specific tabs
+                    switch (tabId) {
+                        case 'planning':
+                            renderContentCalendar();
+                            break;
+                        case 'content':
+                            renderContentPipeline();
+                            break;
+                        case 'agency':
+                            renderDeliverables();
+                            break;
+                        case 'media':
+                            renderMediaAssets();
+                            break;
+                        case 'data':
+                            renderDataAssets();
+                            break;
+                    }
+                } else {
+                    throw new Error(`Tab ${tabId} not found`);
                 }
             } catch (error) {
                 console.error('Error switching tabs:', error);
+                // Fallback to overview tab
+                const overviewTab = safeGetElement('overview');
+                if (overviewTab) {
+                    overviewTab.classList.add('active');
+                }
             }
         }
 
@@ -1368,228 +1767,165 @@
         }
 
         // Dashboard Functions
+        function updateDashboardMetrics() {
+            try {
+                const activeCampaignsEl = safeGetElement('activeCampaignsCount');
+                const pendingApprovalsEl = safeGetElement('pendingApprovalsCount');
+                const upcomingDeadlinesEl = safeGetElement('upcomingDeadlinesCount');
+                const teamCollaboratorsEl = safeGetElement('teamCollaboratorsCount');
+
+                if (activeCampaignsEl) {
+                    activeCampaignsEl.textContent = APP.data.campaigns.filter(c => c.status === 'active').length;
+                }
+                
+                if (pendingApprovalsEl) {
+                    const pendingAssets = APP.data.mediaAssets.filter(a => a.status === 'pending').length;
+                    const pendingDeliverables = APP.data.deliverables.filter(d => d.status === 'pending-review').length;
+                    pendingApprovalsEl.textContent = pendingAssets + pendingDeliverables;
+                }
+
+                if (upcomingDeadlinesEl) {
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+                    const upcomingDeadlines = APP.data.deliverables.filter(d => 
+                        d.due_date && new Date(d.due_date) <= nextWeek
+                    ).length;
+                    upcomingDeadlinesEl.textContent = upcomingDeadlines;
+                }
+
+                if (teamCollaboratorsEl) {
+                    teamCollaboratorsEl.textContent = 5; // Static for now
+                }
+            } catch (error) {
+                console.error('Error updating dashboard metrics:', error);
+            }
+        }
+
         function refreshDashboard() {
             console.log('Refreshing dashboard...');
-            // Simulate refresh delay
-            setTimeout(() => {
-                console.log('Dashboard refreshed');
-            }, 1000);
+            updateDashboardMetrics();
         }
 
         function refreshIntelligence() {
             console.log('Refreshing competitive intelligence...');
             // Update competitive analysis
-            setTimeout(() => {
-                console.log('Intelligence refreshed');
-            }, 1000);
         }
 
-        // Calendar Functions
-        function renderCalendar() {
-            const calendarView = safeGetElement('calendarView');
-            if (!calendarView) return;
-            
-            if (APP.currentCalendarView === 'month') {
-                renderMonthView(calendarView);
-            } else if (APP.currentCalendarView === 'week') {
-                renderWeekView(calendarView);
-            } else {
-                renderListView(calendarView);
-            }
-            
-            updateCalendarHeader();
-        }
-
-        function renderMonthView(container) {
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                               'July', 'August', 'September', 'October', 'November', 'December'];
-            
-            const firstDay = new Date(APP.currentYear, APP.currentMonth, 1);
-            const lastDay = new Date(APP.currentYear, APP.currentMonth + 1, 0);
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
-            
-            let calendarHTML = `
-                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: rgba(255,255,255,0.1); margin-bottom: 1rem;">
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Sun</div>
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Mon</div>
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Tue</div>
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Wed</div>
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Thu</div>
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Fri</div>
-                    <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); text-align: center; font-weight: 600;">Sat</div>
-                </div>
-                <div class="calendar-grid">
-            `;
-            
-            const currentDate = new Date(startDate);
-            for (let week = 0; week < 6; week++) {
-                for (let day = 0; day < 7; day++) {
-                    const isCurrentMonth = currentDate.getMonth() === APP.currentMonth;
-                    const dayEvents = APP.data.events.filter(event => {
-                        const eventDate = new Date(event.start_date);
-                        return eventDate.toDateString() === currentDate.toDateString();
-                    });
-                    
-                    calendarHTML += `
-                        <div class="calendar-day ${!isCurrentMonth ? 'style="opacity: 0.3;"' : ''}">
-                            <div class="calendar-day-number">${currentDate.getDate()}</div>
-                            ${dayEvents.map(event => `
-                                <div class="calendar-event" onclick="viewEvent('${event.id}')">${event.title}</div>
-                            `).join('')}
-                        </div>
-                    `;
-                    
-                    currentDate.setDate(currentDate.getDate() + 1);
-                }
-            }
-            
-            calendarHTML += '</div>';
-            container.innerHTML = calendarHTML;
-        }
-
-        function renderWeekView(container) {
-            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #a0a0a0;">Week view coming soon...</div>';
-        }
-
-        function renderListView(container) {
-            const upcomingEvents = APP.data.events
-                .filter(event => new Date(event.start_date) >= new Date())
-                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
-                .slice(0, 10);
-                
-            const listHTML = upcomingEvents.length ? upcomingEvents.map(event => `
-                <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;" onclick="viewEvent('${event.id}')">
-                    <div style="font-weight: 600;">${event.title}</div>
-                    <div style="color: #a0a0a0; font-size: 0.9rem; margin-top: 0.3rem;">
-                        ${formatDate(event.start_date)} - ${event.event_type}
-                    </div>
-                    ${event.description ? `<div style="color: #ccc; font-size: 0.8rem; margin-top: 0.3rem;">${event.description}</div>` : ''}
-                </div>
-            `).join('') : '<div style="text-align: center; padding: 2rem; color: #a0a0a0;">No upcoming events</div>';
-            
-            container.innerHTML = listHTML;
-        }
-
-        function updateCalendarHeader() {
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                               'July', 'August', 'September', 'October', 'November', 'December'];
-            const currentMonth = safeGetElement('currentMonth');
-            if (currentMonth) {
-                currentMonth.textContent = `${monthNames[APP.currentMonth]} ${APP.currentYear}`;
-            }
-        }
-
-        function setCalendarView(view) {
-            APP.currentCalendarView = view;
-            document.querySelectorAll('.calendar-view-toggle button').forEach(btn => btn.classList.remove('active'));
+        // Campaign Planning Functions
+        function setPlanningView(period) {
+            APP.currentPlanningPeriod = period;
+            document.querySelectorAll('.planning-period button').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            renderCalendar();
+            renderContentCalendar();
         }
 
-        function previousMonth() {
-            if (APP.currentMonth === 0) {
-                APP.currentMonth = 11;
-                APP.currentYear--;
-            } else {
-                APP.currentMonth--;
-            }
-            renderCalendar();
+        function previousPeriod() {
+            console.log('Previous planning period');
         }
 
-        function nextMonth() {
-            if (APP.currentMonth === 11) {
-                APP.currentMonth = 0;
-                APP.currentYear++;
-            } else {
-                APP.currentMonth++;
-            }
-            renderCalendar();
+        function nextPeriod() {
+            console.log('Next planning period');
         }
 
-        function renderUpcomingEvents() {
-            const tbody = safeGetElement('eventsTableBody');
+        function createOpportunityCampaign(opportunity) {
+            console.log(`Creating campaign for ${opportunity} opportunity`);
+            openModal('campaignModal');
+        }
+
+        function renderContentCalendar() {
+            const tbody = safeGetElement('contentCalendarBody');
             if (!tbody) return;
             
-            const upcomingEvents = APP.data.events
-                .filter(event => new Date(event.start_date) >= new Date())
-                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
-                .slice(0, 5);
-            
-            if (upcomingEvents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 2rem;">No upcoming events</td></tr>';
-                return;
+            try {
+                const sampleCalendarItems = [
+                    {
+                        date: '2024-12-15',
+                        platform: 'Instagram',
+                        type: 'Hero Post',
+                        campaign: 'Heritage Drop',
+                        status: 'scheduled'
+                    },
+                    {
+                        date: '2024-12-18',
+                        platform: 'TikTok',
+                        type: 'Behind Scenes',
+                        campaign: 'Holiday Collection',
+                        status: 'in-development'
+                    },
+                    {
+                        date: '2024-12-22',
+                        platform: 'All Platforms',
+                        type: 'Launch Announcement',
+                        campaign: 'Heritage Drop',
+                        status: 'pending-approval'
+                    }
+                ];
+
+                tbody.innerHTML = sampleCalendarItems.map(item => `
+                    <tr>
+                        <td>${formatDate(item.date)}</td>
+                        <td>${item.platform}</td>
+                        <td>${item.type}</td>
+                        <td>${item.campaign}</td>
+                        <td><span class="status-badge status-${item.status.replace('-', '_')}">${item.status.replace('-', ' ')}</span></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error rendering content calendar:', error);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading content calendar</td></tr>';
             }
-            
-            tbody.innerHTML = upcomingEvents.map(event => `
-                <tr>
-                    <td><strong>${event.title}</strong></td>
-                    <td><span class="status-badge status-${event.event_type}">${event.event_type}</span></td>
-                    <td>${formatDate(event.start_date)}</td>
-                    <td><span class="status-badge status-active">Active</span></td>
-                    <td>High</td>
-                </tr>
-            `).join('');
         }
 
         // Content Functions
-        function generateCampaign() {
-            const campaignType = safeGetElement('campaignType')?.value;
-            const targetAudience = safeGetElement('targetAudience')?.value;
-            const message = safeGetElement('campaignMessage')?.value;
-            
-            if (!campaignType || !targetAudience) {
-                alert('Please select campaign type and target audience');
-                return;
-            }
-            
-            // Generate campaign based on selections
-            const campaignId = Date.now();
-            const campaign = {
-                id: campaignId,
-                type: campaignType,
-                audience: targetAudience,
-                message: message,
-                created_at: new Date().toISOString(),
-                status: 'draft',
-                progress: 0
-            };
-            
-            APP.data.campaigns.push(campaign);
-            saveData('campaigns', APP.data.campaigns);
-            renderActiveCampaigns();
-            
-            alert('Campaign generated successfully!');
-        }
-
-        function previewCampaign() {
-            alert('Campaign preview coming soon...');
-        }
-
-        function renderActiveCampaigns() {
-            const tbody = safeGetElement('campaignsTableBody');
+        function renderContentPipeline() {
+            const tbody = safeGetElement('contentPipelineBody');
             if (!tbody) return;
             
-            if (APP.data.campaigns.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No active campaigns</td></tr>';
-                return;
+            try {
+                if (APP.data.content.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No content in pipeline. Create new content to get started.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = APP.data.content.map(content => `
+                    <tr>
+                        <td><strong>${content.title}</strong><br><small style="color: #a0a0a0;">${content.type}</small></td>
+                        <td>${content.campaign || '-'}</td>
+                        <td>${content.creator || '-'}</td>
+                        <td>${formatDate(content.due_date)}</td>
+                        <td><span class="status-badge status-${content.status}">${content.status.replace('-', ' ')}</span></td>
+                        <td>
+                            <button class="btn btn-success btn-small" onclick="approveContent(${content.id})">Approve</button>
+                            <button class="btn btn-secondary btn-small" onclick="editContent(${content.id})">Edit</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error rendering content pipeline:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444;">Error loading content pipeline</td></tr>';
             }
-            
-            tbody.innerHTML = APP.data.campaigns.map(campaign => `
-                <tr>
-                    <td><strong>Campaign ${campaign.id}</strong></td>
-                    <td><span class="status-badge status-${campaign.type}">${campaign.type}</span></td>
-                    <td>
-                        <div class="progress-bar"><div class="progress-fill" style="width: ${campaign.progress}%;"></div></div>
-                        ${campaign.progress}%
-                    </td>
-                    <td>${formatDate(campaign.launch_date)}</td>
-                    <td><span class="status-badge status-${campaign.status}">${campaign.status}</span></td>
-                    <td>
-                        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Edit</button>
-                    </td>
-                </tr>
-            `).join('');
+        }
+
+        function filterContent(filter) {
+            console.log(`Filtering content by: ${filter}`);
+            renderContentPipeline();
+        }
+
+        function approveContent(contentId) {
+            try {
+                const content = APP.data.content.find(c => c.id === contentId);
+                if (content) {
+                    content.status = 'approved';
+                    saveData('content', APP.data.content);
+                    renderContentPipeline();
+                }
+            } catch (error) {
+                console.error('Error approving content:', error);
+            }
+        }
+
+        function editContent(contentId) {
+            console.log(`Editing content ID: ${contentId}`);
         }
 
         // Agency Functions
@@ -1597,241 +1933,409 @@
             const tbody = safeGetElement('deliverablesTableBody');
             if (!tbody) return;
             
-            if (APP.data.deliverables.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No deliverables added yet</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = APP.data.deliverables.map((deliverable, index) => `
-                <tr>
-                    <td><strong>${deliverable.name}</strong></td>
-                    <td>Phase ${deliverable.phase}</td>
-                    <td>${deliverable.assigned_to || '-'}</td>
-                    <td>${formatDate(deliverable.due_date)}</td>
-                    <td><span class="status-badge status-${deliverable.status}">${deliverable.status.replace('_', ' ')}</span></td>
-                    <td>
-                        <button class="btn btn-success" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="updateDeliverableStatus(${index}, 'completed')">Complete</button>
-                        <button class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-left: 0.5rem;" onclick="deleteDeliverable(${index})">Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function updateDeliverableStatus(index, status) {
-            if (APP.data.deliverables[index]) {
-                APP.data.deliverables[index].status = status;
-                APP.data.deliverables[index].updated_at = new Date().toISOString();
-                saveData('deliverables', APP.data.deliverables);
-                renderDeliverables();
-            }
-        }
-
-        function deleteDeliverable(index) {
-            if (confirm('Are you sure you want to delete this deliverable?')) {
-                APP.data.deliverables.splice(index, 1);
-                saveData('deliverables', APP.data.deliverables);
-                renderDeliverables();
-            }
-        }
-
-        // Asset Functions
-        function renderAssets() {
-            const tbody = safeGetElement('assetsTableBody');
-            if (!tbody) return;
-            
-            if (APP.data.assets.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #a0a0a0; padding: 2rem;">No assets added yet</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = APP.data.assets.map((asset, index) => `
-                <tr>
-                    <td><strong>${asset.name}</strong></td>
-                    <td><span class="status-badge status-${asset.type}">${asset.type}</span></td>
-                    <td>${asset.category}</td>
-                    <td>${formatDate(asset.created_at)}</td>
-                    <td>
-                        ${asset.url ? `<a href="${asset.url}" target="_blank" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">View</a>` : ''}
-                        <button class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-left: 0.5rem;" onclick="deleteAsset(${index})">Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function deleteAsset(index) {
-            if (confirm('Are you sure you want to delete this asset?')) {
-                APP.data.assets.splice(index, 1);
-                saveData('assets', APP.data.assets);
-                renderAssets();
-            }
-        }
-
-        // Form Handlers
-        function submitEventForm() {
             try {
-                const title = safeGetElement('eventTitle')?.value;
-                const type = safeGetElement('eventType')?.value;
-                const description = safeGetElement('eventDescription')?.value;
-                const startDate = safeGetElement('eventStartDate')?.value;
-                const endDate = safeGetElement('eventEndDate')?.value;
-                
-                if (!title || !startDate) {
-                    alert('Please fill in required fields');
+                if (APP.data.deliverables.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No deliverables added yet</td></tr>';
                     return;
                 }
                 
-                const event = {
+                tbody.innerHTML = APP.data.deliverables.map(deliverable => `
+                    <tr>
+                        <td>
+                            <strong>${deliverable.name}</strong>
+                            ${deliverable.requirements ? `<br><small style="color: #a0a0a0;">${deliverable.requirements.substring(0, 100)}...</small>` : ''}
+                        </td>
+                        <td>Phase ${deliverable.phase}</td>
+                        <td>${formatDate(deliverable.due_date)}</td>
+                        <td>${deliverable.assigned_to || '-'}</td>
+                        <td><span class="status-badge status-${deliverable.status.replace('-', '_')}">${deliverable.status.replace('-', ' ')}</span></td>
+                        <td>
+                            ${deliverable.status === 'pending-review' ? `
+                                <button class="btn btn-success btn-small" onclick="approveDeliverable('${deliverable.id}')">Approve</button>
+                                <button class="btn btn-danger btn-small" onclick="rejectDeliverable('${deliverable.id}')">Reject</button>
+                            ` : `
+                                <button class="btn btn-secondary btn-small" onclick="editDeliverable(${deliverable.id})">Edit</button>
+                            `}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error rendering deliverables:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444;">Error loading deliverables</td></tr>';
+            }
+        }
+
+        function approveDeliverable(deliverableId) {
+            try {
+                const deliverable = APP.data.deliverables.find(d => d.id == deliverableId);
+                if (deliverable) {
+                    deliverable.status = 'approved';
+                    deliverable.approved_date = new Date().toISOString();
+                    saveData('deliverables', APP.data.deliverables);
+                    renderDeliverables();
+                    updateDashboardMetrics();
+                }
+            } catch (error) {
+                console.error('Error approving deliverable:', error);
+            }
+        }
+
+        function rejectDeliverable(deliverableId) {
+            try {
+                const deliverable = APP.data.deliverables.find(d => d.id == deliverableId);
+                if (deliverable) {
+                    deliverable.status = 'rejected';
+                    deliverable.rejection_date = new Date().toISOString();
+                    saveData('deliverables', APP.data.deliverables);
+                    renderDeliverables();
+                    updateDashboardMetrics();
+                }
+            } catch (error) {
+                console.error('Error rejecting deliverable:', error);
+            }
+        }
+
+        function editDeliverable(deliverableId) {
+            console.log(`Editing deliverable ID: ${deliverableId}`);
+        }
+
+        // Asset Functions
+        function renderMediaAssets() {
+            const grid = safeGetElement('mediaAssetGrid');
+            if (!grid) return;
+            
+            try {
+                if (APP.data.mediaAssets.length === 0) {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #a0a0a0; padding: 3rem;">No media assets uploaded yet</div>';
+                    return;
+                }
+
+                grid.innerHTML = APP.data.mediaAssets.map(asset => `
+                    <div class="asset-card">
+                        <div class="asset-status ${asset.status}">${asset.status}</div>
+                        <div style="margin-bottom: 1rem;">
+                            <div style="width: 100%; height: 120px; background: rgba(255,255,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                                <span style="font-size: 2rem;">${asset.type === 'image' ? '🖼️' : asset.type === 'video' ? '🎥' : asset.type === 'logo' ? '🎨' : '📄'}</span>
+                            </div>
+                            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">${asset.name}</h3>
+                            <p style="color: #a0a0a0; font-size: 0.8rem; margin-bottom: 0.5rem;">${asset.description}</p>
+                            <p style="color: #ff6b35; font-size: 0.8rem;">${asset.campaign || 'General'}</p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            ${asset.url ? `<a href="${asset.url}" target="_blank" class="btn btn-secondary btn-small">View</a>` : ''}
+                            <button class="btn btn-primary btn-small" onclick="approveAsset(${asset.id})">
+                                ${asset.status === 'approved' ? 'Approved' : 'Approve'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error rendering media assets:', error);
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ef4444; padding: 3rem;">Error loading media assets</div>';
+            }
+        }
+
+        function renderDataAssets() {
+            const tbody = safeGetElement('dataAssetsTableBody');
+            if (!tbody) return;
+            
+            try {
+                if (APP.data.dataAssets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #a0a0a0; padding: 2rem;">No data assets uploaded yet</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = APP.data.dataAssets.map(asset => `
+                    <tr>
+                        <td><strong>${asset.name}</strong></td>
+                        <td><span class="status-badge status-${asset.category}">${asset.type.toUpperCase()}</span></td>
+                        <td>${asset.size || '-'}</td>
+                        <td>${asset.description || '-'}</td>
+                        <td>${formatDate(asset.created_at)}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-small" onclick="viewDataAsset(${asset.id})">View</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteDataAsset(${asset.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error rendering data assets:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ef4444;">Error loading data assets</td></tr>';
+            }
+        }
+
+        function approveAsset(assetId) {
+            try {
+                const asset = APP.data.mediaAssets.find(a => a.id === assetId);
+                if (asset) {
+                    asset.status = 'approved';
+                    asset.approved_date = new Date().toISOString();
+                    saveData('mediaAssets', APP.data.mediaAssets);
+                    renderMediaAssets();
+                    updateDashboardMetrics();
+                }
+            } catch (error) {
+                console.error('Error approving asset:', error);
+            }
+        }
+
+        function viewDataAsset(assetId) {
+            console.log(`Viewing data asset ID: ${assetId}`);
+        }
+
+        function deleteDataAsset(assetId) {
+            if (confirm('Are you sure you want to delete this data asset?')) {
+                try {
+                    APP.data.dataAssets = APP.data.dataAssets.filter(a => a.id !== assetId);
+                    saveData('dataAssets', APP.data.dataAssets);
+                    renderDataAssets();
+                } catch (error) {
+                    console.error('Error deleting data asset:', error);
+                }
+            }
+        }
+
+        function filterDataAssets(filter) {
+            console.log(`Filtering data assets by: ${filter}`);
+            renderDataAssets();
+        }
+
+        // Form Submission Functions
+        function submitCampaignForm() {
+            try {
+                const nameEl = safeGetElement('campaignName');
+                const typeEl = safeGetElement('campaignType');
+                const startDateEl = safeGetElement('campaignStartDate');
+                const launchDateEl = safeGetElement('campaignLaunchDate');
+                const descriptionEl = safeGetElement('campaignDescription');
+                const collaboratorsEl = safeGetElement('campaignCollaborators');
+                
+                if (!nameEl || !nameEl.value.trim()) {
+                    alert('Please enter a campaign name');
+                    return;
+                }
+
+                const campaign = {
                     id: Date.now(),
-                    title,
-                    event_type: type,
-                    description,
-                    start_date: startDate,
-                    end_date: endDate,
+                    name: nameEl.value.trim(),
+                    type: typeEl ? typeEl.value : 'product-launch',
+                    status: 'planning',
+                    start_date: startDateEl ? startDateEl.value : null,
+                    launch_date: launchDateEl ? launchDateEl.value : null,
+                    description: descriptionEl ? descriptionEl.value.trim() : '',
+                    collaborators: collaboratorsEl ? collaboratorsEl.value.trim() : '',
                     created_at: new Date().toISOString()
                 };
+
+                APP.data.campaigns.push(campaign);
+                const saveSuccess = saveData('campaigns', APP.data.campaigns);
                 
-                APP.data.events.push(event);
-                saveData('events', APP.data.events);
-                
-                closeModal('eventModal');
-                renderCalendar();
-                renderUpcomingEvents();
+                if (!saveSuccess) {
+                    throw new Error('Failed to save campaign data');
+                }
+
+                closeModal('campaignModal');
+                updateDashboardMetrics();
                 
                 // Reset form
-                ['eventTitle', 'eventDescription', 'eventStartDate', 'eventEndDate'].forEach(id => {
-                    const el = safeGetElement(id);
-                    if (el) el.value = '';
-                });
+                if (nameEl) nameEl.value = '';
+                if (startDateEl) startDateEl.value = '';
+                if (launchDateEl) launchDateEl.value = '';
+                if (descriptionEl) descriptionEl.value = '';
+                if (collaboratorsEl) collaboratorsEl.value = '';
+                
+                console.log('Campaign created successfully');
                 
             } catch (error) {
-                console.error('Error creating event:', error);
-                alert('Error creating event');
+                console.error('Error creating campaign:', error);
+                alert(`Error creating campaign: ${error.message}. Please try again.`);
             }
         }
 
         function submitContentForm() {
             try {
-                const type = safeGetElement('contentTypeModal')?.value;
-                const title = safeGetElement('contentTitle')?.value;
-                const body = safeGetElement('contentBody')?.value;
-                const platform = safeGetElement('contentPlatform')?.value;
-                const priority = safeGetElement('contentPriority')?.value;
+                const typeEl = safeGetElement('contentType');
+                const campaignEl = safeGetElement('contentCampaign');
+                const titleEl = safeGetElement('contentTitle');
+                const briefEl = safeGetElement('contentBrief');
+                const creatorEl = safeGetElement('contentCreator');
+                const dueDateEl = safeGetElement('contentDueDate');
                 
-                if (!title || !body) {
-                    alert('Please fill in required fields');
+                if (!titleEl || !titleEl.value.trim()) {
+                    alert('Please enter a content title');
                     return;
                 }
-                
+
                 const content = {
                     id: Date.now(),
-                    type,
-                    title,
-                    body,
-                    platform,
-                    priority,
+                    title: titleEl.value.trim(),
+                    type: typeEl ? typeEl.value : 'social-post',
+                    campaign: campaignEl ? campaignEl.value : '',
+                    brief: briefEl ? briefEl.value.trim() : '',
+                    creator: creatorEl ? creatorEl.value : '',
+                    due_date: dueDateEl ? dueDateEl.value : null,
                     status: 'draft',
                     created_at: new Date().toISOString()
                 };
-                
+
                 APP.data.content.push(content);
-                saveData('content', APP.data.content);
+                const saveSuccess = saveData('content', APP.data.content);
                 
+                if (!saveSuccess) {
+                    throw new Error('Failed to save content data');
+                }
+
                 closeModal('contentModal');
-                alert('Content created successfully!');
+                renderContentPipeline();
+                updateDashboardMetrics();
                 
                 // Reset form
-                ['contentTitle', 'contentBody'].forEach(id => {
-                    const el = safeGetElement(id);
-                    if (el) el.value = '';
-                });
+                if (titleEl) titleEl.value = '';
+                if (briefEl) briefEl.value = '';
+                if (dueDateEl) dueDateEl.value = '';
                 
             } catch (error) {
                 console.error('Error creating content:', error);
-                alert('Error creating content');
+                alert(`Error creating content: ${error.message}. Please try again.`);
             }
         }
 
         function submitDeliverableForm() {
             try {
-                const name = safeGetElement('deliverableName')?.value;
-                const phase = safeGetElement('deliverablePhase')?.value;
-                const status = safeGetElement('deliverableStatus')?.value;
-                const dueDate = safeGetElement('deliverableDueDate')?.value;
-                const assignedTo = safeGetElement('deliverableAssignedTo')?.value;
-                const notes = safeGetElement('deliverableNotes')?.value;
+                const nameEl = safeGetElement('deliverableName');
+                const phaseEl = safeGetElement('deliverablePhase');
+                const statusEl = safeGetElement('deliverableStatus');
+                const dueDateEl = safeGetElement('deliverableDueDate');
+                const assignedToEl = safeGetElement('deliverableAssignedTo');
+                const requirementsEl = safeGetElement('deliverableRequirements');
                 
-                if (!name) {
-                    alert('Please enter deliverable name');
+                if (!nameEl || !nameEl.value.trim()) {
+                    alert('Please enter a deliverable name');
                     return;
                 }
-                
+
                 const deliverable = {
                     id: Date.now(),
-                    name,
-                    phase: parseInt(phase),
-                    status,
-                    due_date: dueDate,
-                    assigned_to: assignedTo,
-                    notes,
+                    name: nameEl.value.trim(),
+                    phase: phaseEl ? parseInt(phaseEl.value) : 1,
+                    status: statusEl ? statusEl.value : 'not-started',
+                    due_date: dueDateEl ? dueDateEl.value : null,
+                    assigned_to: assignedToEl ? assignedToEl.value.trim() : '',
+                    requirements: requirementsEl ? requirementsEl.value.trim() : '',
                     created_at: new Date().toISOString()
                 };
-                
+
                 APP.data.deliverables.push(deliverable);
-                saveData('deliverables', APP.data.deliverables);
+                const saveSuccess = saveData('deliverables', APP.data.deliverables);
                 
+                if (!saveSuccess) {
+                    throw new Error('Failed to save deliverable data');
+                }
+
                 closeModal('deliverableModal');
                 renderDeliverables();
+                updateDashboardMetrics();
                 
                 // Reset form
-                ['deliverableName', 'deliverableDueDate', 'deliverableAssignedTo', 'deliverableNotes'].forEach(id => {
-                    const el = safeGetElement(id);
-                    if (el) el.value = '';
-                });
+                if (nameEl) nameEl.value = '';
+                if (dueDateEl) dueDateEl.value = '';
+                if (assignedToEl) assignedToEl.value = '';
+                if (requirementsEl) requirementsEl.value = '';
                 
             } catch (error) {
                 console.error('Error creating deliverable:', error);
-                alert('Error creating deliverable');
+                alert(`Error creating deliverable: ${error.message}. Please try again.`);
             }
         }
 
-        function submitAssetForm() {
+        function submitMediaAssetForm() {
             try {
-                const name = safeGetElement('assetName')?.value;
-                const type = safeGetElement('assetType')?.value;
-                const category = safeGetElement('assetCategory')?.value;
-                const description = safeGetElement('assetDescription')?.value;
-                const url = safeGetElement('assetUrl')?.value;
+                const nameEl = safeGetElement('mediaAssetName');
+                const typeEl = safeGetElement('mediaAssetType');
+                const campaignEl = safeGetElement('mediaAssetCampaign');
+                const descriptionEl = safeGetElement('mediaAssetDescription');
+                const urlEl = safeGetElement('mediaAssetUrl');
                 
-                if (!name) {
-                    alert('Please enter asset name');
+                if (!nameEl || !nameEl.value.trim()) {
+                    alert('Please enter an asset name');
                     return;
                 }
-                
-                const asset = {
+
+                const mediaAsset = {
                     id: Date.now(),
-                    name,
-                    type,
-                    category,
-                    description,
-                    url,
+                    name: nameEl.value.trim(),
+                    type: typeEl ? typeEl.value : 'image',
+                    campaign: campaignEl ? campaignEl.value : '',
+                    description: descriptionEl ? descriptionEl.value.trim() : '',
+                    url: urlEl ? urlEl.value.trim() : '',
+                    status: 'pending',
                     created_at: new Date().toISOString()
                 };
+
+                APP.data.mediaAssets.push(mediaAsset);
+                const saveSuccess = saveData('mediaAssets', APP.data.mediaAssets);
                 
-                APP.data.assets.push(asset);
-                saveData('assets', APP.data.assets);
-                
-                closeModal('assetModal');
-                renderAssets();
+                if (!saveSuccess) {
+                    throw new Error('Failed to save media asset data');
+                }
+
+                closeModal('mediaAssetModal');
+                renderMediaAssets();
+                updateDashboardMetrics();
                 
                 // Reset form
-                ['assetName', 'assetDescription', 'assetUrl'].forEach(id => {
-                    const el = safeGetElement(id);
-                    if (el) el.value = '';
-                });
+                if (nameEl) nameEl.value = '';
+                if (descriptionEl) descriptionEl.value = '';
+                if (urlEl) urlEl.value = '';
                 
             } catch (error) {
-                console.error('Error creating asset:', error);
-                alert('Error creating asset');
+                console.error('Error creating media asset:', error);
+                alert(`Error creating media asset: ${error.message}. Please try again.`);
+            }
+        }
+
+        function submitDataAssetForm() {
+            try {
+                const nameEl = safeGetElement('dataAssetName');
+                const typeEl = safeGetElement('dataAssetType');
+                const categoryEl = safeGetElement('dataAssetCategory');
+                const descriptionEl = safeGetElement('dataAssetDescription');
+                const locationEl = safeGetElement('dataAssetLocation');
+                
+                if (!nameEl || !nameEl.value.trim()) {
+                    alert('Please enter a file name');
+                    return;
+                }
+
+                const dataAsset = {
+                    id: Date.now(),
+                    name: nameEl.value.trim(),
+                    type: typeEl ? typeEl.value : 'json',
+                    category: categoryEl ? categoryEl.value : 'analytics',
+                    description: descriptionEl ? descriptionEl.value.trim() : '',
+                    location: locationEl ? locationEl.value.trim() : '',
+                    size: 'Unknown', // Would be calculated from actual file
+                    created_at: new Date().toISOString()
+                };
+
+                APP.data.dataAssets.push(dataAsset);
+                const saveSuccess = saveData('dataAssets', APP.data.dataAssets);
+                
+                if (!saveSuccess) {
+                    throw new Error('Failed to save data asset');
+                }
+
+                closeModal('dataAssetModal');
+                renderDataAssets();
+                
+                // Reset form
+                if (nameEl) nameEl.value = '';
+                if (descriptionEl) descriptionEl.value = '';
+                if (locationEl) locationEl.value = '';
+                
+            } catch (error) {
+                console.error('Error creating data asset:', error);
+                alert(`Error creating data asset: ${error.message}. Please try again.`);
             }
         }
 
