@@ -1,507 +1,159 @@
-import os
-import json
-import uuid
+import os, uuid, json
 from datetime import datetime
+from werkzeug.utils import secure_filename
 from PIL import Image
-import mimetypes
+from db import SessionLocal, Asset, init_db
+from sqlalchemy import select
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
-ASSETS_FOLDER = os.path.join(UPLOAD_FOLDER, 'assets')
-INTEL_FOLDER = os.path.join(UPLOAD_FOLDER, 'intel')
-THUMBNAILS_FOLDER = os.path.join(UPLOAD_FOLDER, 'thumbnails')
+UPLOAD_DIR = os.environ.get('CCC_UPLOAD_DIR', 'uploads')
+THUMB_DIR = os.path.join(UPLOAD_DIR, 'thumbnails')
+ALLOWED_EXT = {
+    'images': {'png','jpg','jpeg','gif','webp'},
+    'videos': {'mp4','mov','avi','mkv'},
+    'data':   {'json','jsonl','csv'},
+    'docs':   {'pdf','ppt','pptx','doc','docx','txt'}
+}
+MAX_FILE_MB = 200
 
-def ensure_directories():
-    """Ensure all required directories exist"""
-    directories = [UPLOAD_FOLDER, ASSETS_FOLDER, INTEL_FOLDER, THUMBNAILS_FOLDER]
-    for directory in directories:
-        try:
-            os.makedirs(directory, exist_ok=True)
-        except (FileExistsError, OSError) as e:
-            print(f"Directory {directory} handling: {e}")
-            pass
+init_db()
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(THUMB_DIR, exist_ok=True)
 
-def scan_assets():
-    """Scan all asset directories and return comprehensive asset inventory - REQUIRED BY APP.PY"""
-    
-    ensure_directories()
-    
-    assets = []
-    
-    # Scan main uploads folder
-    if os.path.exists(UPLOAD_FOLDER):
-        for root, dirs, files in os.walk(UPLOAD_FOLDER):
-            for file in files:
-                if not file.startswith('.') and file != '.gitkeep':
-                    file_path = os.path.join(root, file)
-                    try:
-                        asset = analyze_file(file_path)
-                        if asset:
-                            assets.append(asset)
-                    except Exception as e:
-                        print(f"Error analyzing {file_path}: {e}")
-                        continue
-    
-    return assets
+def _type_of(filename):
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    for k, exts in ALLOWED_EXT.items():
+        if ext in exts: return k
+    return 'unknown'
 
-def analyze_file(file_path):
-    """Analyze a file and return asset metadata"""
-    
-    try:
-        if not os.path.exists(file_path):
-            return None
-            
-        file_stats = os.stat(file_path)
-        file_size = file_stats.st_size
-        
-        # Skip empty files
-        if file_size == 0:
-            return None
-            
-        filename = os.path.basename(file_path)
-        file_ext = os.path.splitext(filename)[1].lower()
-        
-        # Determine file category
-        category = categorize_file(filename, file_ext)
-        
-        # Get MIME type
-        mime_type, _ = mimetypes.guess_type(file_path)
-        
-        asset = {
-            'id': str(uuid.uuid4()),
-            'filename': filename,
-            'path': file_path,
-            'size': file_size,
-            'size_mb': round(file_size / (1024 * 1024), 2),
-            'category': category,
-            'type': get_file_type(file_ext),
-            'mime_type': mime_type,
-            'extension': file_ext,
-            'created_at': datetime.fromtimestamp(file_stats.st_ctime).isoformat(),
-            'modified_at': datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
-            'thumbnail': None
-        }
-        
-        # Generate thumbnail for images
-        if asset['type'] == 'image':
-            thumbnail_path = generate_thumbnail(file_path)
-            if thumbnail_path:
-                asset['thumbnail'] = thumbnail_path
-        
-        # Add special metadata for JSONL files
-        if file_ext == '.jsonl':
-            asset.update(analyze_jsonl_file(file_path))
-        
-        return asset
-        
-    except Exception as e:
-        print(f"Error analyzing file {file_path}: {e}")
-        return None
+def load_catalog():
+    # DB-first
+    with SessionLocal() as s:
+        rows = s.scalars(select(Asset).order_by(Asset.id.desc())).all()
+        return {"assets": [r.as_dict() for r in rows]}
 
-def categorize_file(filename, file_ext):
-    """Categorize file based on filename and extension"""
-    
-    filename_lower = filename.lower()
-    
-    # Intelligence data files
-    if 'dataset' in filename_lower or 'competitive' in filename_lower or file_ext == '.jsonl':
-        return 'intelligence_data'
-    
-    # Brand assets
-    if any(term in filename_lower for term in ['logo', 'brand', 'wordmark', 'castle', 'medusa']):
-        return 'brand_assets'
-    
-    # Social content
-    if any(term in filename_lower for term in ['story', 'post', 'instagram', 'social', 'heritage', 'hiphop']):
-        return 'social_content'
-    
-    # Video content
-    if file_ext in ['.mp4', '.mov', '.avi', '.mkv', '.webm']:
-        return 'video_content'
-    
-    # Audio content
-    if file_ext in ['.mp3', '.wav', '.aac', '.flac']:
-        return 'audio_content'
-    
-    # Documents
-    if file_ext in ['.pdf', '.doc', '.docx', '.txt', '.md']:
-        return 'documents'
-    
-    # Default to general assets
-    return 'general_assets'
-
-def get_file_type(file_ext):
-    """Get general file type from extension"""
-    
-    image_exts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
-    video_exts = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv']
-    audio_exts = ['.mp3', '.wav', '.aac', '.flac', '.ogg']
-    document_exts = ['.pdf', '.doc', '.docx', '.txt', '.md', '.rtf']
-    data_exts = ['.json', '.jsonl', '.csv', '.xml', '.yaml']
-    
-    if file_ext in image_exts:
-        return 'image'
-    elif file_ext in video_exts:
-        return 'video'
-    elif file_ext in audio_exts:
-        return 'audio'
-    elif file_ext in document_exts:
-        return 'document'
-    elif file_ext in data_exts:
-        return 'data'
-    else:
-        return 'other'
-
-def analyze_jsonl_file(file_path):
-    """Analyze JSONL file for additional metadata"""
-    
-    try:
-        line_count = 0
-        sample_data = []
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for i, line in enumerate(f):
-                line_count += 1
-                if i < 3:  # Sample first 3 lines
-                    try:
-                        data = json.loads(line.strip())
-                        sample_data.append(data)
-                    except:
-                        continue
-        
-        # Analyze sample data structure
-        metadata = {
-            'record_count': line_count,
-            'data_type': 'jsonl',
-            'sample_fields': []
-        }
-        
-        if sample_data:
-            # Get field names from first record
-            first_record = sample_data[0]
-            if isinstance(first_record, dict):
-                metadata['sample_fields'] = list(first_record.keys())[:10]  # First 10 fields
-                
-                # Detect data source
-                if 'caption' in first_record or 'likesCount' in first_record:
-                    metadata['source'] = 'instagram'
-                elif 'description' in first_record or 'viewCount' in first_record:
-                    metadata['source'] = 'tiktok'
-                else:
-                    metadata['source'] = 'unknown'
-        
-        return metadata
-        
-    except Exception as e:
-        print(f"Error analyzing JSONL file {file_path}: {e}")
-        return {'record_count': 0, 'data_type': 'jsonl'}
-
-def generate_thumbnail(image_path, size=(150, 150)):
-    """Generate thumbnail for image files - REQUIRED BY APP.PY"""
-    
-    try:
-        ensure_directories()
-        
-        if not os.path.exists(image_path):
-            return None
-            
-        filename = os.path.basename(image_path)
-        name, ext = os.path.splitext(filename)
-        thumbnail_filename = f"{name}_thumb{ext}"
-        thumbnail_path = os.path.join(THUMBNAILS_FOLDER, thumbnail_filename)
-        
-        # Skip if thumbnail already exists and is newer
-        if os.path.exists(thumbnail_path):
-            thumb_mtime = os.path.getmtime(thumbnail_path)
-            image_mtime = os.path.getmtime(image_path)
-            if thumb_mtime > image_mtime:
-                return thumbnail_path
-        
-        # Generate thumbnail
-        with Image.open(image_path) as img:
-            # Convert RGBA to RGB if necessary
-            if img.mode == 'RGBA':
-                # Create white background
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                background.paste(img, mask=img.split()[-1])  # Use alpha channel as mask
-                img = background
-            elif img.mode not in ['RGB', 'L']:
-                img = img.convert('RGB')
-            
-            # Create thumbnail
-            img.thumbnail(size, Image.Resampling.LANCZOS)
-            img.save(thumbnail_path, 'JPEG', quality=85)
-            
-        return thumbnail_path
-        
-    except Exception as e:
-        print(f"Error generating thumbnail for {image_path}: {e}")
-        return None
-
-def add_asset(file_path, category=None):
-    """Add new asset to the library - REQUIRED BY APP.PY"""
-    
-    try:
-        if not os.path.exists(file_path):
-            return {'success': False, 'error': 'File not found'}
-        
-        # Analyze the file
-        asset = analyze_file(file_path)
-        if not asset:
-            return {'success': False, 'error': 'Could not analyze file'}
-        
-        # Override category if provided
-        if category:
-            asset['category'] = category
-        
-        # Move file to appropriate category folder if not already there
-        target_dir = os.path.join(ASSETS_FOLDER, asset['category'])
-        os.makedirs(target_dir, exist_ok=True)
-        
-        return {
-            'success': True,
-            'asset': asset,
-            'message': f'Asset {asset["filename"]} added successfully'
-        }
-        
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
-
-def remove_asset(asset_id):
-    """Remove asset from library - REQUIRED BY APP.PY"""
-    
-    try:
-        # Find asset by ID
-        assets = scan_assets()
-        asset_to_remove = None
-        
-        for asset in assets:
-            if asset['id'] == asset_id:
-                asset_to_remove = asset
-                break
-        
-        if not asset_to_remove:
-            return {'success': False, 'error': 'Asset not found'}
-        
-        # Remove file
-        if os.path.exists(asset_to_remove['path']):
-            os.remove(asset_to_remove['path'])
-        
-        # Remove thumbnail if exists
-        if asset_to_remove.get('thumbnail') and os.path.exists(asset_to_remove['thumbnail']):
-            os.remove(asset_to_remove['thumbnail'])
-        
-        return {
-            'success': True,
-            'message': f'Asset {asset_to_remove["filename"]} removed successfully'
-        }
-        
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
-
-def get_assets_by_category(category=None):
-    """Get assets filtered by category - REQUIRED BY APP.PY"""
-    
-    assets = scan_assets()
-    
-    if category:
-        assets = [asset for asset in assets if asset['category'] == category]
-    
-    # Group by category
-    categorized = {}
-    for asset in assets:
-        cat = asset['category']
-        if cat not in categorized:
-            categorized[cat] = []
-        categorized[cat].append(asset)
-    
-    return categorized
-
-def get_asset_categories():
-    """Get list of all asset categories - REQUIRED BY APP.PY"""
-    
-    assets = scan_assets()
-    categories = {}
-    
-    for asset in assets:
-        category = asset['category']
-        if category not in categories:
-            categories[category] = {
-                'name': category,
-                'count': 0,
-                'total_size': 0,
-                'display_name': category.replace('_', ' ').title()
-            }
-        
-        categories[category]['count'] += 1
-        categories[category]['total_size'] += asset['size']
-    
-    # Add size in MB
-    for cat_data in categories.values():
-        cat_data['total_size_mb'] = round(cat_data['total_size'] / (1024 * 1024), 2)
-    
-    return list(categories.values())
-
-def search_assets(query, category=None):
-    """Search assets by filename or metadata - REQUIRED BY APP.PY"""
-    
-    assets = scan_assets()
-    query_lower = query.lower()
-    
-    results = []
-    for asset in assets:
-        # Skip if category filter doesn't match
-        if category and asset['category'] != category:
-            continue
-        
-        # Search in filename
-        if query_lower in asset['filename'].lower():
-            results.append(asset)
-            continue
-        
-        # Search in category
-        if query_lower in asset['category'].lower():
-            results.append(asset)
-            continue
-        
-        # Search in JSONL metadata
-        if 'source' in asset and query_lower in asset.get('source', '').lower():
-            results.append(asset)
-            continue
-    
-    return results
-
-def get_asset_stats():
-    """Get comprehensive asset statistics - REQUIRED BY APP.PY"""
-    
-    assets = scan_assets()
-    
-    if not assets:
-        return {
-            'total_assets': 0,
-            'total_size': 0,
-            'total_size_mb': 0,
-            'categories': {},
-            'file_types': {},
-            'recent_uploads': []
-        }
-    
-    total_size = sum(asset['size'] for asset in assets)
-    
-    # Category breakdown
-    categories = {}
-    for asset in assets:
-        cat = asset['category']
-        if cat not in categories:
-            categories[cat] = {'count': 0, 'size': 0}
-        categories[cat]['count'] += 1
-        categories[cat]['size'] += asset['size']
-    
-    # File type breakdown
-    file_types = {}
-    for asset in assets:
-        file_type = asset['type']
-        if file_type not in file_types:
-            file_types[file_type] = {'count': 0, 'size': 0}
-        file_types[file_type]['count'] += 1
-        file_types[file_type]['size'] += asset['size']
-    
-    # Recent uploads (last 10)
-    recent_assets = sorted(assets, key=lambda x: x['created_at'], reverse=True)[:10]
-    
-    stats = {
-        'total_assets': len(assets),
-        'total_size': total_size,
-        'total_size_mb': round(total_size / (1024 * 1024), 2),
-        'categories': categories,
-        'file_types': file_types,
-        'recent_uploads': recent_assets,
-        'intelligence_files': len([a for a in assets if a['category'] == 'intelligence_data']),
-        'brand_assets': len([a for a in assets if a['category'] == 'brand_assets']),
-        'social_content': len([a for a in assets if a['category'] == 'social_content']),
-        'video_content': len([a for a in assets if a['category'] == 'video_content'])
-    }
-    
-    return stats
-
-def get_asset_by_id(asset_id):
-    """Get specific asset by ID"""
-    
-    assets = scan_assets()
-    for asset in assets:
-        if asset['id'] == asset_id:
-            return asset
-    return None
-
-def update_asset_metadata(asset_id, metadata):
-    """Update asset metadata"""
-    
-    # This would typically update a database
-    # For now, return success since we're file-based
-    return {'success': True, 'message': 'Metadata updated'}
-
-def get_asset_download_url(asset_id):
-    """Get download URL for asset"""
-    
-    asset = get_asset_by_id(asset_id)
-    if asset:
-        return f"/api/assets/{asset_id}/download"
-    return None
-
-def validate_upload(file_path, max_size_mb=50):
-    """Validate uploaded file"""
-    
-    if not os.path.exists(file_path):
-        return {'valid': False, 'error': 'File not found'}
-    
-    file_size = os.path.getsize(file_path)
-    if file_size > max_size_mb * 1024 * 1024:
-        return {'valid': False, 'error': f'File too large (max {max_size_mb}MB)'}
-    
-    # Check file extension
-    filename = os.path.basename(file_path)
-    file_ext = os.path.splitext(filename)[1].lower()
-    
-    allowed_extensions = [
-        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',  # Images
-        '.mp4', '.mov', '.avi', '.mkv', '.webm',  # Videos
-        '.mp3', '.wav', '.aac', '.flac',  # Audio
-        '.pdf', '.doc', '.docx', '.txt', '.md',  # Documents
-        '.json', '.jsonl', '.csv', '.xml'  # Data
-    ]
-    
-    if file_ext not in allowed_extensions:
-        return {'valid': False, 'error': f'File type {file_ext} not allowed'}
-    
-    return {'valid': True}
-
-def cleanup_old_thumbnails():
-    """Clean up old thumbnail files"""
-    
-    try:
-        if not os.path.exists(THUMBNAILS_FOLDER):
-            return
-        
-        # Get all current assets
-        assets = scan_assets()
-        current_thumbnails = set()
-        
-        for asset in assets:
-            if asset.get('thumbnail'):
-                current_thumbnails.add(os.path.basename(asset['thumbnail']))
-        
-        # Remove orphaned thumbnails
-        for filename in os.listdir(THUMBNAILS_FOLDER):
-            if filename not in current_thumbnails:
-                thumbnail_path = os.path.join(THUMBNAILS_FOLDER, filename)
+def scan_upload_directory():
+    # Optional: sync FS → DB (only adds missing)
+    changed = 0
+    existing_paths = set()
+    with SessionLocal() as s:
+        existing_paths = {a.rel_path for a in s.scalars(select(Asset)).all()}
+        for root, _, files in os.walk(UPLOAD_DIR):
+            for fn in files:
+                if root.endswith('thumbnails'): 
+                    continue
+                rel = os.path.relpath(os.path.join(root, fn), UPLOAD_DIR).replace("\\","/")
+                if rel in existing_paths: 
+                    continue
+                abs_path = os.path.join(UPLOAD_DIR, rel)
                 try:
-                    os.remove(thumbnail_path)
-                    print(f"Removed orphaned thumbnail: {filename}")
-                except Exception as e:
-                    print(f"Error removing thumbnail {filename}: {e}")
-                    
-    except Exception as e:
-        print(f"Error during thumbnail cleanup: {e}")
+                    st = os.stat(abs_path)
+                except Exception:
+                    continue
+                a = Asset(
+                    filename=fn, rel_path=rel, bytes=st.st_size,
+                    type=_type_of(fn), created_at=datetime.fromtimestamp(st.st_ctime)
+                )
+                s.add(a); changed += 1
+        s.commit()
+    return {"synced": changed}
 
-# Initialize directories on import
-ensure_directories()
+def generate_thumbnails(image_rel_list):
+    thumbs = {}
+    for rel in image_rel_list:
+        src = os.path.join(UPLOAD_DIR, rel)
+        if not os.path.exists(src): continue
+        try:
+            with Image.open(src) as im:
+                if im.mode in ('RGBA','P'): im = im.convert('RGB')
+                im.thumbnail((150,150))
+                base = os.path.basename(rel)
+                name, _ = os.path.splitext(base)
+                th_name = f"{name}_thumb.jpg"
+                th_path = os.path.join(THUMB_DIR, th_name)
+                im.save(th_path, format='JPEG', quality=85)
+                thumbs[rel] = os.path.relpath(th_path, UPLOAD_DIR).replace('\\','/')
+        except Exception:
+            continue
+    # write to DB
+    if thumbs:
+        with SessionLocal() as s:
+            for rel, th_rel in thumbs.items():
+                row = s.execute(select(Asset).where(Asset.rel_path==rel)).scalar_one_or_none()
+                if row:
+                    row.thumbnail = th_rel
+            s.commit()
+    return thumbs
+
+def categorize_assets(files):
+    groups = {'Brand Assets': [], 'Social Content': [], 'Video Content': [], 'Intelligence Data': [], 'Documents': []}
+    for a in files:
+        fn = a.get('filename','').lower()
+        t = a.get('type')
+        if t == 'images':
+            if any(k in fn for k in ['wordmark','castle','medusa','brand','guideline']):
+                groups['Brand Assets'].append(a)
+            elif any(k in fn for k in ['story','instagram','tiktok']):
+                groups['Social Content'].append(a)
+            else:
+                groups['Social Content'].append(a)
+        elif t == 'videos':
+            groups['Video Content'].append(a)
+        elif t == 'data':
+            groups['Intelligence Data'].append(a)
+        elif t == 'docs':
+            groups['Documents'].append(a)
+        else:
+            groups['Documents'].append(a)
+    return groups
+
+def map_assets_to_campaigns(assets, calendar):
+    # API keeps same contract
+    by_name = {a['filename']: a for a in assets}
+    mapping = []
+    for view in ['7_day_view','30_day_view','60_day_view','90_day_view']:
+        for ev in calendar.get(view, []):
+            used = []
+            for fn in ev.get('assets_mapped', []):
+                a = by_name.get(fn)
+                if a: used.append({'filename': fn, 'asset_id': a['id']})
+            mapping.append({'event': ev['title'], 'date': ev['date'], 'assets': used})
+    return mapping
+
+def handle_file_upload(file_storage):
+    from sqlalchemy import select
+    filename = secure_filename(file_storage.filename or '')
+    if not filename or _type_of(filename) == 'unknown':
+        return {'ok': False, 'error': 'Invalid file type.'}
+    size = getattr(file_storage, 'content_length', None) or 0
+    if size and size > MAX_FILE_MB * 1024 * 1024:
+        return {'ok': False, 'error': 'File too large.'}
+
+    save_path = os.path.join(UPLOAD_DIR, filename)
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    try:
+        file_storage.save(save_path)
+    except Exception as e:
+        return {'ok': False, 'error': f'Failed to save file: {e}'}
+
+    st = os.stat(save_path)
+    with SessionLocal() as s:
+        a = Asset(
+            filename=filename, rel_path=filename, bytes=st.st_size,
+            type=_type_of(filename), created_at=datetime.fromtimestamp(st.st_ctime)
+        )
+        s.add(a); s.commit(); s.refresh(a)
+        # gen thumb if image
+        if a.type == 'images':
+            generate_thumbnails([a.rel_path])
+            s.refresh(a)
+        return {'ok': True, 'asset': a.as_dict()}
+
+def serve_file_download(asset_id):
+    from sqlalchemy import select
+    with SessionLocal() as s:
+        a = s.get(Asset, asset_id)
+        if a:
+            abs_path = os.path.abspath(os.path.join(UPLOAD_DIR, a.rel_path))
+            if os.path.exists(abs_path):
+                return abs_path, a.filename
+    return None, None
