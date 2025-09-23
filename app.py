@@ -11,8 +11,9 @@ CORS(app)
 
 # Import your existing database connection
 # Replace this with your actual database setup
-from your_database import db  # Replace with your actual DB connection
-
+from pymongo import MongoClient
+   client = MongoClient('mongodb://localhost:27017/')
+   db = client.your_database_name
 def extract_text_for_sentiment(post):
     """Extract text from both Instagram and TikTok post structures"""
     # Instagram posts use 'caption', TikTok posts use 'desc'
