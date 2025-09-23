@@ -9,7 +9,10 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="brand"><span class="logo">CROOKS & CASTLES</span><span class="badge">COMMAND CENTER</span></div>
+    <div class="brand">
+      <span class="logo">CROOKS & CASTLES</span>
+      <span class="badge">COMMAND CENTER</span>
+    </div>
     <nav class="tabs">
       <button class="tab active" data-tab="intelligence"><i class="fa-solid fa-chart-line"></i> Intelligence</button>
       <button class="tab" data-tab="assets"><i class="fa-solid fa-folder-open"></i> Assets</button>
@@ -20,24 +23,54 @@
   </header>
 
   <main>
+    <!-- INTELLIGENCE -->
     <section id="intelligence" class="panel active">
-      <div class="card"><h2>Engagement Overview</h2><pre id="intel-metrics" class="mono">Loading…</pre></div>
-      <div class="card"><h2>Top Hashtags</h2><div id="hashtags" class="grid"></div></div>
-      <div class="card"><h2>Cultural Moments</h2><div id="moments" class="list"></div></div>
-      <div class="card"><h2>Competitive Mentions</h2><div id="competitors" class="list"></div></div>
-      <div class="card actions"><button id="btn-generate-report" class="btn primary"><i class="fa-solid fa-file-export"></i> Generate Intelligence Report</button></div>
+      <div class="grid two">
+        <div class="card">
+          <h2>Engagement Overview</h2>
+          <pre id="intel-metrics" class="mono">Loading…</pre>
+        </div>
+        <div class="card">
+          <h2>Competitive Intelligence</h2>
+          <div id="comp-voice" class="list"></div>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h2>Top Hashtags</h2>
+          <div id="hashtags" class="grid"></div>
+        </div>
+        <div class="card">
+          <h2>Cultural Moments</h2>
+          <div id="moments" class="list"></div>
+        </div>
+      </div>
+
+      <div class="card actions">
+        <button id="btn-generate-report" class="btn primary">
+          <i class="fa-solid fa-file-export"></i> Generate Intelligence Report
+        </button>
+      </div>
     </section>
 
+    <!-- ASSETS -->
     <section id="assets" class="panel">
-      <div class="card"><h2>Asset Library</h2><div id="asset-grid" class="grid"></div></div>
+      <div class="card">
+        <h2>Asset Library</h2>
+        <div id="asset-grid" class="grid"></div>
+      </div>
     </section>
 
+    <!-- CALENDAR -->
     <section id="calendar" class="panel">
       <div class="card">
-        <div class="row" style="align-items:center;justify-content:space-between">
+        <div class="row between">
           <h2>Strategic Calendar</h2>
           <div class="view-switch">
-            <a class="btn small" href="/api/calendar/export.csv"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+            <a class="btn small" href="/api/calendar/export.csv">
+              <i class="fa-solid fa-file-csv"></i> Export CSV
+            </a>
             <button data-view="7_day_view" class="btn small">7 Day</button>
             <button data-view="30_day_view" class="btn small">30 Day</button>
             <button data-view="60_day_view" class="btn small">60 Day</button>
@@ -46,6 +79,7 @@
         </div>
         <div id="calendar-events" class="list"></div>
       </div>
+
       <div class="card">
         <h2>Add Calendar Event</h2>
         <form id="form-add-event" class="row">
@@ -57,14 +91,18 @@
       </div>
     </section>
 
+    <!-- AGENCY -->
     <section id="agency" class="panel">
       <div class="card">
-        <div class="row" style="align-items:center;justify-content:space-between">
+        <div class="row between">
           <h2>Agency Tracking</h2>
-          <a class="btn small" href="/api/agency/export.csv"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+          <a class="btn small" href="/api/agency/export.csv">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+          </a>
         </div>
         <pre id="agency-data" class="mono">Loading…</pre>
       </div>
+
       <div class="card">
         <h2>Add Agency Project</h2>
         <form id="form-add-project" class="row">
@@ -76,10 +114,14 @@
       </div>
     </section>
 
+    <!-- UPLOAD -->
     <section id="upload" class="panel">
       <div class="card">
         <h2>Upload Files</h2>
-        <div id="drop" class="dropzone">Drag & drop files here, or click to browse.<br><small>Images, videos, documents, data. Max 100MB per file.</small></div>
+        <div id="drop" class="dropzone">
+          Drag & drop files here, or click to browse.<br>
+          <small>Images, videos, documents, data. Max 100MB per file.</small>
+        </div>
         <input id="file-input" type="file" multiple
           accept=".png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.avi,.mkv,.pdf,.ppt,.pptx,.doc,.docx,.txt,.json,.jsonl,.csv" hidden>
         <div id="upload-results" class="list" style="margin-top:10px"></div>
@@ -88,7 +130,6 @@
   </main>
 
   <footer>Built for CROOKS — Discipline × Disruption.</footer>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <script src="/static/js/app.js?v=ccv2-20250923"></script>
 </body>
 </html>
