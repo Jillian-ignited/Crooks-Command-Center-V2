@@ -11,3 +11,9 @@ Werkzeug==3.0.1
 Flask-Cors==4.0.1
 sqlalchemy==1.4.53
 psycopg2-binary==2.9.7
+Flask==2.3.3
+Flask-CORS==4.0.0
+pymongo==4.6.0
+vaderSentiment==3.3.2
+gunicorn==21.2.0
+python-dotenv==1.0.0
