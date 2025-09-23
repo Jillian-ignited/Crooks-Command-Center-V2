@@ -2,6 +2,7 @@
 """
 Crooks & Castles Command Center V2 - FINAL FIXED VERSION
 All 7/7 enhanced modules working with correct imports
+ # Force redeploy v2
 """
 
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
