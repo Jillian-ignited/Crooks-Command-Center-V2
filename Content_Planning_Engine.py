@@ -8,6 +8,16 @@ from datetime import date, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy import select, and_
 from db import SessionLocal, CalendarEvent
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Database configuration
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://crooks_command_db_user:SRrFxpJCuYONjpkXCFIMqd5ani6n2c96@dpg-d2vd5logjchc73b43uu0-a.oregon-postgres.render.com/crooks_command_db')
+
+# Create engine and session
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def _title(campaign: str, milestone: str) -> str:
     return f"[{campaign}] {milestone}".strip()
