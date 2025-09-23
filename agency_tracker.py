@@ -446,4 +446,5 @@ if __name__ == "__main__":
     print(f"HVD Partnership - {status['current_stage']}")
     print(f"Current Investment: ${status['current_investment']}/month")
     print(f"Stage 1 Progress: {status['stages']['stage_1']['progress']}%")
-    print(f"Total Deliverables: {len(status['deliverables'])}
+    print(f"Total Deliverables: {len(status['deliverables'])}")
+
