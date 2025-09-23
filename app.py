@@ -4,6 +4,8 @@ from flask import Flask, jsonify, render_template, request, send_file, abort, Re
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from sqlalchemy import select
+from content_planning import plan_campaign, list_campaigns, campaign_overview, update_milestone_status, retitle_milestone, delete_campaign
+from enhanced_competitor_analysis import build_competitor_intel
 
 from db import init_db, SessionLocal, Asset, CalendarEvent, Agency, AgencyProject
 from asset_manager import (
@@ -88,6 +90,45 @@ def api_intelligence():
             'json_found': glob.glob(os.path.join(UPLOAD_DIR, '*.json')) + glob.glob(os.path.join(UPLOAD_DIR, 'intel', '*.json'))
         }
     return jsonify(payload)
+# --- Campaign Planning ---
+@app.route('/api/planning/campaigns', methods=['GET','POST'])
+def api_campaigns():
+    if request.method == 'GET':
+        prefix = request.args.get('q','').strip()
+        return jsonify(list_campaigns(prefix=prefix))
+    data = request.get_json(force=True)
+    return jsonify(plan_campaign(
+        campaign=data['campaign'],
+        window_start=data['window_start'],
+        window_end=data['window_end'],
+        deliverables=data.get('deliverables', []),
+        assets_mapped=data.get('assets_mapped', []),
+        budget_allocation=float(data.get('budget_allocation', 0) or 0),
+        cultural_context=data.get('cultural_context', ''),
+        target_kpis=data.get('target_kpis', {}),
+        status=data.get('status', 'planned'),
+    ))
+@app.route('/api/intelligence/competitors')
+def api_competitors():
+    posts = _collect_posts()
+    intel = build_competitor_intel(posts)
+    return jsonify(intel)
+
+@app.route('/api/planning/<campaign>/overview')
+def api_campaign_overview(campaign):
+    return jsonify(campaign_overview(campaign))
+
+@app.route('/api/planning/milestones/<int:event_id>', methods=['PUT','DELETE'])
+def api_campaign_milestone(event_id):
+    if request.method == 'DELETE':
+        # soft-delete by retitling or truly delete via Calendar endpoints if you prefer
+        return jsonify({"error":"use /api/calendar/<id> DELETE"}), 405
+    data = request.get_json(force=True)
+    if 'status' in data:
+        return jsonify(update_milestone_status(event_id, data['status']))
+    if 'milestone' in data:
+        return jsonify(retitle_milestone(event_id, data['milestone']))
+    return jsonify({"error":"no_action"}), 400
 
 @app.route('/api/reports/generate')
 def api_report_generate():
