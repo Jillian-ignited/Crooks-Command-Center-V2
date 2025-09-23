@@ -1,9 +1,8 @@
-import json, re
+import json, re, glob, os
 from datetime import datetime, timezone
 from collections import Counter, defaultdict
 from typing import List, Dict, Any
 
-# --- robust JSONL loader ------------------------------------------------------
 def _safe_json_loads(line: str):
     try:
         return json.loads(line)
@@ -15,8 +14,7 @@ def _safe_json_loads(line: str):
             return None
 
 def load_jsonl_data(file_path: str) -> List[Dict[str, Any]]:
-    """Load and parse JSONL files from Instagram/TikTok scrapers"""
-    rows: List[Dict[str, Any]] = []
+    rows = []
     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         for line in f:
             line = line.strip()
@@ -27,9 +25,7 @@ def load_jsonl_data(file_path: str) -> List[Dict[str, Any]]:
                 rows.append(obj)
     return rows
 
-# --- hashtags & trends --------------------------------------------------------
 def analyze_hashtags(posts: List[Dict[str, Any]]):
-    """Extract and analyze hashtag trends"""
     counter = Counter()
     for p in posts:
         tags = p.get('hashtags') or []
@@ -42,8 +38,6 @@ def analyze_hashtags(posts: List[Dict[str, Any]]):
             tag = t.lower().lstrip('#')
             if tag:
                 counter[tag] += 1
-
-    # simple cultural buckets
     categories = {
         'hip-hop': {'hiphop','hip-hop','rap','trap'},
         'streetwear': {'streetwear','sneakers','kicks','hypebeast','ootd'},
@@ -55,18 +49,14 @@ def analyze_hashtags(posts: List[Dict[str, Any]]):
         out.append({'hashtag': tag, 'count': count, 'categories': cats})
     return out
 
-# --- engagement metrics -------------------------------------------------------
 def calculate_engagement_metrics(posts: List[Dict[str, Any]]):
-    """Calculate comprehensive engagement analytics from real posts"""
     total_likes = total_comments = total_shares = total_views = 0
     by_day = defaultdict(lambda: {'likes':0,'comments':0,'shares':0,'views':0,'count':0})
-
     for p in posts:
-        total_likes    += int(p.get('likesCount') or 0)
+        total_likes += int(p.get('likesCount') or 0)
         total_comments += int(p.get('commentsCount') or 0)
-        total_shares   += int(p.get('shareCount') or 0)
-        total_views    += int(p.get('viewCount') or 0)
-
+        total_shares += int(p.get('shareCount') or 0)
+        total_views += int(p.get('viewCount') or 0)
         ts = p.get('timestamp')
         if ts:
             try:
@@ -75,14 +65,12 @@ def calculate_engagement_metrics(posts: List[Dict[str, Any]]):
                 day = 'unknown'
         else:
             day = 'unknown'
-
         d = by_day[day]
-        d['likes']    += int(p.get('likesCount') or 0)
+        d['likes'] += int(p.get('likesCount') or 0)
         d['comments'] += int(p.get('commentsCount') or 0)
-        d['shares']   += int(p.get('shareCount') or 0)
-        d['views']    += int(p.get('viewCount') or 0)
-        d['count']    += 1
-
+        d['shares'] += int(p.get('shareCount') or 0)
+        d['views'] += int(p.get('viewCount') or 0)
+        d['count'] += 1
     post_count = len(posts) or 1
     avg_eng = (total_likes + total_comments + total_shares) / post_count
     trend = [{
@@ -91,22 +79,15 @@ def calculate_engagement_metrics(posts: List[Dict[str, Any]]):
         'avg_views': round(vals['views']/max(1, vals['count']), 2),
         'posts': vals['count']
     } for day, vals in sorted(by_day.items())]
-
-    er = round(((total_likes + total_comments + total_shares) / total_views * 100.0), 2) if total_views > 0 else 0.0
-
+    er = round(((total_likes + total_comments + total_shares) / total_views * 100.0), 2) if total_views>0 else 0.0
     return {
-        'totals': {
-            'likes': total_likes, 'comments': total_comments, 'shares': total_shares,
-            'views': total_views, 'posts': len(posts)
-        },
+        'totals': {'likes': total_likes, 'comments': total_comments, 'shares': total_shares, 'views': total_views, 'posts': len(posts)},
         'averages': {'engagement_per_post': round(avg_eng, 2)},
         'engagement_rate_percent': er,
         'trend': trend
     }
 
-# --- cultural signals ---------------------------------------------------------
 def identify_cultural_moments(posts: List[Dict[str, Any]]):
-    """Detect cultural events and trends from social data (caption/description)"""
     moments = []
     keywords = [
         ('Hispanic Heritage', ['hispanic','latino','latinx','mexico']),
@@ -114,21 +95,18 @@ def identify_cultural_moments(posts: List[Dict[str, Any]]):
         ('Streetwear Heritage', ['archive','throwback','y2k','heritage']),
     ]
     for p in posts:
-        full_text = f"{p.get('caption','')} {p.get('description','')}"
-        tl = full_text.lower()
-        hit = [label for label, keys in keywords if any(k in tl for k in keys)]
+        text = f"{p.get('caption','')} {p.get('description','')}".lower()
+        hit = [label for label, keys in keywords if any(k in text for k in keys)]
         if hit:
             moments.append({
                 'timestamp': p.get('timestamp'),
                 'url': p.get('url'),
                 'labels': sorted(set(hit)),
-                'summary': full_text[:200].replace('\n', ' ')
+                'summary': (p.get('caption') or p.get('description') or '')[:200]
             })
     return moments
 
-# --- competitive share-of-voice ----------------------------------------------
 def competitive_analysis(data: Dict[str, Any]):
-    """Analyze competitive positioning via brand mention hits in text"""
     posts = data.get('all_posts', [])
     brand_mentions = Counter()
     competitors = [
@@ -137,19 +115,15 @@ def competitive_analysis(data: Dict[str, Any]):
         'off-white','purple brand','stussy','billionaire boys club'
     ]
     for p in posts:
-        tl = f"{p.get('caption','')} {p.get('description','')}".lower()
+        text = f"{p.get('caption','')} {p.get('description','')}".lower()
         for c in competitors:
-            if c in tl:
+            if c in text:
                 brand_mentions[c] += 1
-
     total = sum(brand_mentions.values()) or 1
-    comp = [{'brand': b.title(), 'mentions': n, 'share_pct': round(n*100/total, 2)}
-            for b, n in brand_mentions.most_common()]
+    comp = [{'brand': b.title(), 'mentions': n, 'share_pct': round(n*100/total, 2)} for b, n in brand_mentions.most_common()]
     return {'brand_mentions': comp, 'notes': 'Mentions parsed from captions/descriptions.'}
 
-# --- report snapshot ----------------------------------------------------------
 def generate_intelligence_report(data: Dict[str, Any]):
-    """Create export-ready intelligence report (JSON)"""
     return {
         'generated_at': datetime.now(timezone.utc).isoformat(),
         'summary': {
@@ -166,7 +140,6 @@ def generate_intelligence_report(data: Dict[str, Any]):
         ]
     }
 
-# Optional explicit export list (prevents import surprises)
 __all__ = [
     'load_jsonl_data',
     'analyze_hashtags',
