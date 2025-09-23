@@ -1,4 +1,3 @@
-from datetime import date
 from db import SessionLocal, Agency, AgencyProject
 from sqlalchemy import select
 
@@ -16,7 +15,7 @@ def load_agency():
                 "budget_used": ag.budget_used,
                 "on_time_delivery": ag.on_time_delivery,
                 "quality_score": ag.quality_score,
-                "next_phase_requirements": [],   # Optional: compute from phase
+                "next_phase_requirements": [],
                 "deliverables_breakdown": {
                     "completed": [p.name for p in projs if p.status=="completed"],
                     "in_progress": [p.name for p in projs if p.status=="in_progress"],
