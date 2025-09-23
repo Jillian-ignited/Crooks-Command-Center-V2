@@ -1,12 +1,14 @@
-import os, json, glob
-from datetime import datetime, date
+import os, json, glob, traceback
+from datetime import date
 from flask import Flask, jsonify, render_template, request, send_file, abort, Response, send_from_directory
+from flask_cors import CORS
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from sqlalchemy import select
 
 from db import init_db, SessionLocal, Asset, CalendarEvent, Agency, AgencyProject
 from asset_manager import (
     load_catalog, categorize_assets, generate_thumbnails,
-    handle_file_upload, serve_file_download, map_assets_to_campaigns
+    handle_file_upload, serve_file_download, map_assets_to_campaigns, UPLOAD_DIR
 )
 from data_processor import (
     load_jsonl_data, analyze_hashtags, calculate_engagement_metrics,
@@ -15,12 +17,22 @@ from data_processor import (
 from calendar_engine import load_calendar
 from agency_tracker import load_agency
 
-APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.environ.get('CCC_UPLOAD_DIR', 'uploads')
-
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB
+CORS(app)
+
+# Limits
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 init_db()
+
+# ---------- Error handler: JSON for /api/* ----------
+@app.errorhandler(Exception)
+def json_api_errors(e):
+    if request.path.startswith('/api/'):
+        code = 500
+        if isinstance(e, RequestEntityTooLarge): code = 413
+        elif isinstance(e, HTTPException): code = e.code or 500
+        return jsonify({'error': type(e).__name__, 'detail': str(e)}), code
+    raise e
 
 # ---------- UI ----------
 @app.route('/')
@@ -58,17 +70,24 @@ def _collect_posts():
             all_posts.extend(rows)
     return all_posts
 
-# ---------- intelligence ----------
+# ---------- Intelligence ----------
 @app.route('/api/intelligence')
 def api_intelligence():
     posts = _collect_posts()
-    return jsonify({
+    payload = {
         'engagement': calculate_engagement_metrics(posts),
         'hashtags': analyze_hashtags(posts),
         'cultural_moments': identify_cultural_moments(posts),
         'competitive': competitive_analysis({'all_posts': posts}),
         'posts_count': len(posts)
-    })
+    }
+    if request.args.get('debug'):
+        payload['_debug'] = {
+            'upload_dir': UPLOAD_DIR,
+            'jsonl_found': glob.glob(os.path.join(UPLOAD_DIR, '*.jsonl')) + glob.glob(os.path.join(UPLOAD_DIR, 'intel', '*.jsonl')),
+            'json_found': glob.glob(os.path.join(UPLOAD_DIR, '*.json')) + glob.glob(os.path.join(UPLOAD_DIR, 'intel', '*.json'))
+        }
+    return jsonify(payload)
 
 @app.route('/api/reports/generate')
 def api_report_generate():
@@ -86,13 +105,13 @@ def api_report_generate():
         json.dump(report, f, indent=2)
     return send_file(out_path, as_attachment=True, download_name='intelligence_report.json')
 
-# ---------- assets ----------
+# ---------- Assets ----------
 @app.route('/api/assets')
 def api_assets():
     cat = load_catalog()
-    image_files = [a['path'] for a in cat.get('assets', []) if a.get('type') == 'images' and not a.get('thumbnail')]
-    if image_files:
-        generate_thumbnails(image_files)
+    image_or_video = [a['path'] for a in cat.get('assets', []) if a.get('type') in ('images','videos') and not a.get('thumbnail')]
+    if image_or_video:
+        generate_thumbnails(image_or_video)
         cat = load_catalog()
     grouped = categorize_assets(cat.get('assets', []))
     return jsonify({'catalog': cat, 'groups': grouped})
@@ -109,12 +128,12 @@ def api_upload():
     results = [handle_file_upload(f) for f in files]
     return jsonify({'results': results})
 
-# ---------- calendar (DB) ----------
+# ---------- Calendar ----------
 @app.route('/api/calendar/<view>')
 def api_calendar_view(view):
     cal = load_calendar()
     if view not in cal:
-        return jsonify({'error': 'invalid view'}), 400
+        return jsonify({'error': 'invalid_view'}), 400
     mapping = map_assets_to_campaigns(load_catalog().get('assets', []), cal)
     return jsonify({'view': view, 'events': cal[view], 'mapping': mapping})
 
@@ -122,7 +141,6 @@ def api_calendar_view(view):
 def api_calendar_all():
     if request.method == 'GET':
         return jsonify(load_calendar())
-    # create event
     data = request.get_json(force=True)
     ev = CalendarEvent(
         date=date.fromisoformat(data['date']),
@@ -175,12 +193,11 @@ def api_calendar_export():
     return Response(buf.getvalue(), mimetype='text/csv',
                     headers={'Content-Disposition':'attachment; filename=calendar_export.csv'})
 
-# ---------- agency (DB) ----------
+# ---------- Agency ----------
 @app.route('/api/agency', methods=['GET','POST'])
 def api_agency():
     if request.method == 'GET':
         return jsonify(load_agency())
-    # create agency
     data = request.get_json(force=True)
     ag = Agency(
         name=data['name'], phase=int(data.get('phase',1)),
@@ -248,6 +265,3 @@ def api_agency_export():
                             (pr.due_date.isoformat() if pr.due_date else '')])
         return Response(buf.getvalue(), mimetype='text/csv',
                         headers={'Content-Disposition':'attachment; filename=agency_export.csv'})
-
-if __name__ == '__main__':
-    app.run(debug=True)
