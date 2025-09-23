@@ -8,7 +8,6 @@ textblob==0.17.1
 nltk==3.8.1
 vaderSentiment==3.3.2
 Werkzeug==3.0.1
-Flask-Cors==4.0.1
 sqlalchemy==1.4.53
 psycopg2-binary==2.9.7
 Flask-CORS==4.0.0
