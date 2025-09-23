@@ -657,5 +657,23 @@
         
         console.log('Dashboard JavaScript initialized');
     </script>
+    <script>
+// Auto-load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, initializing dashboard...');
+    
+    // Load overview data automatically
+    fetch('/api/overview')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Overview data loaded:', data);
+            // Your existing code will handle displaying this data
+        })
+        .catch(error => {
+            console.error('Error loading overview:', error);
+        });
+});
+</script>
+
 </body>
 </html>
