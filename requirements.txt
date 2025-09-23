@@ -9,4 +9,4 @@ nltk==3.8.1
 vaderSentiment==3.3.2
 Werkzeug==3.0.1
 Flask-Cors==4.0.1
-sqlalchemy==2.0.23
+sqlalchemy==1.4.53
