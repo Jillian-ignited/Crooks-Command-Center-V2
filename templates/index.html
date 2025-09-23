@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CROOKS & CASTLES — COMMAND CENTER V2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Optional custom CSS if you have one -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    /* Minimal dark theme so it looks clean even without your CSS file */
+    :root{
+      --crooks-primary:#ff6b35; --crooks-secondary:#1a1a1a; --crooks-accent:#ffd700;
+      --crooks-dark:#0d0d0d; --crooks-light:#f5f5f5; --crooks-success:#28a745;
+    }
+    *{box-sizing:border-box} body{margin:0;background:#0d0d0d;color:#f5f5f5;font:14px/1.5 system-ui,-apple-system,'Segoe UI',Roboto}
+    header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#111;border-bottom:1px solid #222;position:sticky;top:0;z-index:10}
+    .brand .logo{font-weight:800;letter-spacing:.5px;margin-right:8px}
+    .brand .badge{font-weight:700;color:#ff6b35}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tabs .tab{background:#1a1a1a;color:#f5f5f5;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;cursor:pointer}
+    .tabs .tab.active{background:#ff6b35;color:#0d0d0d;border-color:#ff6b35}
+    main{max-width:1200px;margin:18px auto;padding:0 12px}
+    .panel{display:none;gap:16px}
+    .panel.active{display:block}
+    .card{background:#121212;border:1px solid #222;border-radius:12px;padding:14px;margin:12px 0}
+    h2{margin:0 0 10px 0;font-size:18px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;white-space:pre-wrap;background:#0f0f0f;border:1px solid #222;border-radius:8px;padding:10px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+    .list .item,.asset{border:1px solid #222;border-radius:10px;padding:10px;background:#151515}
+    .asset img{display:block;width:100%;height:140px;object-fit:cover;border-radius:8px;margin-bottom:8px;background:#0f0f0f}
+    .meta{opacity:.8;font-size:12px}
+    .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid #333;background:#1a1a1a;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
+    .btn.small{padding:6px 10px;font-size:12px}
+    .btn.primary{background:#ff6b35;color:#0d0d0d;border-color:#ff6b35}
+    .view-switch{display:flex;gap:8px;flex-wrap:wrap}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1 1 260px}
+    .dropzone{border:2px dashed #333;border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:#111}
+    .dropzone.drag{border-color:#ff6b35;background:#14110f}
+    footer{padding:18px;text-align:center;color:#999}
+    input,textarea{width:100%;background:#0f0f0f;border:1px solid #333;border-radius:8px;padding:8px;color:#fff}
+    form .btn{margin-top:8px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">CROOKS & CASTLES</span>
+      <span class="badge">COMMAND CENTER</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="intelligence"><i class="fa-solid fa-chart-line"></i> Intelligence</button>
+      <button class="tab" data-tab="assets"><i class="fa-solid fa-folder-open"></i> Assets</button>
+      <button class="tab" data-tab="calendar"><i class="fa-solid fa-calendar"></i> Calendar</button>
+      <button class="tab" data-tab="agency"><i class="fa-solid fa-briefcase"></i> Agency</button>
+      <button class="tab" data-tab="upload"><i class="fa-solid fa-upload"></i> Upload</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Intelligence -->
+    <section id="intelligence" class="panel active">
+      <div class="card">
+        <h2>Engagement Overview</h2>
+        <pre id="intel-metrics" class="mono">Loading…</pre>
+      </div>
+      <div class="card">
+        <h2>Top Hashtags</h2>
+        <div id="hashtags" class="grid"></div>
+      </div>
+      <div class="card">
+        <h2>Cultural Moments</h2>
+        <div id="moments" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Competitive Mentions</h2>
+        <div id="competitors" class="list"></div>
+      </div>
+      <div class="card">
+        <button id="btn-generate-report" class="btn primary"><i class="fa-solid fa-file-export"></i> Generate Intelligence Report</button>
+      </div>
+    </section>
+
+    <!-- Assets -->
+    <section id="assets" class="panel">
+      <div class="card">
+        <h2>Asset Library</h2>
+        <div id="asset-grid" class="grid"></div>
+      </div>
+    </section>
+
+    <!-- Calendar -->
+    <section id="calendar" class="panel">
+      <div class="card">
+        <div class="row" style="align-items:center;justify-content:space-between">
+          <h2>Strategic Calendar</h2>
+          <div class="view-switch">
+            <a id="btn-cal-export" class="btn small" href="/api/calendar/export.csv"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+            <button data-view="7_day_view" class="btn small">7 Day</button>
+            <button data-view="30_day_view" class="btn small">30 Day</button>
+            <button data-view="60_day_view" class="btn small">60 Day</button>
+            <button data-view="90_day_view" class="btn small">90 Day</button>
+          </div>
+        </div>
+        <div id="calendar-events" class="list"></div>
+      </div>
+
+      <!-- Minimal inline admin to add events (DB-backed) -->
+      <div class="card">
+        <h2>Add Calendar Event</h2>
+        <form id="form-add-event" class="row">
+          <input name="date" type="date" required>
+          <input name="title" type="text" placeholder="Title" required>
+          <input name="status" type="text" placeholder="Status (assets_ready/in_production/…)" />
+          <button class="btn small" type="submit">Add</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Agency -->
+    <section id="agency" class="panel">
+      <div class="card">
+        <div class="row" style="align-items:center;justify-content:space-between">
+          <h2>Agency Tracking — High Voltage Digital</h2>
+          <a id="btn-agency-export" class="btn small" href="/api/agency/export.csv"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+        </div>
+        <pre id="agency-data" class="mono">Loading…</pre>
+      </div>
+
+      <!-- Minimal inline admin to add a project (DB-backed) -->
+      <div class="card">
+        <h2>Add Agency Project</h2>
+        <form id="form-add-project" class="row">
+          <input name="agency_id" type="number" placeholder="Agency ID" required>
+          <input name="name" type="text" placeholder="Project name" required>
+          <input name="due_date" type="date">
+          <button class="btn small" type="submit">Add</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Uploads -->
+    <section id="upload" class="panel">
+      <div class="card">
+        <h2>Upload Files</h2>
+        <div id="drop" class="dropzone">Drag & drop files here, or click to select</div>
+        <input id="file-input" type="file" multiple hidden>
+        <div id="upload-results" class="list" style="margin-top:10px"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>Built for CROOKS — Discipline × Disruption.</footer>
+
+  <!-- cache-bust to avoid stale JS on redeploys -->
+  <script src="/static/js/app.js?v=20250923-cc2"></script>
+</body>
+</html>
