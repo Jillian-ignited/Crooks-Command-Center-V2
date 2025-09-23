@@ -1,8 +1,0 @@
-Flask==2.3.3
-Flask-Cors==4.0.1
-Werkzeug==2.3.7
-Pillow==11.0.0
-gunicorn==21.2.0
-SQLAlchemy==2.0.32
-psycopg[binary]==3.2.10
-
