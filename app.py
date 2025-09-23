@@ -98,6 +98,8 @@ except Exception as e:
     data_processor = None
 
 # All imports configured with fallbacks
+def get_asset_stats(): 
+    return {'total_assets': 0, 'categories': {}, 'recent_uploads': []}
 
 # Setup NLTK data for TextBlob functionality
 try:
