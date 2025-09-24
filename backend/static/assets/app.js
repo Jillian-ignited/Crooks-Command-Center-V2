@@ -1,7 +1,5 @@
 (function(){
-  // Same-origin calls (the UI is served by FastAPI)
-  window.API_BASE = "";
-
+  // Same-origin API calls (UI served by FastAPI)
   async function jsonFetch(url, options={}){
     const res = await fetch(url, options);
     if(!res.ok){
@@ -10,6 +8,5 @@
     }
     return await res.json();
   }
-
   window.ccc = { jsonFetch };
 })();
