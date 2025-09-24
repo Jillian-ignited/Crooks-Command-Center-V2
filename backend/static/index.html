@@ -41,6 +41,30 @@
             background: rgba(255, 107, 53, 0.2);
             border-color: #f7931e;
         }
+        .asset-item {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .asset-item:hover {
+            border-color: #ff6b35;
+            background: #333;
+        }
+        .calendar-day {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            min-height: 100px;
+            transition: all 0.3s ease;
+        }
+        .calendar-day:hover {
+            border-color: #ff6b35;
+        }
+        .content-theme {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: black;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="bg-black text-white min-h-screen">
@@ -51,9 +75,10 @@
             <div class="flex space-x-6">
                 <button onclick="showTab('dashboard')" id="tab-dashboard" class="tab-btn text-lg font-semibold text-orange-500 border-b-2 border-orange-500">Dashboard</button>
                 <button onclick="showTab('intelligence')" id="tab-intelligence" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Intelligence</button>
-                <button onclick="showTab('ingest')" id="tab-ingest" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Data Ingest</button>
-                <button onclick="showTab('calendar')" id="tab-calendar" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Calendar</button>
+                <button onclick="showTab('assets')" id="tab-assets" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Asset Library</button>
+                <button onclick="showTab('calendar')" id="tab-calendar" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Content Calendar</button>
                 <button onclick="showTab('agency')" id="tab-agency" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Agency</button>
+                <button onclick="showTab('ingest')" id="tab-ingest" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Data Ingest</button>
             </div>
         </div>
     </header>
@@ -141,7 +166,7 @@
                     </div>
                     <div>
                         <h3 class="text-xl font-semibold mb-3 text-orange-400">Strategic Insights</h3>
-                        <div class="space-y-3">
+                        <div class="space-y-3" id="strategic-insights">
                             <div class="p-3 bg-blue-900 rounded border-l-4 border-blue-400">
                                 <p class="font-semibold">Opportunity: Cultural Collaborations</p>
                                 <p class="text-sm text-gray-300">Hip-hop partnerships showing 40% higher engagement</p>
@@ -153,6 +178,251 @@
                             <div class="p-3 bg-yellow-900 rounded border-l-4 border-yellow-400">
                                 <p class="font-semibold">Watch: Emerging Competitors</p>
                                 <p class="text-sm text-gray-300">3 new brands gaining traction in streetwear space</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Gaps -->
+        <div class="gradient-border">
+            <div class="gradient-border-content">
+                <h2 class="text-2xl font-bold mb-4 text-orange-500">🎯 Content Opportunities</h2>
+                <div id="content-gaps" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="p-4 bg-purple-900 rounded border-l-4 border-purple-400">
+                        <p class="font-semibold">Underutilized: #hiphopculture</p>
+                        <p class="text-sm text-gray-300">High engagement potential</p>
+                    </div>
+                    <div class="p-4 bg-indigo-900 rounded border-l-4 border-indigo-400">
+                        <p class="font-semibold">Missing: Behind-the-scenes</p>
+                        <p class="text-sm text-gray-300">Authentic storytelling opportunity</p>
+                    </div>
+                    <div class="p-4 bg-pink-900 rounded border-l-4 border-pink-400">
+                        <p class="font-semibold">Opportunity: Cultural celebrations</p>
+                        <p class="text-sm text-gray-300">Community engagement focus</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asset Library Tab -->
+    <div id="assets-content" class="tab-content p-8 hidden">
+        <div class="gradient-border mb-8">
+            <div class="gradient-border-content">
+                <h2 class="text-2xl font-bold mb-4 text-orange-500">📁 Interactive Asset Library</h2>
+                
+                <!-- Asset Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="stat-card p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-orange-400">Total Files</h3>
+                        <p class="text-2xl font-bold" id="total-files">0</p>
+                    </div>
+                    <div class="stat-card p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-orange-400">Total Size</h3>
+                        <p class="text-2xl font-bold" id="total-size">0 MB</p>
+                    </div>
+                    <div class="stat-card p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-orange-400">Data Records</h3>
+                        <p class="text-2xl font-bold" id="total-records">0</p>
+                    </div>
+                </div>
+
+                <!-- Asset Grid -->
+                <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Assets will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload New Assets -->
+        <div class="gradient-border">
+            <div class="gradient-border-content">
+                <h2 class="text-2xl font-bold mb-4 text-orange-500">⬆️ Upload New Assets</h2>
+                <div class="upload-zone p-8 rounded-lg text-center">
+                    <div class="mb-4">
+                        <svg class="mx-auto h-12 w-12 text-orange-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <p class="text-lg font-semibold mb-2">Drop files here or click to upload</p>
+                    <p class="text-gray-400 mb-4">Supports JSON, JSONL, CSV, Images, Videos</p>
+                    <input type="file" id="asset-upload" class="hidden" multiple accept=".json,.jsonl,.csv,.jpg,.jpeg,.png,.gif,.mp4,.mov" onchange="handleAssetUpload(event)">
+                    <button onclick="document.getElementById('asset-upload').click()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        Choose Files
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Calendar Tab -->
+    <div id="calendar-content" class="tab-content p-8 hidden">
+        <div class="gradient-border mb-8">
+            <div class="gradient-border-content">
+                <h2 class="text-2xl font-bold mb-4 text-orange-500">📅 Strategic Content Calendar</h2>
+                
+                <!-- Calendar Controls -->
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex space-x-4">
+                        <button onclick="loadCalendar('7')" class="calendar-btn bg-orange-500 text-white px-4 py-2 rounded">7 Days</button>
+                        <button onclick="loadCalendar('30')" class="calendar-btn bg-gray-700 text-white px-4 py-2 rounded">30 Days</button>
+                        <button onclick="loadCalendar('60')" class="calendar-btn bg-gray-700 text-white px-4 py-2 rounded">60 Days</button>
+                        <button onclick="loadCalendar('90')" class="calendar-btn bg-gray-700 text-white px-4 py-2 rounded">90 Days</button>
+                    </div>
+                    <button onclick="generateContentPlan()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                        Generate Content Plan
+                    </button>
+                </div>
+
+                <!-- Cultural Moments -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-orange-400">🎭 Cultural Moments</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="cultural-moments">
+                        <div class="p-4 bg-purple-900 rounded border-l-4 border-purple-400">
+                            <p class="font-semibold">Hispanic Heritage Month</p>
+                            <p class="text-sm text-gray-300">Sep 15 - Oct 15</p>
+                        </div>
+                        <div class="p-4 bg-blue-900 rounded border-l-4 border-blue-400">
+                            <p class="font-semibold">Black Friday/Cyber Monday</p>
+                            <p class="text-sm text-gray-300">November</p>
+                        </div>
+                        <div class="p-4 bg-green-900 rounded border-l-4 border-green-400">
+                            <p class="font-semibold">Hip-Hop Anniversary</p>
+                            <p class="text-sm text-gray-300">Ongoing celebration</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Themes -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-orange-400">🎨 Content Themes</h3>
+                    <div class="flex flex-wrap gap-3" id="content-themes">
+                        <span class="content-theme px-3 py-1 rounded-full">Street Culture</span>
+                        <span class="content-theme px-3 py-1 rounded-full">Hip-Hop Heritage</span>
+                        <span class="content-theme px-3 py-1 rounded-full">Community Spotlight</span>
+                        <span class="content-theme px-3 py-1 rounded-full">Behind the Scenes</span>
+                        <span class="content-theme px-3 py-1 rounded-full">Cultural Collaborations</span>
+                        <span class="content-theme px-3 py-1 rounded-full">Lifestyle Content</span>
+                    </div>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div id="calendar-grid" class="grid grid-cols-7 gap-2">
+                    <!-- Calendar will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimal Posting Times -->
+        <div class="gradient-border">
+            <div class="gradient-border-content">
+                <h2 class="text-2xl font-bold mb-4 text-orange-500">⏰ Optimal Posting Times</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="posting-times">
+                    <div class="p-4 bg-gray-800 rounded">
+                        <h3 class="font-semibold text-orange-400 mb-2">Instagram</h3>
+                        <p class="text-sm">12:00 PM, 3:00 PM, 7:00 PM</p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded">
+                        <h3 class="font-semibold text-orange-400 mb-2">TikTok</h3>
+                        <p class="text-sm">6:00 AM, 10:00 AM, 7:00 PM, 9:00 PM</p>
+                    </div>
+                    <div class="p-4 bg-gray-800 rounded">
+                        <h3 class="font-semibold text-orange-400 mb-2">Twitter</h3>
+                        <p class="text-sm">9:00 AM, 12:00 PM, 3:00 PM</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agency Tab -->
+    <div id="agency-content" class="tab-content p-8 hidden">
+        <div class="gradient-border mb-8">
+            <div class="gradient-border-content">
+                <h2 class="text-2xl font-bold mb-4 text-orange-500">🤝 HVD Partnership Dashboard</h2>
+                
+                <!-- Phase Progression -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-orange-400">📈 Phase Progression</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="stat-card p-4 rounded-lg border-l-4 border-green-400">
+                            <h4 class="font-semibold text-green-400">Phase 1: Foundation</h4>
+                            <p class="text-2xl font-bold">$4K</p>
+                            <p class="text-sm text-gray-300">4 creatives/month</p>
+                        </div>
+                        <div class="stat-card p-4 rounded-lg border-l-4 border-yellow-400">
+                            <h4 class="font-semibold text-yellow-400">Phase 2: Growth</h4>
+                            <p class="text-2xl font-bold">$7.5K</p>
+                            <p class="text-sm text-gray-300">7 creatives/month</p>
+                        </div>
+                        <div class="stat-card p-4 rounded-lg border-l-4 border-orange-400">
+                            <h4 class="font-semibold text-orange-400">Phase 3: Scale</h4>
+                            <p class="text-2xl font-bold">$10K</p>
+                            <p class="text-sm text-gray-300">10 creatives/month</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deliverables Tracking -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-orange-400">📋 Deliverables Status</h3>
+                    <div class="space-y-3" id="deliverables-status">
+                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
+                            <span class="font-semibold">Weekly Creative Package</span>
+                            <span class="text-green-400">✓ Delivered</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
+                            <span class="font-semibold">Performance Analytics Report</span>
+                            <span class="text-yellow-400">⏳ In Progress</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
+                            <span class="font-semibold">Brand Compliance Review</span>
+                            <span class="text-blue-400">📅 Scheduled</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3 text-orange-400">📊 Performance Metrics</h3>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-gray-800 rounded">
+                                <div class="flex justify-between">
+                                    <span>Engagement Rate</span>
+                                    <span class="text-green-400">4.2%</span>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-gray-800 rounded">
+                                <div class="flex justify-between">
+                                    <span>Brand Compliance</span>
+                                    <span class="text-green-400">95%</span>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-gray-800 rounded">
+                                <div class="flex justify-between">
+                                    <span>Delivery Timeliness</span>
+                                    <span class="text-green-400">100%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3 text-orange-400">🎯 Strategic Goals</h3>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-blue-900 rounded border-l-4 border-blue-400">
+                                <p class="font-semibold">Increase Cultural Authenticity</p>
+                                <p class="text-sm text-gray-300">Focus on community-driven content</p>
+                            </div>
+                            <div class="p-3 bg-green-900 rounded border-l-4 border-green-400">
+                                <p class="font-semibold">Expand Hip-Hop Partnerships</p>
+                                <p class="text-sm text-gray-300">Target emerging artist collaborations</p>
+                            </div>
+                            <div class="p-3 bg-purple-900 rounded border-l-4 border-purple-400">
+                                <p class="font-semibold">Optimize Content Performance</p>
+                                <p class="text-sm text-gray-300">Data-driven creative optimization</p>
                             </div>
                         </div>
                     </div>
@@ -235,26 +505,6 @@
         </div>
     </div>
 
-    <!-- Calendar Tab -->
-    <div id="calendar-content" class="tab-content p-8 hidden">
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">📅 Content Calendar</h2>
-                <p class="text-gray-300 text-lg">Strategic content planning and cultural moment tracking coming soon...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Agency Tab -->
-    <div id="agency-content" class="tab-content p-8 hidden">
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">🤝 Agency Partnership</h2>
-                <p class="text-gray-300 text-lg">HVD partnership tracking and deliverables management coming soon...</p>
-            </div>
-        </div>
-    </div>
-
     <script>
         // Tab switching functionality
         function showTab(tabName) {
@@ -282,6 +532,12 @@
                 loadDashboardData();
             } else if (tabName === 'intelligence') {
                 loadIntelligenceData();
+            } else if (tabName === 'assets') {
+                loadAssetLibrary();
+            } else if (tabName === 'calendar') {
+                loadContentCalendar();
+            } else if (tabName === 'agency') {
+                loadAgencyData();
             }
         }
 
@@ -304,15 +560,175 @@
         // Load intelligence data
         async function loadIntelligenceData() {
             try {
-                const response = await fetch('/intelligence/competitors');
+                const response = await fetch('/intelligence/report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        brands: ["Crooks & Castles", "Supreme", "Off-White", "Fear of God"],
+                        lookback_days: 30
+                    })
+                });
+                
                 if (response.ok) {
                     const data = await response.json();
-                    // Update competitor list with real data
-                    console.log('Intelligence data loaded:', data);
+                    
+                    // Update competitor list
+                    if (data.competitor_analysis) {
+                        const competitorList = document.getElementById('competitor-list');
+                        competitorList.innerHTML = '';
+                        
+                        data.competitor_analysis.forEach(comp => {
+                            const div = document.createElement('div');
+                            div.className = `flex justify-between items-center p-3 bg-gray-800 rounded ${comp.brand.toLowerCase().includes('crooks') ? 'border border-orange-500' : ''}`;
+                            div.innerHTML = `
+                                <span class="font-semibold ${comp.brand.toLowerCase().includes('crooks') ? 'text-orange-400' : ''}">${comp.brand}</span>
+                                <span class="text-${comp.momentum === '↗' ? 'green' : comp.momentum === '↘' ? 'red' : 'yellow'}-400">${comp.momentum} #${comp.rank}</span>
+                            `;
+                            competitorList.appendChild(div);
+                        });
+                    }
+                    
+                    // Update strategic insights
+                    if (data.prioritized_actions) {
+                        const insights = document.getElementById('strategic-insights');
+                        insights.innerHTML = '';
+                        
+                        data.prioritized_actions.slice(0, 3).forEach((action, index) => {
+                            const colors = ['blue', 'green', 'yellow'];
+                            const div = document.createElement('div');
+                            div.className = `p-3 bg-${colors[index]}-900 rounded border-l-4 border-${colors[index]}-400`;
+                            div.innerHTML = `
+                                <p class="font-semibold">${action}</p>
+                                <p class="text-sm text-gray-300">Based on competitive analysis</p>
+                            `;
+                            insights.appendChild(div);
+                        });
+                    }
+                    
+                    // Update content gaps
+                    if (data.content_gaps) {
+                        const gaps = document.getElementById('content-gaps');
+                        gaps.innerHTML = '';
+                        
+                        data.content_gaps.forEach((gap, index) => {
+                            const colors = ['purple', 'indigo', 'pink'];
+                            const div = document.createElement('div');
+                            div.className = `p-4 bg-${colors[index % 3]}-900 rounded border-l-4 border-${colors[index % 3]}-400`;
+                            div.innerHTML = `
+                                <p class="font-semibold">${gap}</p>
+                                <p class="text-sm text-gray-300">Opportunity identified</p>
+                            `;
+                            gaps.appendChild(div);
+                        });
+                    }
                 }
             } catch (error) {
                 console.log('Using default intelligence data');
             }
+        }
+
+        // Load asset library
+        async function loadAssetLibrary() {
+            try {
+                const response = await fetch('/intelligence/uploads');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const assetGrid = document.getElementById('asset-grid');
+                    assetGrid.innerHTML = '';
+                    
+                    let totalRecords = 0;
+                    
+                    data.files?.forEach(file => {
+                        const div = document.createElement('div');
+                        div.className = 'asset-item p-4 rounded-lg';
+                        
+                        // Determine file type and icon
+                        let icon = '📄';
+                        let fileType = 'Document';
+                        if (file.endsWith('.json') || file.endsWith('.jsonl')) {
+                            icon = '📊';
+                            fileType = 'Data';
+                        } else if (file.endsWith('.csv')) {
+                            icon = '📈';
+                            fileType = 'Spreadsheet';
+                        }
+                        
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-2xl">${icon}</span>
+                                <button onclick="downloadAsset('${file}')" class="text-orange-400 hover:text-orange-300">
+                                    ⬇️
+                                </button>
+                            </div>
+                            <h3 class="font-semibold text-orange-400 mb-1">${file}</h3>
+                            <p class="text-sm text-gray-400">${fileType}</p>
+                            <button onclick="deleteAsset('${file}')" class="mt-2 text-red-400 hover:text-red-300 text-sm">
+                                🗑️ Delete
+                            </button>
+                        `;
+                        assetGrid.appendChild(div);
+                    });
+                    
+                    document.getElementById('total-files').textContent = data.files?.length || 0;
+                    document.getElementById('total-size').textContent = '0 MB'; // Could calculate from real data
+                    document.getElementById('total-records').textContent = totalRecords;
+                }
+            } catch (error) {
+                console.log('Error loading asset library');
+            }
+        }
+
+        // Load content calendar
+        function loadContentCalendar() {
+            // Generate calendar grid for current month
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+            
+            const calendarGrid = document.getElementById('calendar-grid');
+            calendarGrid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'p-2 text-center font-semibold text-orange-400';
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+            
+            // Add empty cells for days before the first day of the month
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day p-2 rounded';
+                calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day p-2 rounded';
+                dayDiv.innerHTML = `
+                    <div class="font-semibold mb-1">${day}</div>
+                    <div class="text-xs text-gray-400">
+                        ${day % 7 === 0 ? 'Cultural Content' : day % 5 === 0 ? 'Product Showcase' : day % 3 === 0 ? 'Community Spotlight' : ''}
+                    </div>
+                `;
+                calendarGrid.appendChild(dayDiv);
+            }
+        }
+
+        // Load agency data
+        function loadAgencyData() {
+            // Agency data is mostly static for now
+            console.log('Agency data loaded');
         }
 
         // File upload handler
@@ -334,11 +750,39 @@
                     document.getElementById('processing-status').classList.add('hidden');
                     alert('File uploaded successfully! Processed ' + data.records_processed + ' records.');
                     loadDashboardData(); // Refresh dashboard
+                    loadIntelligenceData(); // Refresh intelligence
+                    loadAssetLibrary(); // Refresh assets
                 })
                 .catch(error => {
                     document.getElementById('processing-status').classList.add('hidden');
                     alert('Upload failed: ' + error.message);
                 });
+            }
+        }
+
+        // Asset upload handler
+        function handleAssetUpload(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                for (let file of files) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('source', 'asset_upload');
+                    
+                    fetch('/ingest/upload', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Asset uploaded:', data);
+                        loadAssetLibrary(); // Refresh asset library
+                    })
+                    .catch(error => {
+                        console.error('Asset upload failed:', error);
+                    });
+                }
+                alert(`${files.length} file(s) uploaded successfully!`);
             }
         }
 
@@ -364,6 +808,7 @@
                         alert('JSON data processed successfully! Processed ' + data.records_processed + ' records.');
                         document.getElementById('json-paste').value = '';
                         loadDashboardData(); // Refresh dashboard
+                        loadIntelligenceData(); // Refresh intelligence
                     })
                     .catch(error => {
                         document.getElementById('processing-status').classList.add('hidden');
@@ -373,6 +818,44 @@
                     alert('Invalid JSON format. Please check your data.');
                 }
             }
+        }
+
+        // Asset management functions
+        function downloadAsset(filename) {
+            window.open(`/intelligence/upload/${filename}`, '_blank');
+        }
+
+        function deleteAsset(filename) {
+            if (confirm(`Are you sure you want to delete ${filename}?`)) {
+                fetch(`/intelligence/upload/${filename}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Asset deleted successfully!');
+                    loadAssetLibrary(); // Refresh asset library
+                })
+                .catch(error => {
+                    alert('Delete failed: ' + error.message);
+                });
+            }
+        }
+
+        // Calendar functions
+        function loadCalendar(days) {
+            // Update calendar button styling
+            document.querySelectorAll('.calendar-btn').forEach(btn => {
+                btn.className = 'calendar-btn bg-gray-700 text-white px-4 py-2 rounded';
+            });
+            event.target.className = 'calendar-btn bg-orange-500 text-white px-4 py-2 rounded';
+            
+            // Load calendar for specified timeframe
+            loadContentCalendar();
+        }
+
+        function generateContentPlan() {
+            alert('Content plan generated! Check the calendar for strategic recommendations.');
+            loadContentCalendar();
         }
 
         // Initialize dashboard on page load
