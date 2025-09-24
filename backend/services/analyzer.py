@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 from collections import Counter
-from .scraper import load_all_uploaded_frames
+from scraper import load_all_uploaded_frames
 
 def _keyword_extract(texts: List[str], top_k=10) -> List[str]:
     bag = []
