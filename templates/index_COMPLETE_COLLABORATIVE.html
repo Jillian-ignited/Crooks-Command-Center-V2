@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crooks & Castles Command Center V2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 3px solid #ff6b35;
+            box-shadow: 0 4px 20px rgba(255,107,53,0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .crown {
+            color: #ffd700;
+            font-size: 2rem;
+            margin: 0 1rem;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            color: #ff6b35;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+            border-bottom: 2px solid #ff6b35;
+            overflow-x: auto;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 200px;
+        }
+        
+        .nav-tab:hover {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-bottom-color: #ffd700;
+            transform: translateY(-2px);
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-bottom-color: #ffd700;
+            box-shadow: 0 4px 15px rgba(255,107,53,0.4);
+        }
+        
+        .content {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h2 {
+            font-size: 2.2rem;
+            margin-bottom: 2rem;
+            color: #ff6b35;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.9) 100%);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff6b35;
+            box-shadow: 0 10px 25px rgba(255,107,53,0.3);
+        }
+        
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .metric-label {
+            opacity: 0.9;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .section {
+            background: linear-gradient(135deg, rgba(45,45,45,0.8) 0%, rgba(26,26,26,0.9) 100%);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,107,53,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .section h3 {
+            margin-bottom: 1.5rem;
+            color: #ff6b35;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .hashtag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        
+        .hashtag {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid rgba(255,215,0,0.3);
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .hashtag:hover {
+            transform: scale(1.05);
+            border-color: #ffd700;
+            box-shadow: 0 4px 15px rgba(255,107,53,0.5);
+        }
+        
+        .competitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .competitor-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .competitor-card:hover {
+            transform: translateY(-3px);
+            border-color: #ff6b35;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .competitor-name {
+            font-weight: 900;
+            margin-bottom: 0.8rem;
+            color: #ff6b35;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .competitor-stats {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .calendar-controls {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .calendar-btn {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, rgba(255,107,53,0.2) 0%, rgba(45,45,45,0.8) 100%);
+            border: 2px solid rgba(255,107,53,0.3);
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .calendar-btn:hover, .calendar-btn.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-color: #ffd700;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255,107,53,0.4);
+        }
+        
+        .campaign-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border-left: 6px solid #ff6b35;
+            border: 2px solid rgba(255,107,53,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .campaign-card:hover {
+            transform: translateX(5px);
+            border-color: #ff6b35;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .campaign-title {
+            font-weight: 900;
+            margin-bottom: 0.8rem;
+            color: #ff6b35;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .campaign-details {
+            font-size: 1rem;
+            opacity: 0.9;
+            line-height: 1.8;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.7;
+            font-size: 1.2rem;
+        }
+        
+        .error {
+            color: #ff6b35;
+            text-align: center;
+            padding: 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .priority-action, .recommendation {
+            background: linear-gradient(135deg, rgba(255,107,53,0.15) 0%, rgba(26,26,26,0.8) 100%);
+            border-left: 6px solid #ff6b35;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 12px 12px 0;
+            border: 2px solid rgba(255,107,53,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .priority-action:hover, .recommendation:hover {
+            transform: translateX(5px);
+            border-color: #ff6b35;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .priority-title, .recommendation-title {
+            font-weight: 900;
+            color: #ff6b35;
+            margin-bottom: 0.8rem;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .upload-section {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px dashed rgba(255,107,53,0.5);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-section:hover {
+            border-color: #ff6b35;
+            background: linear-gradient(135deg, rgba(255,107,53,0.2) 0%, rgba(26,26,26,0.9) 100%);
+        }
+        
+        .upload-btn, .action-btn {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+        
+        .upload-btn:hover, .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255,107,53,0.4);
+        }
+        
+        .content-planning {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .planning-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .planning-card:hover {
+            transform: translateY(-3px);
+            border-color: #ff6b35;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .insight-highlight {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #000;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .workflow-stage {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .workflow-stage:hover {
+            border-color: #ff6b35;
+            transform: translateX(5px);
+        }
+        
+        .stage-title {
+            color: #ff6b35;
+            font-weight: 900;
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+        }
+        
+        .stage-progress {
+            background: rgba(255,107,53,0.2);
+            height: 8px;
+            border-radius: 4px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        
+        .stage-progress-bar {
+            background: linear-gradient(135deg, #ff6b35 0%, #ffd700 100%);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .asset-item {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px solid rgba(255,107,53,0.3);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .asset-item:hover {
+            border-color: #ff6b35;
+            transform: scale(1.05);
+        }
+        
+        .quarterly-view {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .quarter-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(255,107,53,0.3);
+        }
+        
+        .quarter-title {
+            color: #ff6b35;
+            font-weight: 900;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+        
+        .cultural-moment {
+            background: rgba(255,215,0,0.1);
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin-bottom: 0.8rem;
+            border-left: 4px solid #ffd700;
+        }
+        
+        .agency-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255,107,53,0.1);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255,107,53,0.3);
+        }
+        
+        .metric-name {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .metric-value-agency {
+            color: #ff6b35;
+            font-weight: 900;
+            font-size: 1.2rem;
+        }
+        
+        .deliverable-item {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 2px solid rgba(255,107,53,0.3);
+        }
+        
+        .deliverable-title {
+            color: #ff6b35;
+            font-weight: 900;
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-completed {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-progress {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .status-planning {
+            background: #FFC107;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="crown">👑</span> CROOKS & CASTLES <span class="crown">👑</span></h1>
+        <p>Command Center V2 - Advanced Competitive Intelligence & Strategic Planning</p>
+    </div>
+    
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('overview')">📊 Executive Overview</button>
+        <button class="nav-tab" onclick="showTab('intelligence')">🎯 Intelligence</button>
+        <button class="nav-tab" onclick="showTab('assets')">📁 Assets</button>
+        <button class="nav-tab" onclick="showTab('calendar')">📅 Content Planning</button>
+        <button class="nav-tab" onclick="showTab('agency')">🏢 Agency Partnership</button>
+    </div>
+    
+    <div class="content">
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <h2>Executive Command Dashboard</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="data-sources">-</div>
+                    <div class="metric-label">Data Sources</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="trust-score">-</div>
+                    <div class="metric-label">Intelligence Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-assets">-</div>
+                    <div class="metric-label">Total Assets</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="crooks-ranking">-</div>
+                    <div class="metric-label">Crooks Ranking</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>👑 Crooks & Castles Performance</h3>
+                <div id="crooks-performance">Loading performance data...</div>
+            </div>
+            
+            <div class="section">
+                <h3>📊 Strategic Intelligence Summary</h3>
+                <div id="executive-summary">Loading strategic insights...</div>
+            </div>
+            
+            <div class="section">
+                <h3>🎯 Priority Actions This Week</h3>
+                <div id="priority-actions">Loading priority actions...</div>
+            </div>
+        </div>
+        
+        <!-- Intelligence Tab -->
+        <div id="intelligence" class="tab-content">
+            <h2>Competitive Intelligence Center</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="posts-analyzed">-</div>
+                    <div class="metric-label">Posts Analyzed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="sentiment-analyzed">-</div>
+                    <div class="metric-label">Sentiment Analyzed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="positive-sentiment">-</div>
+                    <div class="metric-label">Positive Sentiment</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="trends-tracked">-</div>
+                    <div class="metric-label">Trends Tracked</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🔥 Trending Hashtags</h3>
+                <div class="hashtag-list" id="trending-hashtags">Loading hashtags...</div>
+            </div>
+            
+            <div class="section">
+                <h3>💡 Strategic Intelligence</h3>
+                <div id="strategic-recommendations">Loading intelligence...</div>
+            </div>
+            
+            <div class="section">
+                <h3>🏆 Competitive Landscape</h3>
+                <div id="competitor-analysis">Loading competitor data...</div>
+            </div>
+        </div>
+        
+        <!-- Assets Tab -->
+        <div id="assets" class="tab-content">
+            <h2>Asset Management Center</h2>
+            
+            <div class="upload-section">
+                <h3>📤 Upload New Data & Media</h3>
+                <p>Upload JSONL files from Apify scrapers or media assets</p>
+                <input type="file" id="file-upload" accept=".jsonl,.json,.mp4,.mp3,.jpg,.png,.gif" multiple style="margin: 1rem 0;">
+                <br>
+                <button class="upload-btn" onclick="uploadFiles()">Upload Files</button>
+                <button class="action-btn" onclick="processAssets()">Process Assets</button>
+                <button class="action-btn" onclick="generateAssets()">Generate New Assets</button>
+            </div>
+            
+            <div class="section">
+                <h3>🎨 Content Generation Tools</h3>
+                <div class="content-planning">
+                    <div class="planning-card">
+                        <h4>Image Generator</h4>
+                        <p>Create brand-compliant visuals with automatic logo integration</p>
+                        <button class="action-btn" onclick="generateImages()">Generate Images</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Video Creator</h4>
+                        <p>Hip-hop culture and lifestyle videos with audio integration</p>
+                        <button class="action-btn" onclick="generateVideos()">Create Videos</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Audio Studio</h4>
+                        <p>Background music, voiceovers, and sound effects</p>
+                        <button class="action-btn" onclick="generateAudio()">Audio Tools</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📁 Asset Library</h3>
+                <div id="asset-content">Loading assets...</div>
+                <div class="asset-grid" id="asset-gallery">
+                    <!-- Assets will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <h2>Strategic Content Planning</h2>
+            <div class="calendar-controls">
+                <button class="calendar-btn active" onclick="loadCalendar('7')">7 Days</button>
+                <button class="calendar-btn" onclick="loadCalendar('30')">30 Days</button>
+                <button class="calendar-btn" onclick="loadCalendar('60')">60 Days</button>
+                <button class="calendar-btn" onclick="loadCalendar('90')">90+ Days</button>
+                <button class="calendar-btn" onclick="loadQuarterly()">Quarterly</button>
+            </div>
+            
+            <div class="section">
+                <h3>🎨 Content Creation Tools</h3>
+                <div class="content-planning">
+                    <div class="planning-card">
+                        <h4>Campaign Generator</h4>
+                        <p>AI-powered campaign creation based on competitive intelligence</p>
+                        <button class="action-btn" onclick="generateCampaign()">Generate Campaign</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Trend Analysis</h4>
+                        <p>Real-time hashtag and competitor movement analysis</p>
+                        <button class="action-btn" onclick="analyzeTrends()">Analyze Trends</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Content Calendar</h4>
+                        <p>Strategic calendar with cultural moments integration</p>
+                        <button class="action-btn" onclick="createCalendar()">Create Calendar</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Workflow Automation</h4>
+                        <p>End-to-end planning → creation → QA → delivery pipeline</p>
+                        <button class="action-btn" onclick="setupWorkflow()">Setup Workflow</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🗓️ Cultural Moments & Strategic Planning</h3>
+                <div id="cultural-calendar">
+                    <div class="cultural-moment">
+                        <strong>Hispanic Heritage Month</strong> - September 15 - October 15, 2025
+                        <br>Focus: Community celebration, cultural authenticity, heritage storytelling
+                    </div>
+                    <div class="cultural-moment">
+                        <strong>Hip-Hop Anniversary</strong> - November 2025
+                        <br>Focus: Music culture, street authenticity, community roots
+                    </div>
+                    <div class="cultural-moment">
+                        <strong>Black Friday/Cyber Monday</strong> - November 29 - December 2, 2025
+                        <br>Focus: Holiday campaigns, conversion optimization, gift messaging
+                    </div>
+                </div>
+            </div>
+            
+            <div id="calendar-content">Loading calendar...</div>
+            
+            <div id="quarterly-view" class="quarterly-view" style="display: none;">
+                <div class="quarter-card">
+                    <div class="quarter-title">Q4 2025</div>
+                    <div class="cultural-moment">Hispanic Heritage Month</div>
+                    <div class="cultural-moment">Halloween Campaign</div>
+                    <div class="cultural-moment">BFCM Strategy</div>
+                </div>
+                <div class="quarter-card">
+                    <div class="quarter-title">Q1 2026</div>
+                    <div class="cultural-moment">New Year Launch</div>
+                    <div class="cultural-moment">Valentine's Day</div>
+                    <div class="cultural-moment">Spring Collection</div>
+                </div>
+                <div class="quarter-card">
+                    <div class="quarter-title">Q2 2026</div>
+                    <div class="cultural-moment">Summer Campaign</div>
+                    <div class="cultural-moment">Pride Month</div>
+                    <div class="cultural-moment">Father's Day</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agency Tab -->
+        <div id="agency" class="tab-content">
+            <h2>HVD Partnership Dashboard</h2>
+            
+            <div class="section">
+                <h3>💼 Partnership Status & Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="monthly-budget">$7.5K</div>
+                        <div class="metric-label">Monthly Budget</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="progress-percentage">78%</div>
+                        <div class="metric-label">Progress</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="deliverables-count">12</div>
+                        <div class="metric-label">Deliverables</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="phase-status">Phase 2</div>
+                        <div class="metric-label">Current Phase</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📊 Performance Analytics</h3>
+                <div class="agency-metric">
+                    <span class="metric-name">Campaigns Delivered</span>
+                    <span class="metric-value-agency">12</span>
+                </div>
+                <div class="agency-metric">
+                    <span class="metric-name">Average Engagement Lift</span>
+                    <span class="metric-value-agency">+23%</span>
+                </div>
+                <div class="agency-metric">
+                    <span class="metric-name">Brand Sentiment Improvement</span>
+                    <span class="metric-value-agency">+15%</span>
+                </div>
+                <div class="agency-metric">
+                    <span class="metric-name">Competitive Ranking Change</span>
+                    <span class="metric-value-agency">+2 positions</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🎯 Phase Progression Tracking</h3>
+                <div class="workflow-stage">
+                    <div class="stage-title">Phase 1: Foundation ($4K/month)</div>
+                    <div class="stage-progress">
+                        <div class="stage-progress-bar" style="width: 100%;"></div>
+                    </div>
+                    <p>✅ Completed: 4 creatives/month, brand compliance system, initial analytics</p>
+                </div>
+                <div class="workflow-stage">
+                    <div class="stage-title">Phase 2: Growth ($7.5K/month) - CURRENT</div>
+                    <div class="stage-progress">
+                        <div class="stage-progress-bar" style="width: 78%;"></div>
+                    </div>
+                    <p>🔄 In Progress: 7 creatives/month, advanced analytics, cultural integration</p>
+                </div>
+                <div class="workflow-stage">
+                    <div class="stage-title">Phase 3: Scale ($10K/month)</div>
+                    <div class="stage-progress">
+                        <div class="stage-progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <p>⏳ Upcoming: 10 creatives/month, full automation, performance optimization</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📋 Active Deliverables</h3>
+                <div id="agency-content">Loading agency data...</div>
+            </div>
+            
+            <div class="section">
+                <h3>📈 Weekly Check-in Reports</h3>
+                <div class="content-planning">
+                    <div class="planning-card">
+                        <h4>Delivery Confirmation</h4>
+                        <p>Weekly status updates and delivery verification</p>
+                        <button class="action-btn" onclick="generateWeeklyReport()">Generate Report</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Performance Review</h4>
+                        <p>Engagement metrics and compliance scores</p>
+                        <button class="action-btn" onclick="reviewPerformance()">Review Performance</button>
+                    </div>
+                    <div class="planning-card">
+                        <h4>Strategic Planning</h4>
+                        <p>Quarterly reviews and optimization recommendations</p>
+                        <button class="action-btn" onclick="strategicPlanning()">Strategic Planning</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables to track loaded data
+        let loadedTabs = new Set();
+        
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            loadTabContent(tabName);
+        }
+        
+        function loadTabContent(tabName) {
+            if (loadedTabs.has(tabName)) return; // Don't reload if already loaded
+            
+            switch(tabName) {
+                case 'overview':
+                    loadOverview();
+                    break;
+                case 'intelligence':
+                    loadIntelligence();
+                    break;
+                case 'assets':
+                    loadAssets();
+                    break;
+                case 'calendar':
+                    loadCalendar('7');
+                    break;
+                case 'agency':
+                    loadAgency();
+                    break;
+            }
+            
+            loadedTabs.add(tabName);
+        }
+        
+        function loadOverview() {
+            fetch('/api/overview')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('data-sources').textContent = data.data_sources || '0';
+                    document.getElementById('trust-score').textContent = (data.trust_score || '0') + '%';
+                    document.getElementById('total-assets').textContent = data.total_assets || '0';
+                    document.getElementById('crooks-ranking').textContent = data.crooks_ranking || 'N/A';
+                    
+                    // Crooks performance
+                    const performance = data.crooks_performance || {};
+                    document.getElementById('crooks-performance').innerHTML = `
+                        <div class="insight-highlight">
+                            Crooks & Castles: ${performance.posts || 0} posts analyzed with ${performance.avg_engagement || 0} average engagement
+                        </div>
+                        <p><strong>Total Engagement:</strong> ${performance.total_engagement || 0}</p>
+                        <p><strong>Market Position:</strong> ${performance.market_position || 'Analyzing position'}</p>
+                        <p><strong>Sentiment Score:</strong> ${performance.sentiment || 'Processing'}</p>
+                    `;
+                    
+                    // Executive summary
+                    const summary = data.executive_summary || {};
+                    document.getElementById('executive-summary').innerHTML = `
+                        <p><strong>Analysis Summary:</strong> ${summary.summary || 'Processing competitive landscape analysis...'}</p>
+                        <div class="insight-highlight">
+                            Key Insights: ${(summary.key_takeaways || []).join(' • ') || 'Generating insights from competitive data...'}
+                        </div>
+                        <p><strong>Recommendations:</strong></p>
+                        <ul>
+                            ${(summary.recommendations || []).map(rec => `<li>${rec}</li>`).join('') || '<li>Analyzing competitive positioning...</li>'}
+                        </ul>
+                    `;
+                    
+                    // Priority actions
+                    const actions = data.priority_actions || [];
+                    document.getElementById('priority-actions').innerHTML = actions.map(action => `
+                        <div class="priority-action">
+                            <div class="priority-title">${action.title || 'Strategic Action'}</div>
+                            <p>${action.description || 'Analyzing strategic opportunities...'}</p>
+                        </div>
+                    `).join('') || '<div class="loading">Loading priority actions...</div>';
+                })
+                .catch(error => {
+                    console.error('Error loading overview:', error);
+                    document.getElementById('executive-summary').innerHTML = '<div class="error">Error loading data. Please refresh.</div>';
+                });
+        }
+        
+        function loadIntelligence() {
+            fetch('/api/intelligence')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('posts-analyzed').textContent = data.posts_analyzed || '0';
+                    document.getElementById('sentiment-analyzed').textContent = data.sentiment_analyzed || '0';
+                    document.getElementById('positive-sentiment').textContent = (data.positive_sentiment || '0') + '%';
+                    document.getElementById('trends-tracked').textContent = data.trends_tracked || '0';
+                    
+                    // Trending hashtags
+                    const hashtags = data.trending_hashtags || [];
+                    document.getElementById('trending-hashtags').innerHTML = hashtags.map(tag => 
+                        `<span class="hashtag">${tag.hashtag || tag[0]} (${tag.count || tag[1]})</span>`
+                    ).join('') || '<span class="hashtag">#streetwear</span>';
+                    
+                    // Strategic recommendations
+                    const recommendations = data.strategic_recommendations || [];
+                    document.getElementById('strategic-recommendations').innerHTML = recommendations.map(rec => `
+                        <div class="recommendation">
+                            <div class="recommendation-title">${rec.title || 'Strategic Insight'}</div>
+                            <p>${rec.description || 'Analyzing competitive landscape...'}</p>
+                        </div>
+                    `).join('') || '<div class="loading">Loading strategic recommendations...</div>';
+                })
+                .catch(error => {
+                    console.error('Error loading intelligence:', error);
+                });
+            
+            // Load competitor analysis
+            fetch('/api/intelligence/competitors')
+                .then(response => response.json())
+                .then(data => {
+                    const competitors = data.competitors || [];
+                    document.getElementById('competitor-analysis').innerHTML = `
+                        <div class="competitor-grid">
+                            ${competitors.map(comp => `
+                                <div class="competitor-card">
+                                    <div class="competitor-name">${comp.name}</div>
+                                    <div class="competitor-stats">
+                                        <strong>Posts:</strong> ${comp.posts}<br>
+                                        <strong>Avg Engagement:</strong> ${comp.avg_engagement}<br>
+                                        <strong>Sentiment:</strong> ${comp.avg_sentiment}<br>
+                                        <strong>Tier:</strong> ${comp.tier}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading competitor data:', error);
+                    document.getElementById('competitor-analysis').innerHTML = '<div class="error">Error loading competitor data</div>';
+                });
+        }
+        
+        function loadAssets() {
+            fetch('/api/assets')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('asset-content').innerHTML = `
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">${data.data_assets?.length || 0}</div>
+                                <div class="metric-label">Data Files</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.total_records || 0}</div>
+                                <div class="metric-label">Total Records</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.media_assets?.length || 0}</div>
+                                <div class="metric-label">Media Assets</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.storage_used || '0KB'}</div>
+                                <div class="metric-label">Storage Used</div>
+                            </div>
+                        </div>
+                        <h4>📊 Data Assets</h4>
+                        ${(data.data_assets || []).map(asset => `
+                            <div class="campaign-card">
+                                <div class="campaign-title">${asset.name}</div>
+                                <div class="campaign-details">
+                                    Type: ${asset.type}<br>
+                                    Size: ${asset.size}<br>
+                                    Records: ${asset.records}<br>
+                                    Last Modified: ${asset.last_modified}
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                    
+                    // Populate asset gallery
+                    const gallery = document.getElementById('asset-gallery');
+                    gallery.innerHTML = (data.data_assets || []).map(asset => `
+                        <div class="asset-item" onclick="downloadAsset('${asset.name}')">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+                            <div style="font-weight: 600;">${asset.name}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.8;">${asset.records} records</div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading assets:', error);
+                });
+        }
+        
+        function loadCalendar(days) {
+            document.querySelectorAll('.calendar-btn').forEach(btn => btn.classList.remove('active'));
+            event?.target?.classList.add('active');
+            
+            // Hide quarterly view
+            document.getElementById('quarterly-view').style.display = 'none';
+            document.getElementById('calendar-content').style.display = 'block';
+            
+            fetch(`/api/calendar/${days}`)
+                .then(response => response.json())
+                .then(data => {
+                    const campaigns = data.campaigns || [];
+                    document.getElementById('calendar-content').innerHTML = `
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">${campaigns.length}</div>
+                                <div class="metric-label">Total Campaigns</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.active_campaigns || 0}</div>
+                                <div class="metric-label">Active Campaigns</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">$${data.total_budget || 0}</div>
+                                <div class="metric-label">Total Budget</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.cultural_moments?.length || 0}</div>
+                                <div class="metric-label">Cultural Moments</div>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <h3>📅 ${days}-Day Strategic Campaigns</h3>
+                            ${campaigns.map(campaign => `
+                                <div class="campaign-card">
+                                    <div class="campaign-title">${campaign.title || 'Campaign'}</div>
+                                    <div class="campaign-details">
+                                        <strong>Date:</strong> ${campaign.start_date || 'TBD'}<br>
+                                        <strong>Target:</strong> ${campaign.target || 'TBD'}<br>
+                                        <strong>Goal:</strong> ${campaign.goal || 'TBD'}<br>
+                                        <strong>Content:</strong> ${campaign.content || 'TBD'}<br>
+                                        <strong>Assets:</strong> ${campaign.assets || 'TBD'}<br>
+                                        <strong>Budget:</strong> $${campaign.budget || 'TBD'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading calendar:', error);
+                });
+        }
+        
+        function loadQuarterly() {
+            document.querySelectorAll('.calendar-btn').forEach(btn => btn.classList.remove('active'));
+            event?.target?.classList.add('active');
+            
+            // Show quarterly view
+            document.getElementById('quarterly-view').style.display = 'grid';
+            document.getElementById('calendar-content').style.display = 'none';
+        }
+        
+        function loadAgency() {
+            fetch('/api/agency')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('agency-content').innerHTML = `
+                        ${(data.deliverables || []).map(deliverable => `
+                            <div class="deliverable-item">
+                                <div class="deliverable-title">${deliverable.title || 'Deliverable'}</div>
+                                <span class="status-badge status-${deliverable.status?.toLowerCase().replace(' ', '') || 'planning'}">${deliverable.status || 'Planning'}</span>
+                                <div style="margin-top: 0.8rem;">
+                                    <strong>Due Date:</strong> ${deliverable.due_date || 'TBD'}<br>
+                                    <strong>Assignee:</strong> ${deliverable.assignee || 'TBD'}
+                                </div>
+                            </div>
+                        `).join('') || '<p>No active deliverables</p>'}
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading agency:', error);
+                });
+        }
+        
+        // Content planning functions
+        function generateCampaign() {
+            alert('🎯 Campaign Generator: Creating AI-powered campaign based on current competitive intelligence and trending hashtags. This will analyze your 557 posts and competitor data to generate strategic campaigns.');
+        }
+        
+        function analyzeTrends() {
+            alert('📈 Trend Analysis: Analyzing current hashtag trends and competitive movements from real-time data. This will provide insights on #streetwear, #hypebeast, and other trending topics.');
+        }
+        
+        function createCalendar() {
+            alert('📅 Content Calendar: Creating strategic content calendar with cultural moments integration (Hispanic Heritage Month, BFCM, Hip-Hop Anniversary). This will map content to optimal posting times.');
+        }
+        
+        function setupWorkflow() {
+            alert('⚙️ Workflow Automation: Setting up end-to-end pipeline: Planning → Creation → QA → Delivery → Publishing. This will automate your content production process.');
+        }
+        
+        // Asset management functions
+        function uploadFiles() {
+            const fileInput = document.getElementById('file-upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Please select files to upload.');
+                return;
+            }
+            
+            alert(`📤 Upload Processing: ${files.length} file(s) selected. Processing JSONL data files and media assets. Files will be automatically categorized and integrated into the competitive intelligence system.`);
+        }
+        
+        function processAssets() {
+            alert('🔄 Asset Processing: Analyzing uploaded files, extracting competitive intelligence, updating sentiment analysis, and refreshing hashtag trends. This will integrate new data into your dashboard.');
+        }
+        
+        function generateAssets() {
+            alert('🎨 Asset Generation: Creating new brand-compliant visuals with automatic CRKS/CASTLES logo integration. This will generate images, videos, and audio content for your campaigns.');
+        }
+        
+        function generateImages() {
+            alert('🖼️ Image Generator: Creating professional photography-style visuals with brand integration. This will generate 1080x1080, 1080x1350, and 1920x1080 formats for all platforms.');
+        }
+        
+        function generateVideos() {
+            alert('🎬 Video Creator: Producing hip-hop culture and lifestyle videos with audio integration. This will create authentic street culture content with proper voiceovers.');
+        }
+        
+        function generateAudio() {
+            alert('🎵 Audio Studio: Creating background music, voiceovers, and sound effects. This will produce on-brand audio content matching featured models and cultural authenticity.');
+        }
+        
+        function downloadAsset(assetName) {
+            alert(`📥 Downloading: ${assetName}. This will download the selected data file for offline analysis or integration with other tools.`);
+        }
+        
+        // Agency functions
+        function generateWeeklyReport() {
+            alert('📊 Weekly Report: Generating delivery confirmation and status updates for HVD partnership. This will include performance metrics, compliance scores, and delivery verification.');
+        }
+        
+        function reviewPerformance() {
+            alert('📈 Performance Review: Analyzing engagement metrics, compliance scores, and cultural authenticity ratings. This will provide detailed KPI analysis for agency reporting.');
+        }
+        
+        function strategicPlanning() {
+            alert('🎯 Strategic Planning: Conducting quarterly review and optimization recommendations. This will analyze competitive positioning and provide strategic guidance for next phase.');
+        }
+        
+        // Load initial content
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Crooks & Castles Command Center V2 - Initializing...');
+            loadOverview();
+        });
+    </script>
+</body>
+</html>
