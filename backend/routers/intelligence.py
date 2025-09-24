@@ -1,9 +1,9 @@
 import os
 from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, Form
-from ..models.schemas import UploadAck, IntelligenceRequest, IntelligenceReport
-from ..services.scraper import save_uploads
-from ..services.analyzer import brand_intelligence
+from models.schemas import UploadAck, IntelligenceRequest, IntelligenceReport
+from services.scraper import save_uploads
+from services.analyzer import brand_intelligence
 
 router = APIRouter()
 
