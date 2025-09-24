@@ -29,6 +29,27 @@ app.include_router(agency.router, prefix="/agency", tags=["agency"])
 app.include_router(ingest_ENHANCED.router, prefix="/ingest", tags=["ingest"])
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
+
+@app.get("/intelligence")
+@app.head("/intelligence")
+def intelligence_page():
+    return FileResponse("static/intelligence/index.html")
+
+@app.get("/summary")
+@app.head("/summary")
+def summary_page():
+    return FileResponse("static/summary/index.html")
+
+@app.get("/calendar")
+@app.head("/calendar")
+def calendar_page():
+    return FileResponse("static/calendar/index.html")
+
+@app.get("/agency")
+@app.head("/agency")
+def agency_page():
+    return FileResponse("static/agency/index.html")
+
 import os
 
 STATIC_DIR = "static"
