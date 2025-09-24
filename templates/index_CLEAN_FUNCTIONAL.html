@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crooks & Castles Command Center V2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 3px solid #ff6b35;
+            box-shadow: 0 4px 20px rgba(255,107,53,0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .crown {
+            color: #ffd700;
+            font-size: 2rem;
+            margin: 0 1rem;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            color: #ff6b35;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+            border-bottom: 2px solid #ff6b35;
+            overflow-x: auto;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 200px;
+        }
+        
+        .nav-tab:hover {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-bottom-color: #ffd700;
+            transform: translateY(-2px);
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            border-bottom-color: #ffd700;
+            box-shadow: 0 4px 15px rgba(255,107,53,0.4);
+        }
+        
+        .content {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h2 {
+            font-size: 2.2rem;
+            margin-bottom: 2rem;
+            color: #ff6b35;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.9) 100%);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff6b35;
+            box-shadow: 0 10px 25px rgba(255,107,53,0.3);
+        }
+        
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .metric-label {
+            opacity: 0.9;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .section {
+            background: linear-gradient(135deg, rgba(45,45,45,0.8) 0%, rgba(26,26,26,0.9) 100%);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,107,53,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .section h3 {
+            margin-bottom: 1.5rem;
+            color: #ff6b35;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .hashtag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        
+        .hashtag {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid rgba(255,215,0,0.3);
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .hashtag:hover {
+            transform: scale(1.05);
+            border-color: #ffd700;
+            box-shadow: 0 4px 15px rgba(255,107,53,0.5);
+        }
+        
+        .competitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .competitor-card {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .competitor-card:hover {
+            transform: translateY(-3px);
+            border-color: #ff6b35;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .competitor-name {
+            font-weight: 900;
+            margin-bottom: 0.8rem;
+            color: #ff6b35;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .competitor-stats {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.7;
+            font-size: 1.2rem;
+        }
+        
+        .error {
+            color: #ff6b35;
+            text-align: center;
+            padding: 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .priority-action, .recommendation {
+            background: linear-gradient(135deg, rgba(255,107,53,0.15) 0%, rgba(26,26,26,0.8) 100%);
+            border-left: 6px solid #ff6b35;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 12px 12px 0;
+            border: 2px solid rgba(255,107,53,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .priority-action:hover, .recommendation:hover {
+            transform: translateX(5px);
+            border-color: #ff6b35;
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .priority-title, .recommendation-title {
+            font-weight: 900;
+            color: #ff6b35;
+            margin-bottom: 0.8rem;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .insight-highlight {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #000;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .asset-item {
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(26,26,26,0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid rgba(255,107,53,0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .asset-item:hover {
+            border-color: #ff6b35;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255,107,53,0.3);
+        }
+        
+        .asset-name {
+            font-weight: 900;
+            color: #ff6b35;
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+        }
+        
+        .asset-details {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+        
+        .mock-notice {
+            background: linear-gradient(135deg, rgba(255,193,7,0.2) 0%, rgba(26,26,26,0.8) 100%);
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .mock-notice h4 {
+            color: #ffc107;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+        
+        .functional-badge {
+            background: #28a745;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        
+        .mock-badge {
+            background: #ffc107;
+            color: #000;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="crown">👑</span> CROOKS & CASTLES <span class="crown">👑</span></h1>
+        <p>Command Center V2 - Advanced Competitive Intelligence & Strategic Planning</p>
+    </div>
+    
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('overview')">📊 Executive Overview</button>
+        <button class="nav-tab" onclick="showTab('intelligence')">🎯 Intelligence</button>
+        <button class="nav-tab" onclick="showTab('assets')">📁 Assets</button>
+        <button class="nav-tab" onclick="showTab('calendar')">📅 Content Planning</button>
+        <button class="nav-tab" onclick="showTab('agency')">🏢 Agency Partnership</button>
+    </div>
+    
+    <div class="content">
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <span class="functional-badge">✅ FULLY FUNCTIONAL</span>
+            <h2>Executive Command Dashboard</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="data-sources">-</div>
+                    <div class="metric-label">Data Sources</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="trust-score">-</div>
+                    <div class="metric-label">Intelligence Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="total-assets">-</div>
+                    <div class="metric-label">Total Assets</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="crooks-ranking">-</div>
+                    <div class="metric-label">Crooks Ranking</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>👑 Crooks & Castles Performance</h3>
+                <div id="crooks-performance">Loading performance data...</div>
+            </div>
+            
+            <div class="section">
+                <h3>📊 Strategic Intelligence Summary</h3>
+                <div id="executive-summary">Loading strategic insights...</div>
+            </div>
+            
+            <div class="section">
+                <h3>🎯 Priority Actions This Week</h3>
+                <div id="priority-actions">Loading priority actions...</div>
+            </div>
+        </div>
+        
+        <!-- Intelligence Tab -->
+        <div id="intelligence" class="tab-content">
+            <span class="functional-badge">✅ FULLY FUNCTIONAL</span>
+            <h2>Competitive Intelligence Center</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="posts-analyzed">-</div>
+                    <div class="metric-label">Posts Analyzed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="sentiment-analyzed">-</div>
+                    <div class="metric-label">Sentiment Analyzed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="positive-sentiment">-</div>
+                    <div class="metric-label">Positive Sentiment</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="trends-tracked">-</div>
+                    <div class="metric-label">Trends Tracked</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🔥 Trending Hashtags</h3>
+                <div class="hashtag-list" id="trending-hashtags">Loading hashtags...</div>
+            </div>
+            
+            <div class="section">
+                <h3>💡 Strategic Intelligence</h3>
+                <div id="strategic-recommendations">Loading intelligence...</div>
+            </div>
+            
+            <div class="section">
+                <h3>🏆 Competitive Landscape</h3>
+                <div id="competitor-analysis">Loading competitor data...</div>
+            </div>
+        </div>
+        
+        <!-- Assets Tab -->
+        <div id="assets" class="tab-content">
+            <span class="functional-badge">✅ FUNCTIONAL - Asset Management & Removal</span>
+            <h2>Asset Management Center</h2>
+            
+            <div class="section">
+                <h3>📊 Data Assets</h3>
+                <div id="asset-content">Loading assets...</div>
+                <div class="asset-grid" id="asset-gallery">
+                    <!-- Assets will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <span class="mock-badge">⚠️ BASIC FUNCTIONALITY</span>
+            <h2>Strategic Content Planning</h2>
+            
+            <div class="mock-notice">
+                <h4>📅 Basic Calendar Data Available</h4>
+                <p>Shows strategic campaign planning data. Advanced planning tools are in development.</p>
+            </div>
+            
+            <div id="calendar-content">Loading calendar...</div>
+        </div>
+        
+        <!-- Agency Tab -->
+        <div id="agency" class="tab-content">
+            <span class="mock-badge">⚠️ BASIC FUNCTIONALITY</span>
+            <h2>HVD Partnership Dashboard</h2>
+            
+            <div class="mock-notice">
+                <h4>🏢 Basic Agency Data Available</h4>
+                <p>Shows partnership status and deliverables. Advanced tracking tools are in development.</p>
+            </div>
+            
+            <div class="section">
+                <h3>📋 Active Deliverables</h3>
+                <div id="agency-content">Loading agency data...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables to track loaded data
+        let loadedTabs = new Set();
+        
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            loadTabContent(tabName);
+        }
+        
+        function loadTabContent(tabName) {
+            if (loadedTabs.has(tabName)) return; // Don't reload if already loaded
+            
+            switch(tabName) {
+                case 'overview':
+                    loadOverview();
+                    break;
+                case 'intelligence':
+                    loadIntelligence();
+                    break;
+                case 'assets':
+                    loadAssets();
+                    break;
+                case 'calendar':
+                    loadCalendar();
+                    break;
+                case 'agency':
+                    loadAgency();
+                    break;
+            }
+            
+            loadedTabs.add(tabName);
+        }
+        
+        function loadOverview() {
+            fetch('/api/overview')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('data-sources').textContent = data.data_sources || '0';
+                    document.getElementById('trust-score').textContent = (data.trust_score || '0') + '%';
+                    document.getElementById('total-assets').textContent = data.total_assets || '0';
+                    document.getElementById('crooks-ranking').textContent = data.crooks_ranking || 'N/A';
+                    
+                    // Crooks performance
+                    const performance = data.crooks_performance || {};
+                    document.getElementById('crooks-performance').innerHTML = `
+                        <div class="insight-highlight">
+                            Crooks & Castles: ${performance.posts || 0} posts analyzed with ${performance.avg_engagement || 0} average engagement
+                        </div>
+                        <p><strong>Total Engagement:</strong> ${performance.total_engagement || 0}</p>
+                        <p><strong>Market Position:</strong> ${performance.market_position || 'Analyzing position'}</p>
+                        <p><strong>Sentiment Score:</strong> ${performance.sentiment || 'Processing'}</p>
+                    `;
+                    
+                    // Executive summary
+                    const summary = data.executive_summary || {};
+                    document.getElementById('executive-summary').innerHTML = `
+                        <p><strong>Analysis Summary:</strong> ${summary.summary || 'Processing competitive landscape analysis...'}</p>
+                        <div class="insight-highlight">
+                            Key Insights: ${(summary.key_takeaways || []).join(' • ') || 'Generating insights from competitive data...'}
+                        </div>
+                        <p><strong>Recommendations:</strong></p>
+                        <ul>
+                            ${(summary.recommendations || []).map(rec => `<li>${rec}</li>`).join('') || '<li>Analyzing competitive positioning...</li>'}
+                        </ul>
+                    `;
+                    
+                    // Priority actions
+                    const actions = data.priority_actions || [];
+                    document.getElementById('priority-actions').innerHTML = actions.map(action => `
+                        <div class="priority-action">
+                            <div class="priority-title">${action.title || 'Strategic Action'}</div>
+                            <p>${action.description || 'Analyzing strategic opportunities...'}</p>
+                        </div>
+                    `).join('') || '<div class="loading">Loading priority actions...</div>';
+                })
+                .catch(error => {
+                    console.error('Error loading overview:', error);
+                    document.getElementById('executive-summary').innerHTML = '<div class="error">Error loading data. Please refresh.</div>';
+                });
+        }
+        
+        function loadIntelligence() {
+            fetch('/api/intelligence')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('posts-analyzed').textContent = data.posts_analyzed || '0';
+                    document.getElementById('sentiment-analyzed').textContent = data.sentiment_analyzed || '0';
+                    document.getElementById('positive-sentiment').textContent = (data.positive_sentiment || '0') + '%';
+                    document.getElementById('trends-tracked').textContent = data.trends_tracked || '0';
+                    
+                    // Trending hashtags
+                    const hashtags = data.trending_hashtags || [];
+                    document.getElementById('trending-hashtags').innerHTML = hashtags.map(tag => 
+                        `<span class="hashtag">${tag.hashtag || tag[0]} (${tag.count || tag[1]})</span>`
+                    ).join('') || '<span class="hashtag">#streetwear</span>';
+                    
+                    // Strategic recommendations
+                    const recommendations = data.strategic_recommendations || [];
+                    document.getElementById('strategic-recommendations').innerHTML = recommendations.map(rec => `
+                        <div class="recommendation">
+                            <div class="recommendation-title">${rec.title || 'Strategic Insight'}</div>
+                            <p>${rec.description || 'Analyzing competitive landscape...'}</p>
+                        </div>
+                    `).join('') || '<div class="loading">Loading strategic recommendations...</div>';
+                })
+                .catch(error => {
+                    console.error('Error loading intelligence:', error);
+                });
+            
+            // Load competitor analysis
+            fetch('/api/intelligence/competitors')
+                .then(response => response.json())
+                .then(data => {
+                    const competitors = data.competitors || [];
+                    document.getElementById('competitor-analysis').innerHTML = `
+                        <div class="competitor-grid">
+                            ${competitors.map(comp => `
+                                <div class="competitor-card">
+                                    <div class="competitor-name">${comp.name}</div>
+                                    <div class="competitor-stats">
+                                        <strong>Posts:</strong> ${comp.posts}<br>
+                                        <strong>Avg Engagement:</strong> ${comp.avg_engagement}<br>
+                                        <strong>Sentiment:</strong> ${comp.avg_sentiment}<br>
+                                        <strong>Tier:</strong> ${comp.tier}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading competitor data:', error);
+                    document.getElementById('competitor-analysis').innerHTML = '<div class="error">Error loading competitor data</div>';
+                });
+        }
+        
+        function loadAssets() {
+            fetch('/api/assets')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('asset-content').innerHTML = `
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">${data.data_assets?.length || 0}</div>
+                                <div class="metric-label">Data Files</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.total_records || 0}</div>
+                                <div class="metric-label">Total Records</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.media_assets?.length || 0}</div>
+                                <div class="metric-label">Media Assets</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.storage_used || '0KB'}</div>
+                                <div class="metric-label">Storage Used</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Populate asset gallery with delete functionality
+                    const gallery = document.getElementById('asset-gallery');
+                    gallery.innerHTML = (data.data_assets || []).map(asset => `
+                        <div class="asset-item">
+                            <button class="delete-btn" onclick="deleteAsset('${asset.name}')" title="Delete Asset">×</button>
+                            <div class="asset-name">${asset.name}</div>
+                            <div class="asset-details">
+                                <strong>Type:</strong> ${asset.type}<br>
+                                <strong>Size:</strong> ${asset.size}<br>
+                                <strong>Records:</strong> ${asset.records}<br>
+                                <strong>Last Modified:</strong> ${asset.last_modified}
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading assets:', error);
+                });
+        }
+        
+        function loadCalendar() {
+            fetch('/api/calendar/30')
+                .then(response => response.json())
+                .then(data => {
+                    const campaigns = data.campaigns || [];
+                    document.getElementById('calendar-content').innerHTML = `
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">${campaigns.length}</div>
+                                <div class="metric-label">Total Campaigns</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.active_campaigns || 0}</div>
+                                <div class="metric-label">Active Campaigns</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">$${data.total_budget || 0}</div>
+                                <div class="metric-label">Total Budget</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.cultural_moments?.length || 0}</div>
+                                <div class="metric-label">Cultural Moments</div>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <h3>📅 Strategic Campaigns</h3>
+                            ${campaigns.map(campaign => `
+                                <div class="priority-action">
+                                    <div class="priority-title">${campaign.title || 'Campaign'}</div>
+                                    <p>
+                                        <strong>Date:</strong> ${campaign.start_date || 'TBD'}<br>
+                                        <strong>Target:</strong> ${campaign.target || 'TBD'}<br>
+                                        <strong>Goal:</strong> ${campaign.goal || 'TBD'}<br>
+                                        <strong>Budget:</strong> $${campaign.budget || 'TBD'}
+                                    </p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading calendar:', error);
+                });
+        }
+        
+        function loadAgency() {
+            fetch('/api/agency')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('agency-content').innerHTML = `
+                        ${(data.deliverables || []).map(deliverable => `
+                            <div class="priority-action">
+                                <div class="priority-title">${deliverable.title || 'Deliverable'}</div>
+                                <p>
+                                    <strong>Status:</strong> ${deliverable.status || 'Planning'}<br>
+                                    <strong>Due Date:</strong> ${deliverable.due_date || 'TBD'}<br>
+                                    <strong>Assignee:</strong> ${deliverable.assignee || 'TBD'}
+                                </p>
+                            </div>
+                        `).join('') || '<p>No active deliverables</p>'}
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading agency:', error);
+                });
+        }
+        
+        // Asset deletion functionality
+        function deleteAsset(filename) {
+            if (confirm(`Are you sure you want to delete ${filename}? This action cannot be undone.`)) {
+                fetch(`/api/assets/delete/${filename}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(`Error: ${data.error}`);
+                    } else {
+                        alert(data.message);
+                        // Reload assets to reflect changes
+                        loadedTabs.delete('assets');
+                        loadAssets();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting asset:', error);
+                    alert('Failed to delete asset. Please try again.');
+                });
+            }
+        }
+        
+        // Load initial content
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Crooks & Castles Command Center V2 - Initializing...');
+            loadOverview();
+        });
+    </script>
+</body>
+</html>
