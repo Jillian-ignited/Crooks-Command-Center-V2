@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/data:/app/data
+  frontend:
+    image: node:20
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+    command: bash -lc "npm i && npm run dev"
