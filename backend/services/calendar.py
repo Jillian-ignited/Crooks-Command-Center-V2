@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from datetime import date, timedelta
-from ..models.schemas import CalendarEvent
+from models.schemas import CalendarEvent
 
 # Minimal curated cultural/streetwear calendar seed.
 CULTURE_SEED = [
