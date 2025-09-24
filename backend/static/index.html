@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard — Crooks Command Center</title>
+  <link rel="stylesheet" href="/assets/styles.css"/>
+</head>
+<body>
+  <div class="container">
+    <header class="row" style="justify-content:space-between; margin-bottom:16px">
+      <div class="row" style="gap:10px">
+        <div class="pill">Crooks Command Center</div>
+        <nav class="row" style="gap:10px">
+          <a href="/index.html">Dashboard</a>
+          <a href="/intelligence/index.html">Intelligence</a>
+          <a href="/summary/index.html">Executive Summary</a>
+          <a href="/calendar/index.html">Calendar</a>
+          <a href="/agency/index.html">Agency</a>
+        </nav>
+      </div>
+      <div class="muted">static-ui v1</div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h3 class="title">Controls</h3>
+        <div class="row" style="margin-top:8px">
+          <input id="brands" type="text" value="Crooks &amp; Castles, Stussy, Supreme"/>
+          <input id="days" type="number" min="1" max="60" value="7" style="width:100px"/>
+          <button class="button" id="runSummary">Run Summary</button>
+          <button class="button" id="runIntel">Run Intelligence</button>
+        </div>
+      </div>
+
+      <div id="summaryCard" class="card" style="display:none">
+        <h3 class="title">Executive Summary</h3>
+        <div id="summaryBody"></div>
+      </div>
+
+      <div id="intelCard" class="card" style="display:none">
+        <h3 class="title">Brand Intelligence</h3>
+        <div id="intelBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script src="/assets/dashboard.js"></script>
+</body>
+</html>
