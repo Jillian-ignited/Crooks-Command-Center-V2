@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from ..models.schemas import SummaryReport, IntelligenceRequest
-from ..services.analyzer import weekly_summary
+from models.schemas import SummaryReport, IntelligenceRequest
+from services.analyzer import weekly_summary
 
 router = APIRouter()
 
