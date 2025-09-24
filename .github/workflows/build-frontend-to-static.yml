@@ -1,0 +1,60 @@
+name: Build Frontend & Publish to Backend Static
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/build-frontend-to-static.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "frontend-static-build"
+  cancel-in-progress: true
+
+jobs:
+  build-export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Export static
+        working-directory: frontend
+        run: npx next export -o out
+
+      - name: Publish to backend/static
+        run: |
+          rm -rf backend/static
+          mkdir -p backend/static
+          cp -R frontend/out/* backend/static/
+          # only commit if there are changes
+          if [ -n "$(git status --porcelain backend/static)" ]; then
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add backend/static
+            git commit -m "chore(static): publish Next export -> backend/static"
+            git push
+          else
+            echo "No static changes to commit."
+          fi
