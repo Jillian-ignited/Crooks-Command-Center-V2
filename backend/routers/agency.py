@@ -1,6 +1,6 @@
 from datetime import date
 from fastapi import APIRouter
-from ..models.schemas import AgencyResponse, Deliverable
+from models.schemas import AgencyResponse, Deliverable
 
 router = APIRouter()
 
