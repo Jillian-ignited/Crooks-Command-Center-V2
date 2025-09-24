@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
-from ..models.schemas import CalendarResponse
-from ..services.calendar import list_events
+from models.schemas import CalendarResponse
+from services.calendar import list_events
 
 router = APIRouter()
 
