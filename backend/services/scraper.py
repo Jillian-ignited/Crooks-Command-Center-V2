@@ -4,7 +4,7 @@ import pandas as pd
 
 UPLOAD_DIR = "data/uploads"
 
-# Supported: .json (list of posts), .csv with columns like: brand, platform, date, likes, comments, shares, text, url
+# Supported: json (list of posts), .csv with columns like: brand, platform, date, likes, comments, shares, text, url
 def save_uploads(files: List[str]) -> List[str]:
     # here `files` are filepaths already saved by router
     return files
