@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 # Include all routers with proper prefixes
-app.include_router(intelligence_COMPLETE.router, prefix="/intelligence", tags=["intelligence"])
+app.include_router(intelligence.router, prefix="/intelligence", tags=["intelligence"])
 app.include_router(summary.router, prefix="/summary", tags=["summary"])
 app.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 app.include_router(agency.router, prefix="/agency", tags=["agency"])
