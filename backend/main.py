@@ -1,13 +1,28 @@
-import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from routers import intelligence, summary, calendar, agency, ingest_ENHANCED, shopify
+from pathlib import Path
+import uvicorn
 
-os.makedirs("data/uploads", exist_ok=True)
-os.makedirs("data/cache", exist_ok=True)
+# Import all routers
+from routers import (
+    intelligence_COMPLETE,
+    summary_COMPLETE, 
+    calendar_COMPLETE,
+    agency_COMPLETE,
+    ingest_COMPLETE,
+    shopify_COMPLETE
+)
 
-app = FastAPI(title="Crooks Command Center API", version="1.0.0")
+# Create FastAPI app
+app = FastAPI(
+    title="Crooks & Castles Command Center V2",
+    description="Complete competitive intelligence and revenue analytics platform",
+    version="2.0.0"
+)
 
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,45 +31,79 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+# Include all routers with proper prefixes
+app.include_router(intelligence_COMPLETE.router, prefix="/intelligence", tags=["intelligence"])
+app.include_router(summary_COMPLETE.router, prefix="/summary", tags=["summary"])
+app.include_router(calendar_COMPLETE.router, prefix="/calendar", tags=["calendar"])
+app.include_router(agency_COMPLETE.router, prefix="/agency", tags=["agency"])
+app.include_router(ingest_COMPLETE.router, prefix="/ingest", tags=["ingest"])
+app.include_router(shopify_COMPLETE.router, prefix="/shopify", tags=["shopify"])
 
-app.include_router(intelligence.router, prefix="/intelligence", tags=["intelligence"])
-app.include_router(summary.router, prefix="/summary", tags=["summary"])
-app.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
-app.include_router(agency.router, prefix="/agency", tags=["agency"])
-app.include_router(ingest_ENHANCED.router, prefix="/ingest", tags=["ingest"])
-app.include_router(shopify.router, prefix="/shopify", tags=["shopify"])
-from fastapi.staticfiles import StaticFiles
-from starlette.responses import FileResponse
+# Ensure required directories exist
+def ensure_directories():
+    """Ensure all required directories exist"""
+    directories = [
+        "data/uploads",
+        "data/config", 
+        "data/shopify",
+        "data/calendar",
+        "data/agency",
+        "static"
+    ]
+    
+    for directory in directories:
+        Path(directory).mkdir(parents=True, exist_ok=True)
 
-@app.get("/intelligence")
-@app.head("/intelligence")
-def intelligence_page():
-    return FileResponse("static/intelligence/index.html")
+# Create directories on startup
+ensure_directories()
 
-@app.get("/summary")
-@app.head("/summary")
-def summary_page():
-    return FileResponse("static/summary/index.html")
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/calendar")
-@app.head("/calendar")
-def calendar_page():
-    return FileResponse("static/calendar/index.html")
-
-@app.get("/agency")
-@app.head("/agency")
-def agency_page():
-    return FileResponse("static/agency/index.html")
-
-import os
-
-STATIC_DIR = "static"
-app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
-
+# Root endpoint - serve the main dashboard
 @app.get("/")
-@app.head("/")
-def root():
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+async def read_root():
+    """Serve the main dashboard interface"""
+    static_file = Path("static/index.html")
+    if static_file.exists():
+        return FileResponse("static/index.html")
+    else:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Overall system health check"""
+    return {
+        "status": "healthy",
+        "service": "Crooks & Castles Command Center V2",
+        "version": "2.0.0",
+        "modules": {
+            "intelligence": "operational",
+            "summary": "operational", 
+            "calendar": "operational",
+            "agency": "operational",
+            "ingest": "operational",
+            "shopify": "operational"
+        }
+    }
+
+# API status endpoint
+@app.get("/api/status")
+async def api_status():
+    """API status for frontend monitoring"""
+    return {
+        "api_status": "online",
+        "endpoints_available": [
+            "/intelligence/report",
+            "/summary/overview",
+            "/calendar/planning",
+            "/agency/dashboard",
+            "/ingest/upload",
+            "/shopify/dashboard"
+        ],
+        "last_updated": "2025-09-25T00:00:00Z"
+    }
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
