@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👑 Crooks & Castles Command Center V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-border { background: linear-gradient(45deg, #ff6b35, #f7931e, #ff6b35); padding: 2px; border-radius: 12px; }
+        .gradient-text { background: linear-gradient(45deg, #ff6b35, #f7931e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shimmer 2s infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .particle { position: absolute; width: 4px; height: 4px; background: #ff6b35; border-radius: 50%; animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+        .hover-glow:hover { box-shadow: 0 0 20px rgba(255, 107, 53, 0.3); }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen relative overflow-x-hidden">
+    <!-- Animated Background Particles -->
+    <div class="fixed inset-0 pointer-events-none">
+        <div class="particle" style="top: 10%; left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="top: 20%; left: 80%; animation-delay: 1s;"></div>
+        <div class="particle" style="top: 60%; left: 20%; animation-delay: 2s;"></div>
+        <div class="particle" style="top: 80%; left: 70%; animation-delay: 3s;"></div>
+        <div class="particle" style="top: 40%; left: 90%; animation-delay: 4s;"></div>
+    </div>
+
+    <div class="relative z-10">
+        <!-- Header -->
+        <header class="text-center py-8 mb-8">
+            <h1 class="text-5xl font-bold mb-4">
+                <span class="gradient-text">👑 Crooks & Castles</span><br>
+                <span class="text-white">Command Center</span>
+            </h1>
+            <div class="flex justify-center space-x-4 mt-6">
+                <div class="flex items-center space-x-2 bg-green-900/30 px-4 py-2 rounded-full border border-green-500/30">
+                    <div class="w-3 h-3 bg-green-400 rounded-full pulse-dot"></div>
+                    <span class="text-green-300 text-sm font-medium">Status: Online</span>
+                </div>
+                <div class="flex items-center space-x-2 bg-blue-900/30 px-4 py-2 rounded-full border border-blue-500/30">
+                    <div class="w-3 h-3 bg-blue-400 rounded-full pulse-dot"></div>
+                    <span class="text-blue-300 text-sm font-medium">Shopify: Connected (crooksonline)</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap justify-center mb-8 space-x-2 space-y-2 px-4">
+            <button onclick="showTab('overview')" id="tab-overview" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">📊 Overview</div>
+            </button>
+            <button onclick="showTab('intelligence')" id="tab-intelligence" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">🧠 Revenue Intelligence</div>
+            </button>
+            <button onclick="showTab('calendar')" id="tab-calendar" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">📅 Campaign Calendar</div>
+            </button>
+            <button onclick="showTab('agency')" id="tab-agency" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">🤝 Agency Tracking</div>
+            </button>
+            <button onclick="showTab('ingest')" id="tab-ingest" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">📥 Data Ingest</div>
+            </button>
+            <button onclick="showTab('shopify')" id="tab-shopify" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">🛒 Shopify Setup</div>
+            </button>
+            <button onclick="showTab('assets')" id="tab-assets" class="gradient-border hover-glow transition-all duration-300">
+                <div class="bg-gray-800 px-6 py-3 rounded-lg font-medium">🎨 Asset Library</div>
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="max-w-7xl mx-auto px-4">
+            <!-- Overview Tab -->
+            <div id="overview-tab" class="tab-content">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text">📊 System Overview</h2>
+                        <div id="overview-content" class="space-y-6">
+                            <div class="text-center py-8">
+                                <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                                <p class="text-gray-400">Loading overview data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intelligence Tab -->
+            <div id="intelligence-tab" class="tab-content hidden">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text">🧠 Revenue Intelligence</h2>
+                        
+                        <!-- Intelligence Report Section -->
+                        <div class="mb-8">
+                            <button onclick="generateIntelligenceReport()" class="gradient-border hover-glow transition-all duration-300 mb-6">
+                                <div class="bg-gray-700 px-6 py-3 rounded-lg font-medium">🔍 Generate Intelligence Report</div>
+                            </button>
+                            <div id="intelligence-content" class="space-y-6">
+                                <div class="text-center py-8">
+                                    <p class="text-gray-400">Click "Generate Intelligence Report" to analyze your data and get strategic insights.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Competitive Insights Section -->
+                        <div class="mb-8">
+                            <h3 class="text-2xl font-bold mb-4 gradient-text">🎯 Competitive Intelligence</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <button onclick="loadTrendAnalysis()" class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl mb-2">📈</div>
+                                        <div class="font-medium">Trend Analysis</div>
+                                    </div>
+                                </button>
+                                <button onclick="loadCulturalRadar()" class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl mb-2">🎭</div>
+                                        <div class="font-medium">Cultural Radar</div>
+                                    </div>
+                                </button>
+                                <button onclick="loadPerformanceDashboard()" class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl mb-2">📊</div>
+                                        <div class="font-medium">Performance Dashboard</div>
+                                    </div>
+                                </button>
+                            </div>
+                            <div id="competitive-insights" class="space-y-6">
+                                <div class="text-center py-8">
+                                    <p class="text-gray-400">Select a competitive intelligence module above to view insights.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Shopify Analytics Dashboard -->
+                        <div class="mb-8">
+                            <h3 class="text-2xl font-bold mb-4 gradient-text">💰 Shopify Analytics</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <button onclick="syncShopifyData('sales')" class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl mb-2">💰</div>
+                                        <div class="font-medium">Sync Sales Data</div>
+                                    </div>
+                                </button>
+                                <button onclick="syncShopifyData('traffic')" class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl mb-2">📊</div>
+                                        <div class="font-medium">Sync Traffic Data</div>
+                                    </div>
+                                </button>
+                                <button onclick="syncShopifyData('products')" class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                        <div class="text-2xl mb-2">📦</div>
+                                        <div class="font-medium">Sync Products Data</div>
+                                    </div>
+                                </button>
+                            </div>
+                            <div id="shopify-dashboard" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Shopify metrics will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other tabs remain the same... -->
+            <!-- Calendar Tab -->
+            <div id="calendar-tab" class="tab-content hidden">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text">📅 Campaign Calendar</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <button onclick="loadCalendarView('tactical7')" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center font-medium">7-Day Tactical</div>
+                            </button>
+                            <button onclick="loadCalendarView('strategic30')" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center font-medium">30-Day Strategic</div>
+                            </button>
+                            <button onclick="loadCalendarView('strategic60')" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center font-medium">60-Day Cultural</div>
+                            </button>
+                            <button onclick="loadCalendarView('strategic90')" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center font-medium">90+ Day Long-term</div>
+                            </button>
+                        </div>
+                        <div id="calendar-content" class="space-y-6">
+                            <div class="text-center py-8">
+                                <p class="text-gray-400">Select a calendar view above to see content planning.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agency Tab -->
+            <div id="agency-tab" class="tab-content hidden">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text">🤝 Agency Tracking</h2>
+                        <div id="agency-content" class="space-y-6">
+                            <div class="text-center py-8">
+                                <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                                <p class="text-gray-400">Loading agency data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Ingest Tab -->
+            <div id="ingest-tab" class="tab-content hidden">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text">📥 Data Ingest</h2>
+                        <div class="space-y-6">
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4">Upload Data Files</h3>
+                                    <input type="file" id="fileInput" accept=".json,.jsonl,.csv" multiple class="mb-4 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                                    <button onclick="uploadFiles()" class="gradient-border hover-glow transition-all duration-300">
+                                        <div class="bg-gray-600 px-6 py-3 rounded-lg font-medium">Upload Files</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="ingest-status" class="space-y-4">
+                                <!-- Upload status will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shopify Setup Tab -->
+            <div id="shopify-tab" class="tab-content hidden">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text">🛒 Shopify Setup</h2>
+                        <div class="space-y-6">
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4">Store Configuration</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Shop Domain</label>
+                                            <input type="text" id="shopDomain" placeholder="your-shop.myshopify.com" class="w-full p-3 bg-gray-600 rounded-lg border border-gray-500 focus:border-orange-500 focus:outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Access Token</label>
+                                            <input type="password" id="accessToken" placeholder="shpat_..." class="w-full p-3 bg-gray-600 rounded-lg border border-gray-500 focus:border-orange-500 focus:outline-none">
+                                        </div>
+                                        <button onclick="connectShopify()" class="gradient-border hover-glow transition-all duration-300">
+                                            <div class="bg-gray-600 px-6 py-3 rounded-lg font-medium">Connect Shopify</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="shopify-status" class="space-y-4">
+                                <!-- Connection status will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Asset Library Tab -->
+            <div id="assets-tab" class="tab-content hidden">
+                <div class="gradient-border mb-8">
+                    <div class="bg-gray-800 p-8 rounded-lg">
+                        <h2 class="text-3xl font-bold mb-6 gradient-text flex items-center">
+                            🎨 Asset Library 
+                            <span class="ml-3 px-3 py-1 bg-pink-600 text-white text-sm rounded-full">Creative Hub</span>
+                        </h2>
+                        
+                        <!-- Asset Categories -->
+                        <div class="flex flex-wrap gap-4 mb-8">
+                            <button onclick="showAssetCategory('images')" id="asset-images" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 px-6 py-3 rounded-lg font-medium">🖼️ Images</div>
+                            </button>
+                            <button onclick="showAssetCategory('videos')" id="asset-videos" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 px-6 py-3 rounded-lg font-medium">🎥 Videos</div>
+                            </button>
+                            <button onclick="showAssetCategory('audio')" id="asset-audio" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 px-6 py-3 rounded-lg font-medium">🎵 Audio</div>
+                            </button>
+                            <button onclick="uploadAsset()" id="asset-upload" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-blue-700 px-6 py-3 rounded-lg font-medium">⬆️ Upload Asset</div>
+                            </button>
+                        </div>
+
+                        <!-- Asset Grid -->
+                        <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Default Images -->
+                            <div class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                    <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                        <span class="text-4xl">🖼️</span>
+                                    </div>
+                                    <h4 class="font-medium mb-2">street_style_1.jpg</h4>
+                                    <p class="text-sm text-gray-400 mb-4">2.4 MB</p>
+                                    <button onclick="downloadAsset('street_style_1.jpg')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                        <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                    <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                        <span class="text-4xl">🖼️</span>
+                                    </div>
+                                    <h4 class="font-medium mb-2">heritage_collection.png</h4>
+                                    <p class="text-sm text-gray-400 mb-4">1.8 MB</p>
+                                    <button onclick="downloadAsset('heritage_collection.png')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                        <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-4 rounded-lg text-center">
+                                    <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                        <span class="text-4xl">🖼️</span>
+                                    </div>
+                                    <h4 class="font-medium mb-2">brand_logo_variants.svg</h4>
+                                    <p class="text-sm text-gray-400 mb-4">156 KB</p>
+                                    <button onclick="downloadAsset('brand_logo_variants.svg')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                        <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 transform translate-x-full transition-transform duration-300 z-50">
+        <div class="gradient-border">
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
+                <div id="toast-content" class="flex items-center space-x-3">
+                    <div id="toast-icon" class="text-2xl"></div>
+                    <div id="toast-message" class="font-medium"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            
+            // Update tab buttons
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('bg-orange-600');
+            });
+            document.getElementById('tab-' + tabName).classList.add('bg-orange-600');
+            
+            // Load tab-specific content
+            if (tabName === 'overview') {
+                loadOverview();
+            } else if (tabName === 'agency') {
+                loadAgencyData();
+            }
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info', icon = '📢') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastIcon.textContent = icon;
+            toastMessage.textContent = message;
+            
+            // Show toast
+            toast.classList.remove('translate-x-full');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+        // Load Overview Data
+        async function loadOverview() {
+            try {
+                const response = await fetch('/ingest/overview');
+                const data = await response.json();
+                
+                const content = document.getElementById('overview-content');
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                    <div class="text-3xl font-bold gradient-text mb-2">${data.overview.total_posts}</div>
+                                    <div class="text-gray-300">Total Posts</div>
+                                </div>
+                            </div>
+                            <div class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                    <div class="text-3xl font-bold gradient-text mb-2">${data.overview.avg_engagement}%</div>
+                                    <div class="text-gray-300">Avg Engagement</div>
+                                </div>
+                            </div>
+                            <div class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                    <div class="text-3xl font-bold gradient-text mb-2">${data.overview.total_files}</div>
+                                    <div class="text-gray-300">Data Sources</div>
+                                </div>
+                            </div>
+                        </div>
+                        ${data.top_content && data.top_content.length > 0 ? `
+                        <div class="gradient-border">
+                            <div class="bg-gray-700 p-6 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-4 gradient-text">🔥 Top Performing Content</h3>
+                                <div class="space-y-4">
+                                    ${data.top_content.slice(0, 3).map(post => `
+                                        <div class="bg-gray-600 p-4 rounded-lg">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="font-medium">${post.caption ? post.caption.substring(0, 100) + '...' : 'No caption'}</div>
+                                                <div class="text-sm text-gray-400">${post.likes || 0} likes</div>
+                                            </div>
+                                            <div class="text-sm text-gray-400">
+                                                ${post.comments || 0} comments • ${post.shares || 0} shares
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">📊</div>
+                            <h3 class="text-xl font-semibold mb-2">No Data Available</h3>
+                            <p class="text-gray-400 mb-4">Upload your social media data files to see insights here.</p>
+                            <button onclick="showTab('ingest')" class="gradient-border hover-glow transition-all duration-300">
+                                <div class="bg-gray-700 px-6 py-3 rounded-lg font-medium">Go to Data Ingest</div>
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading overview:', error);
+                showToast('Failed to load overview data', 'error', '❌');
+            }
+        }
+
+        // Generate Intelligence Report
+        async function generateIntelligenceReport() {
+            const content = document.getElementById('intelligence-content');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-400">Analyzing data and generating strategic insights...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/intelligence/report', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <!-- Data Summary -->
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">📊 Data Summary</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.data_summary.total_posts}</div>
+                                            <div class="text-sm text-gray-400">Total Posts</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.data_summary.total_engagement}</div>
+                                            <div class="text-sm text-gray-400">Total Engagement</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.data_summary.avg_engagement_per_post.toFixed(1)}</div>
+                                            <div class="text-sm text-gray-400">Avg Engagement/Post</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${(data.data_summary.analysis_confidence * 100).toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Analysis Confidence</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sentiment Analysis -->
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">😊 Sentiment Analysis</h3>
+                                    <div class="grid grid-cols-3 gap-4 mb-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-400">${(data.sentiment_analysis.positive * 100).toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Positive</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-gray-400">${(data.sentiment_analysis.neutral * 100).toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Neutral</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-red-400">${(data.sentiment_analysis.negative * 100).toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Negative</div>
+                                        </div>
+                                    </div>
+                                    ${data.sentiment_analysis.emotion_distribution ? `
+                                    <div class="mt-4">
+                                        <h4 class="font-medium mb-2">Emotion Distribution:</h4>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${Object.entries(data.sentiment_analysis.emotion_distribution).map(([emotion, count]) => `
+                                                <span class="px-3 py-1 bg-gray-600 rounded-full text-sm">${emotion}: ${count}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <!-- Strategic Recommendations -->
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🎯 Strategic Recommendations</h3>
+                                    <div class="space-y-4">
+                                        ${data.strategic_recommendations.map((rec, index) => `
+                                            <div class="bg-gray-600 p-4 rounded-lg">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-medium text-orange-400">${rec.title}</h4>
+                                                    <span class="px-2 py-1 bg-${rec.priority === 'high' ? 'red' : rec.priority === 'medium' ? 'yellow' : 'green'}-600 text-white text-xs rounded-full">${rec.priority}</span>
+                                                </div>
+                                                <p class="text-sm text-gray-300 mb-2">${rec.description}</p>
+                                                <div class="flex justify-between text-xs text-gray-400">
+                                                    <span>Category: ${rec.category}</span>
+                                                    <span>Timeline: ${rec.timeline}</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Brand Analysis -->
+                            ${data.trend_insights && data.trend_insights.brand_analysis ? `
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🏷️ Brand Analysis</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.trend_insights.brand_analysis.brand_mentions}</div>
+                                            <div class="text-sm text-gray-400">Brand Mentions</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.trend_insights.brand_analysis.brand_mention_rate.toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Mention Rate</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.trend_insights.brand_analysis.brand_share_of_voice.toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Share of Voice</div>
+                                        </div>
+                                    </div>
+                                    ${data.trend_insights.brand_analysis.competitor_mentions ? `
+                                    <div class="mt-4">
+                                        <h4 class="font-medium mb-2">Competitor Mentions:</h4>
+                                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                            ${Object.entries(data.trend_insights.brand_analysis.competitor_mentions).map(([brand, count]) => `
+                                                <div class="bg-gray-600 p-2 rounded text-center">
+                                                    <div class="font-medium">${brand}</div>
+                                                    <div class="text-sm text-gray-400">${count} mentions</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <!-- Cultural Insights -->
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🎭 Cultural Insights</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.cultural_insights.cultural_relevance_score}</div>
+                                            <div class="text-sm text-gray-400">Cultural Relevance</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.cultural_insights.community_engagement.toFixed(1)}%</div>
+                                            <div class="text-sm text-gray-400">Community Engagement</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.cultural_insights.authenticity_rating}</div>
+                                            <div class="text-sm text-gray-400">Authenticity Rating</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.performance_metrics.brand_health_score.toFixed(1)}</div>
+                                            <div class="text-sm text-gray-400">Brand Health Score</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4">
+                                        <h4 class="font-medium mb-2">Trending Cultural Moments:</h4>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${data.cultural_insights.trending_cultural_moments.map(moment => `
+                                                <span class="px-3 py-1 bg-purple-600 text-white rounded-full text-sm">${moment}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    showToast('Intelligence report generated successfully!', 'success', '🧠');
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">❌</div>
+                            <h3 class="text-xl font-semibold mb-2">Analysis Failed</h3>
+                            <p class="text-gray-400">${data.error}</p>
+                        </div>
+                    `;
+                    showToast('Failed to generate intelligence report', 'error', '❌');
+                }
+            } catch (error) {
+                console.error('Error generating intelligence report:', error);
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h3 class="text-xl font-semibold mb-2">Connection Error</h3>
+                        <p class="text-gray-400">Failed to connect to intelligence service</p>
+                    </div>
+                `;
+                showToast('Connection error', 'error', '❌');
+            }
+        }
+
+        // Load Competitive Intelligence Functions
+        async function loadTrendAnalysis() {
+            const content = document.getElementById('competitive-insights');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading trend analysis...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/intelligence/trends');
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">📈 Emerging Brands</h3>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        ${Object.entries(data.emerging_brands || {}).map(([brand, info]) => `
+                                            <div class="bg-gray-600 p-4 rounded-lg">
+                                                <div class="font-medium text-orange-400 mb-2">${brand}</div>
+                                                <div class="text-sm text-gray-300 mb-1">${info.mentions} mentions</div>
+                                                <div class="text-sm ${info.wow_change > 0 ? 'text-green-400' : 'text-red-400'}">
+                                                    ${info.wow_change > 0 ? '+' : ''}${info.wow_change}% WoW
+                                                </div>
+                                                <div class="text-xs text-gray-400 mt-1">${info.status}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🔍 Consumer Signals</h3>
+                                    <div class="space-y-4">
+                                        ${Object.entries(data.consumer_signals || {}).map(([signal, info]) => `
+                                            <div class="bg-gray-600 p-4 rounded-lg flex justify-between items-center">
+                                                <div>
+                                                    <div class="font-medium">${signal.replace('_', ' ').toUpperCase()}</div>
+                                                    <div class="text-sm text-gray-400">${info.mentions} mentions</div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <div class="text-sm ${info.wow_change > 0 ? 'text-green-400' : 'text-red-400'}">
+                                                        ${info.wow_change > 0 ? '+' : ''}${info.wow_change}%
+                                                    </div>
+                                                    <div class="text-xs text-gray-400">${info.sentiment}</div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">📈</div>
+                            <h3 class="text-xl font-semibold mb-2">No Trend Data</h3>
+                            <p class="text-gray-400">${data.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading trend analysis:', error);
+                showToast('Failed to load trend analysis', 'error', '❌');
+            }
+        }
+
+        async function loadCulturalRadar() {
+            const content = document.getElementById('competitive-insights');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading cultural radar...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/intelligence/cultural-radar');
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🎭 Cultural Moments</h3>
+                                    <div class="space-y-4">
+                                        ${Object.entries(data.cultural_moments || {}).map(([moment, info]) => `
+                                            <div class="bg-gray-600 p-4 rounded-lg">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="font-medium text-orange-400">${moment.replace('_', ' ').toUpperCase()}</div>
+                                                    <span class="px-2 py-1 bg-purple-600 text-white text-xs rounded-full">${info.status}</span>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                                    <div>Relevance: <span class="text-orange-400">${info.relevance}</span></div>
+                                                    <div>Score: <span class="text-orange-400">${info.opportunity_score}/10</span></div>
+                                                    <div>Momentum: <span class="text-green-400">${info.momentum}</span></div>
+                                                    <div>Action: <span class="text-blue-400">${info.recommended_action}</span></div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🏆 Competitive Landscape</h3>
+                                    <div class="space-y-4">
+                                        ${Object.entries(data.competitive_landscape || {}).map(([brand, info]) => `
+                                            <div class="bg-gray-600 p-4 rounded-lg">
+                                                <div class="font-medium text-orange-400 mb-2">${brand.toUpperCase()}</div>
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                                                    <div>Activity: <span class="text-gray-300">${info.activity}</span></div>
+                                                    <div>Focus: <span class="text-gray-300">${info.focus}</span></div>
+                                                    <div>Opportunity: <span class="text-green-400">${info.opportunity}</span></div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🌟 Emerging Influencers</h3>
+                                    <div class="space-y-4">
+                                        ${(data.emerging_influencers || []).map(influencer => `
+                                            <div class="bg-gray-600 p-4 rounded-lg">
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <div class="font-medium text-orange-400">${influencer.handle}</div>
+                                                    <span class="px-2 py-1 bg-${influencer.tier === 'Collaborate' ? 'blue' : 'green'}-600 text-white text-xs rounded-full">${influencer.tier}</span>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                                    <div>Platform: <span class="text-gray-300">${influencer.platform}</span></div>
+                                                    <div>Followers: <span class="text-gray-300">${influencer.followers}</span></div>
+                                                    <div>Engagement: <span class="text-green-400">${influencer.engagement_rate}</span></div>
+                                                    <div>Relevance: <span class="text-blue-400">${influencer.relevance}</span></div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">🎭</div>
+                            <h3 class="text-xl font-semibold mb-2">No Cultural Data</h3>
+                            <p class="text-gray-400">${data.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading cultural radar:', error);
+                showToast('Failed to load cultural radar', 'error', '❌');
+            }
+        }
+
+        async function loadPerformanceDashboard() {
+            const content = document.getElementById('competitive-insights');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading performance dashboard...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/intelligence/performance-dashboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">📊 KPI Summary</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.kpi_summary.total_posts}</div>
+                                            <div class="text-sm text-gray-400">Total Posts</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.kpi_summary.total_engagement}</div>
+                                            <div class="text-sm text-gray-400">Total Engagement</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.kpi_summary.avg_engagement_rate.toFixed(2)}%</div>
+                                            <div class="text-sm text-gray-400">Avg Engagement Rate</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.kpi_summary.content_velocity.toFixed(1)}</div>
+                                            <div class="text-sm text-gray-400">Posts/Day</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.kpi_summary.engagement_per_post.toFixed(1)}</div>
+                                            <div class="text-sm text-gray-400">Engagement/Post</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-orange-400">${data.kpi_summary.total_reach}</div>
+                                            <div class="text-sm text-gray-400">Total Reach</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">📈 Growth Metrics</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-400">+${data.growth_metrics.engagement_growth}%</div>
+                                            <div class="text-sm text-gray-400">Engagement Growth</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-400">+${data.growth_metrics.reach_growth}%</div>
+                                            <div class="text-sm text-gray-400">Reach Growth</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-400">+${data.growth_metrics.follower_growth}%</div>
+                                            <div class="text-sm text-gray-400">Follower Growth</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-400">+${data.growth_metrics.brand_mention_growth}%</div>
+                                            <div class="text-sm text-gray-400">Brand Mentions</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">🎯 Content Performance</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <h4 class="font-medium mb-2">Top Performing Content Types:</h4>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${data.content_performance.top_performing_content_types.map(type => `
+                                                    <span class="px-3 py-1 bg-blue-600 text-white rounded-full text-sm">${type}</span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium mb-2">Optimal Posting Times:</h4>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${data.content_performance.optimal_posting_times.map(time => `
+                                                    <span class="px-3 py-1 bg-green-600 text-white rounded-full text-sm">${time}</span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium mb-2">Best Performing Hashtags:</h4>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${data.content_performance.best_performing_hashtags.map(hashtag => `
+                                                    <span class="px-3 py-1 bg-purple-600 text-white rounded-full text-sm">${hashtag}</span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">📊</div>
+                            <h3 class="text-xl font-semibold mb-2">No Performance Data</h3>
+                            <p class="text-gray-400">${data.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading performance dashboard:', error);
+                showToast('Failed to load performance dashboard', 'error', '❌');
+            }
+        }
+
+        // Other existing functions remain the same...
+        // (Calendar, Agency, File Upload, Shopify, Asset Library functions)
+
+        // Calendar Functions
+        async function loadCalendarView(view) {
+            const content = document.getElementById('calendar-content');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-400">Loading ${view} calendar view...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/calendar/${view}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="gradient-border">
+                            <div class="bg-gray-700 p-6 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-4 gradient-text">${data.title}</h3>
+                                <div class="space-y-4">
+                                    ${data.content.map(item => `
+                                        <div class="bg-gray-600 p-4 rounded-lg">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="font-medium">${item.title}</div>
+                                                <span class="px-2 py-1 bg-${item.status === 'completed' ? 'green' : item.status === 'in_progress' ? 'yellow' : 'gray'}-600 text-white text-xs rounded-full">${item.status}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-300 mb-2">${item.description}</p>
+                                            <div class="text-xs text-gray-400">${item.date}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">📅</div>
+                            <h3 class="text-xl font-semibold mb-2">Calendar Error</h3>
+                            <p class="text-gray-400">${data.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading calendar:', error);
+                showToast('Failed to load calendar view', 'error', '❌');
+            }
+        }
+
+        // Agency Functions
+        async function loadAgencyData() {
+            const content = document.getElementById('agency-content');
+            try {
+                const response = await fetch('/agency/dashboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                        <div class="text-3xl font-bold gradient-text mb-2">${data.metrics.deliverables_completed}</div>
+                                        <div class="text-gray-300">Deliverables Completed</div>
+                                    </div>
+                                </div>
+                                <div class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                        <div class="text-3xl font-bold gradient-text mb-2">${data.metrics.on_time_delivery}%</div>
+                                        <div class="text-gray-300">On-Time Delivery</div>
+                                    </div>
+                                </div>
+                                <div class="gradient-border hover-glow transition-all duration-300">
+                                    <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                        <div class="text-3xl font-bold gradient-text mb-2">${data.metrics.client_satisfaction}%</div>
+                                        <div class="text-gray-300">Client Satisfaction</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gradient-border">
+                                <div class="bg-gray-700 p-6 rounded-lg">
+                                    <h3 class="text-xl font-semibold mb-4 gradient-text">Recent Deliverables</h3>
+                                    <div class="space-y-4">
+                                        ${data.recent_deliverables.map(item => `
+                                            <div class="bg-gray-600 p-4 rounded-lg flex justify-between items-center">
+                                                <div>
+                                                    <div class="font-medium">${item.title}</div>
+                                                    <div class="text-sm text-gray-400">${item.client} • ${item.date}</div>
+                                                </div>
+                                                <span class="px-3 py-1 bg-${item.status === 'completed' ? 'green' : item.status === 'in_progress' ? 'yellow' : 'red'}-600 text-white text-sm rounded-full">${item.status}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">🤝</div>
+                            <h3 class="text-xl font-semibold mb-2">No Agency Data</h3>
+                            <p class="text-gray-400">Agency tracking data will appear here once configured.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading agency data:', error);
+                showToast('Failed to load agency data', 'error', '❌');
+            }
+        }
+
+        // File Upload Functions
+        async function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showToast('Please select files to upload', 'error', '❌');
+                return;
+            }
+
+            const statusDiv = document.getElementById('ingest-status');
+            statusDiv.innerHTML = `
+                <div class="gradient-border">
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="animate-spin w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+                            <span>Uploading ${files.length} file(s)...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const formData = new FormData();
+                for (let file of files) {
+                    formData.append('files', file);
+                }
+
+                const response = await fetch('/ingest/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = `
+                        <div class="gradient-border">
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <div class="text-green-400 text-xl">✅</div>
+                                    <span class="font-medium">Upload Successful</span>
+                                </div>
+                                <div class="space-y-2">
+                                    ${result.files.map(file => `
+                                        <div class="text-sm text-gray-300">
+                                            📄 ${file.filename} (${file.records} records)
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    showToast(`Successfully uploaded ${files.length} file(s)`, 'success', '✅');
+                    fileInput.value = '';
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="gradient-border">
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-red-400 text-xl">❌</div>
+                                    <span class="font-medium">Upload Failed: ${result.error}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    showToast('Upload failed', 'error', '❌');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                statusDiv.innerHTML = `
+                    <div class="gradient-border">
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="text-red-400 text-xl">❌</div>
+                                <span class="font-medium">Upload Error: Connection failed</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                showToast('Connection error during upload', 'error', '❌');
+            }
+        }
+
+        // Shopify Functions
+        async function connectShopify() {
+            const shopDomain = document.getElementById('shopDomain').value;
+            const accessToken = document.getElementById('accessToken').value;
+            
+            if (!shopDomain || !accessToken) {
+                showToast('Please enter both shop domain and access token', 'error', '❌');
+                return;
+            }
+
+            const statusDiv = document.getElementById('shopify-status');
+            statusDiv.innerHTML = `
+                <div class="gradient-border">
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="animate-spin w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+                            <span>Connecting to Shopify...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/shopify/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        shop_domain: shopDomain,
+                        access_token: accessToken
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = `
+                        <div class="gradient-border">
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-green-400 text-xl">✅</div>
+                                    <span class="font-medium">Connected Successfully</span>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-300">
+                                    Shop: ${result.shop_info.name}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    showToast('Shopify connected successfully!', 'success', '🛒');
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="gradient-border">
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-red-400 text-xl">❌</div>
+                                    <span class="font-medium">Connection Failed: ${result.error}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    showToast('Shopify connection failed', 'error', '❌');
+                }
+            } catch (error) {
+                console.error('Shopify connection error:', error);
+                statusDiv.innerHTML = `
+                    <div class="gradient-border">
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="text-red-400 text-xl">❌</div>
+                                <span class="font-medium">Connection Error</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                showToast('Connection error', 'error', '❌');
+            }
+        }
+
+        async function syncShopifyData(dataType) {
+            showToast(`Syncing ${dataType} data...`, 'info', '🔄');
+            
+            try {
+                const response = await fetch(`/shopify/sync/${dataType}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`${dataType} data synced successfully!`, 'success', '✅');
+                    loadShopifyDashboard();
+                } else {
+                    showToast(`Failed to sync ${dataType} data: ${result.error}`, 'error', '❌');
+                }
+            } catch (error) {
+                console.error(`Error syncing ${dataType}:`, error);
+                showToast(`Error syncing ${dataType} data`, 'error', '❌');
+            }
+        }
+
+        async function loadShopifyDashboard() {
+            try {
+                const response = await fetch('/shopify/dashboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const dashboard = document.getElementById('shopify-dashboard');
+                    dashboard.innerHTML = `
+                        <div class="gradient-border hover-glow transition-all duration-300">
+                            <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                <div class="text-3xl font-bold gradient-text mb-2">$${data.analytics.total_revenue.toLocaleString()}</div>
+                                <div class="text-gray-300">Total Revenue</div>
+                            </div>
+                        </div>
+                        <div class="gradient-border hover-glow transition-all duration-300">
+                            <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                <div class="text-3xl font-bold gradient-text mb-2">${data.analytics.total_orders}</div>
+                                <div class="text-gray-300">Total Orders</div>
+                            </div>
+                        </div>
+                        <div class="gradient-border hover-glow transition-all duration-300">
+                            <div class="bg-gray-700 p-6 rounded-lg text-center">
+                                <div class="text-3xl font-bold gradient-text mb-2">${data.analytics.total_sessions.toLocaleString()}</div>
+                                <div class="text-gray-300">Total Sessions</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading Shopify dashboard:', error);
+            }
+        }
+
+        // Asset Library Functions
+        function showAssetCategory(category) {
+            const grid = document.getElementById('asset-grid');
+            
+            if (category === 'images') {
+                grid.innerHTML = `
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🖼️</span>
+                            </div>
+                            <h4 class="font-medium mb-2">street_style_1.jpg</h4>
+                            <p class="text-sm text-gray-400 mb-4">2.4 MB</p>
+                            <button onclick="downloadAsset('street_style_1.jpg')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🖼️</span>
+                            </div>
+                            <h4 class="font-medium mb-2">heritage_collection.png</h4>
+                            <p class="text-sm text-gray-400 mb-4">1.8 MB</p>
+                            <button onclick="downloadAsset('heritage_collection.png')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🖼️</span>
+                            </div>
+                            <h4 class="font-medium mb-2">brand_logo_variants.svg</h4>
+                            <p class="text-sm text-gray-400 mb-4">156 KB</p>
+                            <button onclick="downloadAsset('brand_logo_variants.svg')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (category === 'videos') {
+                grid.innerHTML = `
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🎥</span>
+                            </div>
+                            <h4 class="font-medium mb-2">brand_story.mp4</h4>
+                            <p class="text-sm text-gray-400 mb-4">45.2 MB</p>
+                            <button onclick="downloadAsset('brand_story.mp4')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🎥</span>
+                            </div>
+                            <h4 class="font-medium mb-2">product_showcase.mov</h4>
+                            <p class="text-sm text-gray-400 mb-4">32.1 MB</p>
+                            <button onclick="downloadAsset('product_showcase.mov')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (category === 'audio') {
+                grid.innerHTML = `
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🎵</span>
+                            </div>
+                            <h4 class="font-medium mb-2">brand_anthem.mp3</h4>
+                            <p class="text-sm text-gray-400 mb-4">4.2 MB</p>
+                            <button onclick="downloadAsset('brand_anthem.mp3')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gradient-border hover-glow transition-all duration-300">
+                        <div class="bg-gray-700 p-4 rounded-lg text-center">
+                            <div class="w-full h-32 bg-gray-600 rounded-lg mb-4 flex items-center justify-center">
+                                <span class="text-4xl">🎵</span>
+                            </div>
+                            <h4 class="font-medium mb-2">background_music.wav</h4>
+                            <p class="text-sm text-gray-400 mb-4">12.8 MB</p>
+                            <button onclick="downloadAsset('background_music.wav')" class="gradient-border hover-glow transition-all duration-300 w-full">
+                                <div class="bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium">Download</div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function uploadAsset() {
+            showToast('Asset upload feature coming soon!', 'info', '⬆️');
+        }
+
+        function downloadAsset(filename) {
+            showToast(`Downloading ${filename}...`, 'success', '⬇️');
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            showTab('overview');
+            loadShopifyDashboard();
+        });
+    </script>
+</body>
+</html>

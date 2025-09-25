@@ -1,6 +1,6 @@
-# Crooks & Castles Command Center V2
+# Crooks & Castles Command Center V2 - Core Application
 
-## Quick Start
+## 🚀 Quick Start
 
 1. **Install Dependencies**
    ```bash
@@ -13,35 +13,30 @@
    python main.py
    ```
 
-3. **Access the Dashboard**
-   Open your browser to: `http://localhost:8000`
+3. **Access Dashboard**
+   Open: `http://localhost:8000`
 
-## Features
+## 📦 What's Included
 
-- **Intelligence System**: Advanced sentiment analysis and trend insights
-- **Shopify Integration**: E-commerce analytics and data sync
-- **Calendar Planning**: Strategic content planning with cultural moments
-- **Asset Library**: Media management for images, videos, and audio
-- **Beautiful UI**: Modern, responsive design with animations
+- **Complete Application Code** - All routers, services, and frontend
+- **Competitive Intelligence System** - Strategic recommendations and trend analysis
+- **Beautiful Modern UI** - Gradient styling with animations
+- **All Features** - Calendar, Agency tracking, Asset library, Shopify integration
 
-## File Structure
+## 📊 To Add Real Data
 
-```
-backend/
-├── main.py              # Main application
-├── requirements.txt     # Python dependencies
-├── static/
-│   └── index.html      # Frontend interface
-├── routers/            # API endpoints
-├── services/           # Business logic
-├── data/              # Data storage
-└── media/             # Asset storage
-```
+1. Download the **sample-data** package
+2. Copy JSON files to `backend/data/` directory
+3. Restart the application
+4. Upload your own data via the Data Ingest tab
 
-## Data Upload
+## 🎯 Features
 
-Upload your social media data files (JSONL/JSON) through the Data Ingest tab to see real analytics and insights.
+- **Intelligence Reports** with sentiment analysis
+- **Competitive Analysis** with emerging brand tracking
+- **Cultural Radar** with opportunity scoring
+- **Strategic Recommendations** with priority levels
+- **Performance Dashboard** with KPIs and growth metrics
 
-## Support
-
-For issues or questions, refer to the comprehensive documentation included with the full package.
+**File Size**: ~50KB (core application only)
+**Status**: Ready to run (works with or without sample data)
