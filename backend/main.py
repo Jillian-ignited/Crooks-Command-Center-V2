@@ -7,12 +7,12 @@ import uvicorn
 
 # Import all routers
 from routers import (
-    intelligence_COMPLETE,
-    summary_COMPLETE, 
-    calendar_COMPLETE,
-    agency_COMPLETE,
-    ingest_COMPLETE,
-    shopify_COMPLETE
+    intelligence,
+    summary, 
+    calendar,
+    agency_,
+    ingest_ENHANCED,
+    shopify
 )
 
 # Create FastAPI app
