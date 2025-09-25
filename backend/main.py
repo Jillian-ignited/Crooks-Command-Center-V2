@@ -1,9 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import intelligence, summary, calendar, agency
-from routers import ingest_ENHANCED
-
+from routers import intelligence, summary, calendar, agency, ingest_ENHANCED, shopify
 
 os.makedirs("data/uploads", exist_ok=True)
 os.makedirs("data/cache", exist_ok=True)
@@ -27,6 +25,7 @@ app.include_router(summary.router, prefix="/summary", tags=["summary"])
 app.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 app.include_router(agency.router, prefix="/agency", tags=["agency"])
 app.include_router(ingest_ENHANCED.router, prefix="/ingest", tags=["ingest"])
+app.include_router(shopify.router, prefix="/shopify", tags=["shopify"])
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
