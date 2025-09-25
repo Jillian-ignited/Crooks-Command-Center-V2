@@ -95,6 +95,7 @@
         .nav-tabs {
             display: flex;
             gap: 0.25rem;
+            flex-wrap: wrap;
         }
         
         .tab-button {
@@ -205,6 +206,11 @@
             background-color: #4b5563;
         }
         
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -291,10 +297,6 @@
             color: #4ade80;
         }
         
-        .text-yellow-400 {
-            color: #facc15;
-        }
-        
         .mb-4 {
             margin-bottom: 1rem;
         }
@@ -333,64 +335,80 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Calendar Specific Styles */
+        .calendar-view-content {
+            margin-top: 1rem;
+        }
         
-        .alert {
-            padding: 1rem;
+        .calendar-container {
+            background-color: var(--crooks-gray);
             border-radius: 0.5rem;
-            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            overflow: hidden;
         }
-        
-        .alert-success {
-            background-color: rgba(16, 185, 129, 0.1);
-            border: 1px solid #10b981;
-            color: #10b981;
-        }
-        
-        .alert-error {
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #ef4444;
-        }
-        
-        .alert-warning {
-            background-color: rgba(250, 204, 21, 0.1);
-            border: 1px solid #facc15;
-            color: #facc15;
-        }
-        
-        .domain-examples {
-            background-color: var(--crooks-black);
-            border: 1px solid #374151;
-            border-radius: 0.5rem;
+
+        .calendar-header {
+            background: linear-gradient(45deg, var(--crooks-orange), var(--crooks-gold));
+            color: var(--crooks-black);
             padding: 1rem;
-            margin-top: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        
-        .domain-examples h5 {
-            color: var(--crooks-orange);
+
+        .calendar-nav-btn {
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            color: var(--crooks-black);
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
             font-weight: bold;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
         }
-        
-        .domain-examples ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+
+        .calendar-nav-btn:hover {
+            background: rgba(0, 0, 0, 0.3);
         }
-        
-        .domain-examples li {
-            padding: 0.25rem 0;
-            font-size: 0.875rem;
-            color: #d1d5db;
+
+        .event-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        
-        .domain-examples .correct {
-            color: #10b981;
+
+        .event-modal-content {
+            background-color: var(--crooks-gray);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
         }
-        
-        .domain-examples .incorrect {
-            color: #ef4444;
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: white;
         }
     </style>
 </head>
@@ -431,6 +449,9 @@
                 </button>
                 <button onclick="showTab('revenue')" id="tab-revenue" class="tab-button">
                     💰 Revenue Intelligence
+                </button>
+                <button onclick="showTab('calendar')" id="tab-calendar" class="tab-button">
+                    📅 Campaign Calendar
                 </button>
                 <button onclick="showTab('media')" id="tab-media" class="tab-button">
                     🎬 Media Library
@@ -552,6 +573,179 @@
                 </div>
             </div>
 
+            <!-- Campaign Calendar Tab -->
+            <div id="calendar-tab" class="tab-content">
+                <!-- Strategic Calendar Views -->
+                <div class="card mb-6">
+                    <h3 class="card-title">📊 Strategic Calendar Views</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="switchCalendarView('tactical7')" id="view-tactical7" class="btn btn-secondary btn-small">
+                            📅 7-Day Tactical
+                        </button>
+                        <button onclick="switchCalendarView('strategic30')" id="view-strategic30" class="btn btn-secondary btn-small">
+                            🎯 30-Day Strategic  
+                        </button>
+                        <button onclick="switchCalendarView('strategic60')" id="view-strategic60" class="btn btn-secondary btn-small">
+                            🌟 60-Day Planning
+                        </button>
+                        <button onclick="switchCalendarView('strategic90')" id="view-strategic90" class="btn btn-secondary btn-small">
+                            🚀 90+ Long-term
+                        </button>
+                        <button onclick="openQuarterlyStrategy()" class="btn btn-primary btn-small">
+                            📋 Quarterly Strategy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Creation Tools -->
+                <div class="card mb-6">
+                    <h3 class="card-title">🎨 Content Creation Tools</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="generateCampaign()" class="btn btn-primary btn-small">
+                            🎯 Campaign Generator
+                        </button>
+                        <button onclick="analyzeTrends()" class="btn btn-primary btn-small">
+                            📈 Trend Analysis
+                        </button>
+                        <button onclick="createContentCalendar()" class="btn btn-primary btn-small">
+                            📅 Content Calendar Creator
+                        </button>
+                        <button onclick="planCulturalMoments()" class="btn btn-primary btn-small">
+                            🌍 Cultural Moment Planner
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 7-Day Tactical View -->
+                <div id="tactical7-view" class="calendar-view-content">
+                    <div class="grid grid-cols-2">
+                        <div class="card">
+                            <h3 class="card-title">📋 Weekly Content Pipeline</h3>
+                            <div id="weeklyPipeline">
+                                <div class="text-center text-gray-400 py-8">Loading weekly content...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">🎬 Asset Mapping</h3>
+                            <div id="assetMapping">
+                                <div class="text-center text-gray-400 py-8">Loading asset assignments...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 30-Day Strategic View -->
+                <div id="strategic30-view" class="calendar-view-content hidden">
+                    <div class="grid grid-cols-2">
+                        <div class="card">
+                            <h3 class="card-title">✅ Approved Content</h3>
+                            <div id="approvedContent">
+                                <div class="text-center text-gray-400 py-8">Loading approved content...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">💡 Opportunities</h3>
+                            <div id="contentOpportunities">
+                                <div class="text-center text-gray-400 py-8">Loading opportunities...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-6">
+                        <h3 class="card-title">📊 Completion Tracking</h3>
+                        <div id="completionTracking">
+                            <div class="text-center text-gray-400 py-8">Loading completion status...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 60-Day Planning View -->
+                <div id="strategic60-view" class="calendar-view-content hidden">
+                    <div class="grid grid-cols-2">
+                        <div class="card">
+                            <h3 class="card-title">🎉 Upcoming Holidays</h3>
+                            <div id="upcomingHolidays">
+                                <div class="text-center text-gray-400 py-8">Loading holidays...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">🎵 Cultural Moments</h3>
+                            <div id="culturalMoments">
+                                <div class="text-center text-gray-400 py-8">Loading cultural moments...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-6">
+                        <h3 class="card-title">🏆 Campaign Themes</h3>
+                        <div id="campaignThemes">
+                            <div class="text-center text-gray-400 py-8">Loading campaign themes...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 90+ Day Long-term View -->
+                <div id="strategic90-view" class="calendar-view-content hidden">
+                    <div class="grid grid-cols-3">
+                        <div class="card">
+                            <h3 class="card-title">🎂 Important Birthdays</h3>
+                            <div id="importantBirthdays">
+                                <div class="text-center text-gray-400 py-8">Loading birthdays...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">💿 Album Drops</h3>
+                            <div id="albumDrops">
+                                <div class="text-center text-gray-400 py-8">Loading album releases...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">📅 Anniversaries</h3>
+                            <div id="anniversaries">
+                                <div class="text-center text-gray-400 py-8">Loading anniversaries...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-6">
+                        <h3 class="card-title">💫 Marketing Opportunities</h3>
+                        <div id="marketingOpportunities">
+                            <div class="text-center text-gray-400 py-8">Loading opportunities...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Traditional Calendar View (fallback) -->
+                <div id="calendar-traditional-view" class="calendar-view-content hidden">
+                    <div class="grid grid-cols-3">
+                        <div style="grid-column: 1 / 3;">
+                            <div class="calendar-container">
+                                <div class="calendar-header">
+                                    <button onclick="changeMonth(-1)" class="calendar-nav-btn">‹</button>
+                                    <h3 id="calendarMonth" style="margin: 0; font-size: 1.25rem; font-weight: bold;"></h3>
+                                    <button onclick="changeMonth(1)" class="calendar-nav-btn">›</button>
+                                </div>
+                                <div class="calendar-grid">
+                                    <div class="calendar-day-header">Sun</div>
+                                    <div class="calendar-day-header">Mon</div>
+                                    <div class="calendar-day-header">Tue</div>
+                                    <div class="calendar-day-header">Wed</div>
+                                    <div class="calendar-day-header">Thu</div>
+                                    <div class="calendar-day-header">Fri</div>
+                                    <div class="calendar-day-header">Sat</div>
+                                    <div id="calendarDays"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="calendar-sidebar">
+                                <h3 class="card-title">🎯 Upcoming Events</h3>
+                                <div id="upcomingEvents" class="upcoming-events">
+                                    <!-- Events will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Media Library Tab -->
             <div id="media-tab" class="tab-content">
                 <div class="grid grid-cols-3 mb-6">
@@ -632,25 +826,11 @@
                             </div>
                         </div>
 
-                        <div id="connectionAlert" class="hidden"></div>
-
                         <form id="shopifySetupForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
                             <div class="form-group">
-                                <label class="form-label">Shop Domain</label>
-                                <input type="text" id="shopUrl" class="form-input" placeholder="crooksonline">
-                                <div class="domain-examples">
-                                    <h5>✅ Correct formats:</h5>
-                                    <ul>
-                                        <li class="correct">• crooksonline</li>
-                                        <li class="correct">• crooksonline.myshopify.com</li>
-                                        <li class="correct">• https://crooksonline.myshopify.com</li>
-                                    </ul>
-                                    <h5 style="margin-top: 0.75rem;">❌ Avoid:</h5>
-                                    <ul>
-                                        <li class="incorrect">• www.crooksonline.com</li>
-                                        <li class="incorrect">• crooksonline.com</li>
-                                    </ul>
-                                </div>
+                                <label class="form-label">Shop URL</label>
+                                <input type="text" id="shopUrl" class="form-input" placeholder="your-shop.myshopify.com">
+                                <p class="text-gray-400 text-sm mt-2">Enter your Shopify store URL (without https://)</p>
                             </div>
 
                             <div class="form-group">
@@ -676,7 +856,7 @@
                                 <li>2. Create a private app with Admin API access</li>
                                 <li>3. Enable permissions for: Orders (read), Products (read), Analytics (read)</li>
                                 <li>4. Copy the Admin API access token</li>
-                                <li>5. Enter your shop name (just "crooksonline") and access token above</li>
+                                <li>5. Enter your shop URL and access token above</li>
                             </ol>
                         </div>
                     </div>
@@ -684,6 +864,41 @@
             </div>
         </div>
     </main>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="event-modal">
+        <div class="event-modal-content">
+            <button onclick="closeEventModal()" class="modal-close">×</button>
+            <h3 class="card-title">📅 Add Calendar Event</h3>
+            
+            <div class="event-type-selector">
+                <button type="button" onclick="setEventType('campaign')" id="type-campaign" class="event-type-btn active">🎯 Campaign</button>
+                <button type="button" onclick="setEventType('meeting')" id="type-meeting" class="event-type-btn">👥 Meeting</button>
+                <button type="button" onclick="setEventType('deadline')" id="type-deadline" class="event-type-btn">⚠️ Deadline</button>
+                <button type="button" onclick="setEventType('content')" id="type-content" class="event-type-btn">📝 Content</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Event Title</label>
+                <input type="text" id="eventTitle" class="form-input" placeholder="Enter event title...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="eventDate" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="eventDescription" class="form-input" style="height: 4rem; resize: none;" placeholder="Event details..."></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="closeEventModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveEvent()" class="btn btn-primary">Save Event</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Global state
@@ -693,8 +908,18 @@
             intelligence: false,
             revenue: false,
             media: false,
-            ingest: false
+            ingest: false,
+            calendar: false
         };
+
+        // Calendar state
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+        let selectedDate = null;
+        let currentEventType = 'campaign';
+        let currentCalendarView = 'tactical7';
+        let events = [];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -704,28 +929,11 @@
             loadOverviewData();
             setupFileUpload();
             setupMediaFileUpload();
+            initializeCalendar();
         });
 
         function updateLastUpdated() {
             document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
-        }
-
-        function showAlert(message, type = 'error') {
-            const alertDiv = document.getElementById('connectionAlert');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
-            alertDiv.classList.remove('hidden');
-            
-            // Auto-hide after 5 seconds for success messages
-            if (type === 'success') {
-                setTimeout(() => {
-                    alertDiv.classList.add('hidden');
-                }, 5000);
-            }
-        }
-
-        function hideAlert() {
-            document.getElementById('connectionAlert').classList.add('hidden');
         }
 
         function showTab(tabName) {
@@ -763,8 +971,790 @@
                     case 'media':
                         loadMediaLibrary();
                         break;
+                    case 'calendar':
+                        loadCalendarData();
+                        break;
                 }
             }
+        }
+
+        // Calendar Functions
+        function initializeCalendar() {
+            renderCalendar();
+            updateUpcomingEvents();
+        }
+
+        function loadCalendarData() {
+            switchCalendarView('tactical7'); // Default to 7-day tactical view
+            dataLoaded.calendar = true;
+        }
+
+        // Calendar View Switching
+        function switchCalendarView(viewType) {
+            currentCalendarView = viewType;
+            
+            // Hide all views
+            document.querySelectorAll('.calendar-view-content').forEach(view => {
+                view.classList.add('hidden');
+            });
+            
+            // Remove active class from all view buttons
+            document.querySelectorAll('[id^="view-"]').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('btn-secondary');
+                btn.classList.remove('btn-primary');
+            });
+            
+            // Show selected view and activate button
+            document.getElementById(`${viewType}-view`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`view-${viewType}`);
+            if (activeBtn) {
+                activeBtn.classList.add('tab-active');
+                activeBtn.classList.remove('btn-secondary');
+                activeBtn.classList.add('btn-primary');
+            }
+            
+            // Load data for the selected view
+            switch(viewType) {
+                case 'tactical7':
+                    load7DayTacticalData();
+                    break;
+                case 'strategic30':
+                    load30DayStrategicData();
+                    break;
+                case 'strategic60':
+                    load60DayPlanningData();
+                    break;
+                case 'strategic90':
+                    load90DayLongTermData();
+                    break;
+            }
+        }
+
+        // Content Creation Tool Functions
+        async function generateCampaign() {
+            try {
+                console.log('Generating campaign...');
+                const response = await fetch('/content-tools/generate-campaign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        brand: 'Crooks & Castles',
+                        timeframe: currentCalendarView 
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Campaign generated:', data);
+                
+                if (data.success) {
+                    showContentToolResult('Campaign Generator', data.campaign || data);
+                } else {
+                    throw new Error(data.error || 'Campaign generation failed');
+                }
+                
+            } catch (error) {
+                console.error('Error generating campaign:', error);
+                alert(`Campaign generation failed: ${error.message}`);
+            }
+        }
+
+        async function analyzeTrends() {
+            try {
+                console.log('Analyzing trends...');
+                const response = await fetch('/content-tools/trend-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Trends analyzed:', data);
+                
+                if (data.success) {
+                    showContentToolResult('Trend Analysis', data.analysis || data);
+                } else {
+                    throw new Error(data.error || 'Trend analysis failed');
+                }
+                
+            } catch (error) {
+                console.error('Error analyzing trends:', error);
+                alert(`Trend analysis failed: ${error.message}`);
+            }
+        }
+
+        async function createContentCalendar() {
+            try {
+                console.log('Creating content calendar...');
+                const response = await fetch('/content-tools/content-calendar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ view: currentCalendarView })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Content calendar created:', data);
+                
+                if (data.success) {
+                    showContentToolResult('Content Calendar Creator', data.calendar || data);
+                } else {
+                    throw new Error(data.error || 'Content calendar creation failed');
+                }
+                
+            } catch (error) {
+                console.error('Error creating content calendar:', error);
+                alert(`Content calendar creation failed: ${error.message}`);
+            }
+        }
+
+        async function planCulturalMoments() {
+            try {
+                console.log('Planning cultural moments...');
+                const response = await fetch('/content-tools/cultural-moments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframe: currentCalendarView })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Cultural moments planned:', data);
+                
+                if (data.success) {
+                    showContentToolResult('Cultural Moment Planner', data.moments || data);
+                } else {
+                    throw new Error(data.error || 'Cultural moment planning failed');
+                }
+                
+            } catch (error) {
+                console.error('Error planning cultural moments:', error);
+                alert(`Cultural moment planning failed: ${error.message}`);
+            }
+        }
+
+        function showContentToolResult(toolName, result) {
+            const resultText = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+            const modal = document.getElementById('eventModal');
+            const modalContent = modal.querySelector('.event-modal-content');
+            
+            modalContent.innerHTML = `
+                <button onclick="closeEventModal()" class="modal-close">×</button>
+                <h3 class="card-title">${toolName} Results</h3>
+                <div style="background-color: var(--crooks-black); padding: 1rem; border-radius: 0.5rem; border: 1px solid rgba(255, 107, 53, 0.3); max-height: 400px; overflow-y: auto;">
+                    <pre style="white-space: pre-wrap; font-family: monospace; color: white;">${resultText}</pre>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                    <button onclick="closeEventModal()" class="btn btn-primary">Close</button>
+                </div>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        // Quarterly Strategy
+        async function openQuarterlyStrategy() {
+            try {
+                console.log('Loading quarterly strategy...');
+                const response = await fetch('/calendar/quarterly-strategy');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Quarterly strategy loaded:', data);
+                
+                showQuarterlyStrategyModal(data.strategy || {});
+                
+            } catch (error) {
+                console.error('Error loading quarterly strategy:', error);
+                showQuarterlyStrategyModal({});
+            }
+        }
+
+        function showQuarterlyStrategyModal(strategy) {
+            const modal = document.getElementById('eventModal');
+            const modalContent = modal.querySelector('.event-modal-content');
+            
+            modalContent.innerHTML = `
+                <button onclick="closeEventModal()" class="modal-close">×</button>
+                <h3 class="card-title">📋 Quarterly Strategy</h3>
+                <div class="form-group">
+                    <label class="form-label">Strategic Objectives</label>
+                    <textarea id="strategyObjectives" class="form-input" style="height: 6rem; resize: none;" placeholder="Enter strategic objectives for the quarter...">${strategy.objectives || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Key Campaigns</label>
+                    <textarea id="strategyCampaigns" class="form-input" style="height: 4rem; resize: none;" placeholder="List major campaigns planned...">${strategy.campaigns || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Budget Allocation</label>
+                    <input type="text" id="strategyBudget" class="form-input" placeholder="Budget breakdown..." value="${strategy.budget || ''}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Success Metrics</label>
+                    <textarea id="strategyMetrics" class="form-input" style="height: 4rem; resize: none;" placeholder="How will success be measured...">${strategy.metrics || ''}</textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button onclick="closeEventModal()" class="btn btn-secondary">Cancel</button>
+                    <button onclick="saveQuarterlyStrategy()" class="btn btn-primary">Save Strategy</button>
+                </div>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        async function saveQuarterlyStrategy() {
+            try {
+                const strategy = {
+                    objectives: document.getElementById('strategyObjectives').value,
+                    campaigns: document.getElementById('strategyCampaigns').value,
+                    budget: document.getElementById('strategyBudget').value,
+                    metrics: document.getElementById('strategyMetrics').value
+                };
+                
+                console.log('Saving quarterly strategy...');
+                const response = await fetch('/calendar/quarterly-strategy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(strategy)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Strategy saved:', data);
+                
+                if (data.success) {
+                    alert('Quarterly strategy saved successfully!');
+                    closeEventModal();
+                } else {
+                    throw new Error(data.error || 'Save failed');
+                }
+                
+            } catch (error) {
+                console.error('Error saving strategy:', error);
+                alert(`Failed to save strategy: ${error.message}`);
+            }
+        }
+
+        // Data Loading Functions for Each View
+        async function load7DayTacticalData() {
+            try {
+                console.log('Loading 7-day tactical data...');
+                const [pipelineResponse, assetsResponse] = await Promise.all([
+                    fetch('/calendar/7day/pipeline'),
+                    fetch('/calendar/7day/assets')
+                ]);
+                
+                if (pipelineResponse.ok) {
+                    const pipelineData = await pipelineResponse.json();
+                    displayWeeklyPipeline(pipelineData.pipeline || []);
+                }
+                
+                if (assetsResponse.ok) {
+                    const assetsData = await assetsResponse.json();
+                    displayAssetMapping(assetsData.assets || []);
+                }
+                
+            } catch (error) {
+                console.error('Error loading 7-day tactical data:', error);
+                displayWeeklyPipeline([]);
+                displayAssetMapping([]);
+            }
+        }
+
+        async function load30DayStrategicData() {
+            try {
+                console.log('Loading 30-day strategic data...');
+                const [approvedResponse, opportunitiesResponse, trackingResponse] = await Promise.all([
+                    fetch('/calendar/30day/approved'),
+                    fetch('/calendar/30day/opportunities'),
+                    fetch('/calendar/30day/tracking')
+                ]);
+                
+                if (approvedResponse.ok) {
+                    const approvedData = await approvedResponse.json();
+                    displayApprovedContent(approvedData.content || []);
+                }
+                
+                if (opportunitiesResponse.ok) {
+                    const opportunitiesData = await opportunitiesResponse.json();
+                    displayContentOpportunities(opportunitiesData.opportunities || []);
+                }
+                
+                if (trackingResponse.ok) {
+                    const trackingData = await trackingResponse.json();
+                    displayCompletionTracking(trackingData.tracking || {});
+                }
+                
+            } catch (error) {
+                console.error('Error loading 30-day strategic data:', error);
+                displayApprovedContent([]);
+                displayContentOpportunities([]);
+                displayCompletionTracking({});
+            }
+        }
+
+        async function load60DayPlanningData() {
+            try {
+                console.log('Loading 60-day planning data...');
+                const [holidaysResponse, culturalResponse, campaignsResponse] = await Promise.all([
+                    fetch('/calendar/60day/holidays'),
+                    fetch('/calendar/60day/cultural'),
+                    fetch('/calendar/60day/campaigns')
+                ]);
+                
+                if (holidaysResponse.ok) {
+                    const holidaysData = await holidaysResponse.json();
+                    displayUpcomingHolidays(holidaysData.holidays || []);
+                }
+                
+                if (culturalResponse.ok) {
+                    const culturalData = await culturalResponse.json();
+                    displayCulturalMoments(culturalData.moments || []);
+                }
+                
+                if (campaignsResponse.ok) {
+                    const campaignsData = await campaignsResponse.json();
+                    displayCampaignThemes(campaignsData.themes || []);
+                }
+                
+            } catch (error) {
+                console.error('Error loading 60-day planning data:', error);
+                displayUpcomingHolidays([]);
+                displayCulturalMoments([]);
+                displayCampaignThemes([]);
+            }
+        }
+
+        async function load90DayLongTermData() {
+            try {
+                console.log('Loading 90-day long-term data...');
+                const [birthdaysResponse, albumsResponse, anniversariesResponse, opportunitiesResponse] = await Promise.all([
+                    fetch('/calendar/90day/birthdays'),
+                    fetch('/calendar/90day/albums'),
+                    fetch('/calendar/90day/anniversaries'),
+                    fetch('/calendar/90day/opportunities')
+                ]);
+                
+                if (birthdaysResponse.ok) {
+                    const birthdaysData = await birthdaysResponse.json();
+                    displayImportantBirthdays(birthdaysData.birthdays || []);
+                }
+                
+                if (albumsResponse.ok) {
+                    const albumsData = await albumsResponse.json();
+                    displayAlbumDrops(albumsData.albums || []);
+                }
+                
+                if (anniversariesResponse.ok) {
+                    const anniversariesData = await anniversariesResponse.json();
+                    displayAnniversaries(anniversariesData.anniversaries || []);
+                }
+                
+                if (opportunitiesResponse.ok) {
+                    const opportunitiesData = await opportunitiesResponse.json();
+                    displayMarketingOpportunities(opportunitiesData.opportunities || []);
+                }
+                
+            } catch (error) {
+                console.error('Error loading 90-day long-term data:', error);
+                displayImportantBirthdays([]);
+                displayAlbumDrops([]);
+                displayAnniversaries([]);
+                displayMarketingOpportunities([]);
+            }
+        }
+
+        // Display Functions
+        function displayWeeklyPipeline(pipeline) {
+            const container = document.getElementById('weeklyPipeline');
+            if (!pipeline || pipeline.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No content in pipeline</div>';
+                return;
+            }
+
+            container.innerHTML = pipeline.map(item => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid var(--crooks-orange);">
+                    <div style="font-weight: bold; color: white;">${item.title}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${item.description}</div>
+                    <div class="text-xs text-gray-400" style="margin-top: 0.25rem;">Due: ${item.due_date}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayAssetMapping(assets) {
+            const container = document.getElementById('assetMapping');
+            if (!assets || assets.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No assets assigned</div>';
+                return;
+            }
+
+            container.innerHTML = assets.map(asset => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="font-weight: bold; color: var(--crooks-orange);">${asset.name}</div>
+                    <div class="text-sm" style="color: #d1d5db;">Status: ${asset.status}</div>
+                    <div class="text-xs text-gray-400">Assigned to: ${asset.assignee}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayApprovedContent(content) {
+            const container = document.getElementById('approvedContent');
+            if (!content || content.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No approved content</div>';
+                return;
+            }
+
+            container.innerHTML = content.map(item => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid #10b981;">
+                    <div style="font-weight: bold; color: white;">${item.title}</div>
+                    <div class="text-sm text-green-400">✅ Approved</div>
+                    <div class="text-xs text-gray-400">Launch: ${item.launch_date}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayContentOpportunities(opportunities) {
+            const container = document.getElementById('contentOpportunities');
+            if (!opportunities || opportunities.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No opportunities identified</div>';
+                return;
+            }
+
+            container.innerHTML = opportunities.map(opp => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid var(--crooks-gold);">
+                    <div style="font-weight: bold; color: white;">${opp.title}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${opp.description}</div>
+                    <div class="text-xs" style="color: var(--crooks-gold);">Impact: ${opp.impact}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayCompletionTracking(tracking) {
+            const container = document.getElementById('completionTracking');
+            if (!tracking.total) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No tracking data available</div>';
+                return;
+            }
+
+            const completionRate = ((tracking.completed / tracking.total) * 100).toFixed(1);
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div style="text-align: center; padding: 1rem; background-color: var(--crooks-black); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--crooks-orange);">${tracking.total}</div>
+                        <div class="text-sm text-gray-400">Total Tasks</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background-color: var(--crooks-black); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #10b981;">${tracking.completed}</div>
+                        <div class="text-sm text-gray-400">Completed</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background-color: var(--crooks-black); border-radius: 0.5rem;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--crooks-gold);">${completionRate}%</div>
+                        <div class="text-sm text-gray-400">Completion Rate</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayUpcomingHolidays(holidays) {
+            const container = document.getElementById('upcomingHolidays');
+            if (!holidays || holidays.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No upcoming holidays</div>';
+                return;
+            }
+
+            container.innerHTML = holidays.map(holiday => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="font-weight: bold; color: var(--crooks-orange);">${holiday.name}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${holiday.date}</div>
+                    <div class="text-xs text-gray-400">${holiday.significance}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayCulturalMoments(moments) {
+            const container = document.getElementById('culturalMoments');
+            if (!moments || moments.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No cultural moments identified</div>';
+                return;
+            }
+
+            container.innerHTML = moments.map(moment => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid var(--crooks-gold);">
+                    <div style="font-weight: bold; color: white;">${moment.event}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${moment.context}</div>
+                    <div class="text-xs" style="color: var(--crooks-gold);">Relevance: ${moment.relevance}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayCampaignThemes(themes) {
+            const container = document.getElementById('campaignThemes');
+            if (!themes || themes.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No campaign themes planned</div>';
+                return;
+            }
+
+            container.innerHTML = themes.map(theme => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid var(--crooks-orange);">
+                    <div style="font-weight: bold; color: white;">${theme.title}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${theme.description}</div>
+                    <div class="text-xs text-gray-400">Timeline: ${theme.timeline}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayImportantBirthdays(birthdays) {
+            const container = document.getElementById('importantBirthdays');
+            if (!birthdays || birthdays.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No important birthdays</div>';
+                return;
+            }
+
+            container.innerHTML = birthdays.map(birthday => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="font-weight: bold; color: var(--crooks-orange);">${birthday.name}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${birthday.date}</div>
+                    <div class="text-xs text-gray-400">${birthday.significance}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayAlbumDrops(albums) {
+            const container = document.getElementById('albumDrops');
+            if (!albums || albums.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No album drops scheduled</div>';
+                return;
+            }
+
+            container.innerHTML = albums.map(album => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid var(--crooks-gold);">
+                    <div style="font-weight: bold; color: white;">${album.artist}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${album.album}</div>
+                    <div class="text-xs" style="color: var(--crooks-gold);">Release: ${album.release_date}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayAnniversaries(anniversaries) {
+            const container = document.getElementById('anniversaries');
+            if (!anniversaries || anniversaries.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No anniversaries</div>';
+                return;
+            }
+
+            container.innerHTML = anniversaries.map(anniversary => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="font-weight: bold; color: var(--crooks-orange);">${anniversary.event}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${anniversary.date}</div>
+                    <div class="text-xs text-gray-400">${anniversary.significance}</div>
+                </div>
+            `).join('');
+        }
+
+        function displayMarketingOpportunities(opportunities) {
+            const container = document.getElementById('marketingOpportunities');
+            if (!opportunities || opportunities.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-8">No marketing opportunities identified</div>';
+                return;
+            }
+
+            container.innerHTML = opportunities.map(opp => `
+                <div style="padding: 0.75rem; background-color: var(--crooks-black); border-radius: 0.5rem; margin-bottom: 0.5rem; border-left: 4px solid var(--crooks-orange);">
+                    <div style="font-weight: bold; color: white;">${opp.title}</div>
+                    <div class="text-sm" style="color: #d1d5db;">${opp.description}</div>
+                    <div class="text-xs" style="color: var(--crooks-orange);">Potential Impact: ${opp.impact}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderCalendar() {
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            document.getElementById('calendarMonth').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDate = firstDay.getDay();
+
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+
+            // Previous month days
+            const prevMonth = new Date(currentYear, currentMonth - 1, 0);
+            const prevMonthDays = prevMonth.getDate();
+            for (let i = startDate - 1; i >= 0; i--) {
+                const dayDiv = createCalendarDay(prevMonthDays - i, true);
+                calendarDays.appendChild(dayDiv);
+            }
+
+            // Current month days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDiv = createCalendarDay(day, false);
+                calendarDays.appendChild(dayDiv);
+            }
+
+            // Next month days
+            const totalCells = calendarDays.children.length;
+            const remainingCells = 42 - totalCells; // 6 rows × 7 days
+            for (let day = 1; day <= remainingCells; day++) {
+                const dayDiv = createCalendarDay(day, true);
+                calendarDays.appendChild(dayDiv);
+            }
+        }
+
+        function createCalendarDay(day, isOtherMonth) {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = `calendar-day ${isOtherMonth ? 'other-month' : ''}`;
+            
+            const today = new Date();
+            if (!isOtherMonth && day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
+                dayDiv.classList.add('today');
+            }
+
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'calendar-day-number';
+            dayNumber.textContent = day;
+            dayDiv.appendChild(dayNumber);
+
+            // Add events for this day
+            const dayDate = new Date(currentYear, currentMonth, day);
+            const dayEvents = events.filter(event => 
+                event.date.getDate() === day &&
+                event.date.getMonth() === currentMonth &&
+                event.date.getFullYear() === currentYear &&
+                !isOtherMonth
+            );
+
+            dayEvents.forEach(event => {
+                const eventDiv = document.createElement('div');
+                eventDiv.className = `calendar-event ${event.type}`;
+                eventDiv.textContent = event.title;
+                eventDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    viewEvent(event);
+                };
+                dayDiv.appendChild(eventDiv);
+            });
+
+            dayDiv.onclick = () => {
+                if (!isOtherMonth) {
+                    selectedDate = new Date(currentYear, currentMonth, day);
+                    document.getElementById('eventDate').value = selectedDate.toISOString().split('T')[0];
+                    openEventModal();
+                }
+            };
+
+            return dayDiv;
+        }
+
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        }
+
+        function updateUpcomingEvents() {
+            const upcomingContainer = document.getElementById('upcomingEvents');
+            const today = new Date();
+            const upcoming = events
+                .filter(event => event.date >= today)
+                .sort((a, b) => a.date - b.date)
+                .slice(0, 10);
+
+            if (upcoming.length === 0) {
+                upcomingContainer.innerHTML = '<div class="text-gray-400 text-center py-4">No upcoming events</div>';
+                return;
+            }
+
+            upcomingContainer.innerHTML = upcoming.map(event => `
+                <div class="upcoming-event" onclick="viewEvent(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                    <div class="upcoming-event-date">${event.date.toLocaleDateString()}</div>
+                    <div class="upcoming-event-title">${event.title}</div>
+                    <div class="upcoming-event-type">${event.type}</div>
+                </div>
+            `).join('');
+        }
+
+        function openEventModal() {
+            document.getElementById('eventModal').style.display = 'flex';
+            if (selectedDate) {
+                document.getElementById('eventDate').value = selectedDate.toISOString().split('T')[0];
+            }
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventDescription').value = '';
+            selectedDate = null;
+        }
+
+        function setEventType(type) {
+            currentEventType = type;
+            document.querySelectorAll('.event-type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`type-${type}`).classList.add('active');
+        }
+
+        function saveEvent() {
+            const title = document.getElementById('eventTitle').value;
+            const date = new Date(document.getElementById('eventDate').value);
+            const description = document.getElementById('eventDescription').value;
+
+            if (!title || !date) {
+                alert('Please fill in title and date');
+                return;
+            }
+
+            const newEvent = {
+                id: events.length + 1,
+                title,
+                date,
+                type: currentEventType,
+                description
+            };
+
+            events.push(newEvent);
+            renderCalendar();
+            updateUpcomingEvents();
+            closeEventModal();
+
+            // Here you would typically save to your backend
+            console.log('New event saved:', newEvent);
+        }
+
+        function viewEvent(event) {
+            alert(`Event: ${event.title}\nDate: ${event.date.toLocaleDateString()}\nType: ${event.type}\nDescription: ${event.description || 'No description'}`);
         }
 
         async function loadOverviewData() {
@@ -990,40 +1980,20 @@
         async function syncShopifyData(type) {
             try {
                 console.log(`Syncing ${type} data...`);
-                
-                // Prepare request body based on sync type
-                let requestBody = {};
-                
-                if (type === 'sales' || type === 'traffic') {
-                    // Sales and traffic endpoints expect AnalysisRequest format
-                    requestBody = {
-                        days_back: 30,
-                        include_correlation: true
-                    };
-                }
-                // Products endpoint doesn't need request body parameters
-                
                 const response = await fetch(`/shopify/sync/${type}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
                 console.log(`${type} sync result:`, data);
 
                 if (data.success) {
-                    let message = `${type.charAt(0).toUpperCase() + type.slice(1)} data synced successfully!`;
-                    if (data.message) {
-                        message = data.message;
-                    }
-                    showAlert(message, 'success');
-                    
+                    alert(`${type} data synced successfully!`);
                     // Refresh revenue intelligence
                     dataLoaded.revenue = false;
                     if (currentTab === 'revenue') {
@@ -1035,16 +2005,7 @@
 
             } catch (error) {
                 console.error(`Error syncing ${type} data:`, error);
-                let errorMessage = `Failed to sync ${type} data: ${error.message}`;
-                
-                // Provide helpful error messages
-                if (error.message.includes('not configured')) {
-                    errorMessage += '\n\nPlease configure Shopify integration first in the Shopify Setup tab.';
-                } else if (error.message.includes('Invalid access token')) {
-                    errorMessage += '\n\nPlease check your Shopify access token in the Shopify Setup tab.';
-                }
-                
-                showAlert(errorMessage, 'error');
+                alert(`Failed to sync ${type} data: ${error.message}`);
             }
         }
 
@@ -1137,7 +2098,7 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    showAlert('File deleted successfully!', 'success');
+                    alert('File deleted successfully!');
                     // Refresh media library
                     dataLoaded.media = false;
                     loadMediaLibrary();
@@ -1147,7 +2108,7 @@
 
             } catch (error) {
                 console.error('Error deleting media:', error);
-                showAlert(`Failed to delete file: ${error.message}`, 'error');
+                alert(`Failed to delete file: ${error.message}`);
             }
         }
 
@@ -1209,7 +2170,7 @@
                 console.log('Upload result:', data);
 
                 if (data.success) {
-                    showAlert(`File "${file.name}" uploaded successfully!`, 'success');
+                    alert(`File "${file.name}" uploaded successfully!`);
                     
                     // Refresh data if needed
                     dataLoaded.overview = false;
@@ -1223,7 +2184,7 @@
 
             } catch (error) {
                 console.error('Error uploading file:', error);
-                showAlert(`Failed to upload "${file.name}": ${error.message}`, 'error');
+                alert(`Failed to upload "${file.name}": ${error.message}`);
             }
         }
 
@@ -1249,14 +2210,14 @@
                 console.log('Media upload result:', data);
 
                 if (data.success) {
-                    showAlert(`Media file "${file.name}" uploaded successfully!`, 'success');
+                    alert(`Media file "${file.name}" uploaded successfully!`);
                 } else {
                     throw new Error(data.error || 'Upload failed');
                 }
 
             } catch (error) {
                 console.error('Error uploading media file:', error);
-                showAlert(`Failed to upload "${file.name}": ${error.message}`, 'error');
+                alert(`Failed to upload "${file.name}": ${error.message}`);
             }
         }
 
@@ -1265,7 +2226,7 @@
             const jsonData = textarea.value.trim();
 
             if (!jsonData) {
-                showAlert('Please paste JSON data first', 'error');
+                alert('Please paste JSON data first');
                 return;
             }
 
@@ -1288,7 +2249,7 @@
                 console.log('Paste processing result:', data);
 
                 if (data.success) {
-                    showAlert('JSON data processed successfully!', 'success');
+                    alert('JSON data processed successfully!');
                     textarea.value = '';
                     
                     // Refresh data if needed
@@ -1303,7 +2264,7 @@
 
             } catch (error) {
                 console.error('Error processing JSON paste:', error);
-                showAlert(`Failed to process JSON data: ${error.message}`, 'error');
+                alert(`Failed to process JSON data: ${error.message}`);
             }
         }
 
@@ -1336,15 +2297,14 @@
             const accessToken = document.getElementById('accessToken').value;
 
             if (!shopUrl || !accessToken) {
-                showAlert('Please enter both shop URL and access token', 'error');
+                alert('Please enter both shop URL and access token');
                 return;
             }
-
-            hideAlert();
 
             try {
                 console.log('Testing Shopify connection...');
                 
+                // Test the connection by attempting to fetch shop info
                 const formData = new FormData();
                 formData.append('shop_domain', shopUrl);
                 formData.append('access_token', accessToken);
@@ -1358,28 +2318,14 @@
                 console.log('Connection test result:', data);
 
                 if (data.success) {
-                    let message = `✅ Connection successful! Connected to ${data.config?.shop_info?.shop_name || 'your shop'}`;
-                    if (data.normalized_domain && data.normalized_domain !== shopUrl) {
-                        message += ` (normalized domain: ${data.normalized_domain})`;
-                    }
-                    if (data.config?.shop_info?.warning) {
-                        message += ` ⚠️ ${data.config.shop_info.warning}`;
-                    }
-                    showAlert(message, 'success');
+                    alert('✅ Connection successful! You can now save the configuration.');
                 } else {
-                    let errorMessage = `❌ Connection failed: ${data.error || 'Unknown error'}`;
-                    if (data.normalized_domain) {
-                        errorMessage += `\n\nTried to connect to: ${data.normalized_domain}.myshopify.com`;
-                    }
-                    if (data.troubleshooting?.suggestions) {
-                        errorMessage += '\n\nSuggestions:\n' + data.troubleshooting.suggestions.map(s => `• ${s}`).join('\n');
-                    }
-                    showAlert(errorMessage, 'error');
+                    alert('❌ Connection failed: ' + (data.detail || data.error || 'Unknown error'));
                 }
 
             } catch (error) {
                 console.error('Connection test error:', error);
-                showAlert(`❌ Connection test failed: ${error.message}`, 'error');
+                alert(`❌ Connection test failed: ${error.message}`);
             }
         }
 
@@ -1388,11 +2334,9 @@
             const accessToken = document.getElementById('accessToken').value;
 
             if (!shopUrl || !accessToken) {
-                showAlert('Please enter both shop URL and access token', 'error');
+                alert('Please enter both shop URL and access token');
                 return;
             }
-
-            hideAlert();
 
             try {
                 const formData = new FormData();
@@ -1411,11 +2355,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    let message = `✅ Shopify configuration saved successfully! Connected to ${data.config?.shop_info?.shop_name || 'your shop'}`;
-                    if (data.config?.shop_info?.warning) {
-                        message += ` ⚠️ ${data.config.shop_info.warning}`;
-                    }
-                    showAlert(message, 'success');
+                    alert('Shopify configuration saved successfully!');
                     checkShopifyStatus();
                 } else {
                     throw new Error(data.error || 'Setup failed');
@@ -1423,7 +2363,7 @@
 
             } catch (error) {
                 console.error('Error saving Shopify config:', error);
-                showAlert(`❌ Failed to save configuration: ${error.message}`, 'error');
+                alert(`Failed to save configuration: ${error.message}`);
             }
         }
 
