@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crooks & Castles Command Center V2</title>
+    <style>
+        /* Tailwind CSS Reset and Base Styles */
+        *, ::before, ::after {
+            box-sizing: border-box;
+            border-width: 0;
+            border-style: solid;
+            border-color: #e5e7eb;
+        }
+        
+        html {
+            line-height: 1.5;
+            -webkit-text-size-adjust: 100%;
+            -moz-tab-size: 4;
+            tab-size: 4;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            line-height: inherit;
+        }
+        
+        /* Custom Crooks & Castles Styles */
+        :root {
+            --crooks-black: #0a0a0a;
+            --crooks-orange: #ff6b35;
+            --crooks-gold: #ffd700;
+            --crooks-gray: #1a1a1a;
+        }
+        
+        body {
+            background-color: var(--crooks-black);
+            color: white;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        .header {
+            background-color: var(--crooks-gray);
+            border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+            padding: 1rem 0;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--crooks-orange);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-online { background-color: #10b981; }
+        .status-offline { background-color: #ef4444; }
+        .status-checking { background-color: #6b7280; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .nav {
+            background-color: var(--crooks-gray);
+            border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+        
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.5rem 0.5rem 0 0;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+        }
+        
+        .tab-button:hover {
+            color: white;
+        }
+        
+        .tab-button.tab-active {
+            background-color: var(--crooks-black);
+            color: var(--crooks-orange);
+            border-bottom: 2px solid var(--crooks-orange);
+        }
+        
+        .main-content {
+            padding: 2rem 0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background-color: var(--crooks-gray);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--crooks-orange);
+            margin-bottom: 1rem;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .grid-cols-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--crooks-orange);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #e55a2b;
+        }
+        
+        .btn-secondary {
+            background-color: #374151;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #374151;
+            border-radius: 0.375rem;
+            background-color: var(--crooks-black);
+            color: white;
+        }
+        
+        .input:focus {
+            outline: none;
+            border-color: var(--crooks-orange);
+        }
+        
+        .textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #374151;
+            border-radius: 0.375rem;
+            background-color: var(--crooks-black);
+            color: white;
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .textarea:focus {
+            outline: none;
+            border-color: var(--crooks-orange);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-gray-400 {
+            color: #9ca3af;
+        }
+        
+        .py-8 {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        
+        .mb-6 {
+            margin-bottom: 1.5rem;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, var(--crooks-gray) 0%, #2d2d2d 100%);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--crooks-orange);
+        }
+        
+        .metric-label {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #374151;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--crooks-orange);
+            transition: width 0.3s ease;
+        }
+        
+        /* Calendar Specific Styles */
+        .calendar-view-content {
+            display: none;
+        }
+        
+        .calendar-view-content.active {
+            display: block;
+        }
+        
+        .calendar-container {
+            background-color: var(--crooks-gray);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+        }
+        
+        .calendar-nav-btn {
+            background: none;
+            border: none;
+            color: var(--crooks-orange);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+        
+        .calendar-nav-btn:hover {
+            color: #e55a2b;
+        }
+        
+        .calendar-month-year {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: #374151;
+            border-radius: 0.375rem;
+            overflow: hidden;
+        }
+        
+        .calendar-day-header {
+            background-color: var(--crooks-gray);
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--crooks-orange);
+        }
+        
+        .calendar-day {
+            background-color: var(--crooks-black);
+            padding: 0.75rem 0.5rem;
+            min-height: 80px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .calendar-day:hover {
+            background-color: var(--crooks-gray);
+        }
+        
+        .calendar-day.other-month {
+            color: #6b7280;
+        }
+        
+        .calendar-day.today {
+            background-color: rgba(255, 107, 53, 0.2);
+            border: 1px solid var(--crooks-orange);
+        }
+        
+        .calendar-day.has-event {
+            border-left: 3px solid var(--crooks-orange);
+        }
+        
+        .calendar-event {
+            background-color: rgba(255, 107, 53, 0.3);
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: white;
+        }
+        
+        /* Media Library Styles */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .media-item {
+            background-color: var(--crooks-gray);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+        }
+        
+        .media-preview {
+            width: 100%;
+            height: 150px;
+            background-color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+        
+        .media-info {
+            padding: 1rem;
+        }
+        
+        .media-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .media-meta {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .grid-cols-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            .tab-button {
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="header-title">Crooks & Castles Command Center V2</h1>
+                <div class="status-indicator" id="shopifyStatus">
+                    <div class="status-dot status-checking"></div>
+                    <span>Checking status...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav">
+        <div class="container">
+            <div class="nav-tabs">
+                <button onclick="showTab('overview')" id="tab-overview" class="tab-button tab-active">
+                    📊 Executive Overview
+                </button>
+                <button onclick="showTab('intelligence')" id="tab-intelligence" class="tab-button">
+                    🧠 Intelligence
+                </button>
+                <button onclick="showTab('revenue')" id="tab-revenue" class="tab-button">
+                    💰 Revenue Intelligence
+                </button>
+                <button onclick="showTab('calendar')" id="tab-calendar" class="tab-button">
+                    📅 Campaign Calendar
+                </button>
+                <button onclick="showTab('media')" id="tab-media" class="tab-button">
+                    🎬 Media Library
+                </button>
+                <button onclick="showTab('ingest')" id="tab-ingest" class="tab-button">
+                    📥 Data Ingest
+                </button>
+                <button onclick="showTab('shopify-setup')" id="tab-shopify-setup" class="tab-button">
+                    🛒 Shopify Setup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- Executive Overview Tab -->
+            <div id="overview-tab" class="tab-content active">
+                <div class="grid grid-cols-4">
+                    <div class="metric-card">
+                        <div class="metric-value" id="totalPosts">557</div>
+                        <div class="metric-label">Total Posts Analyzed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="avgEngagement">4.2%</div>
+                        <div class="metric-label">Avg Engagement Rate</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="revenueImpact">$0</div>
+                        <div class="metric-label">Revenue Impact</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="competitorInsights">12</div>
+                        <div class="metric-label">Competitor Insights</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">📈 Performance Trends</h3>
+                        <div id="performanceTrends">
+                            <div class="text-center text-gray-400 py-8">Loading performance data...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">🎯 Top Performing Content</h3>
+                        <div id="topContent">
+                            <div class="text-center text-gray-400 py-8">Loading top content...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intelligence Tab -->
+            <div id="intelligence-tab" class="tab-content">
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">🔍 Competitor Analysis</h3>
+                        <div id="competitorAnalysis">
+                            <div class="text-center text-gray-400 py-8">Loading competitor data...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">📊 Market Insights</h3>
+                        <div id="marketInsights">
+                            <div class="text-center text-gray-400 py-8">Loading market insights...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">🎨 Content Strategy Recommendations</h3>
+                    <div id="contentStrategy">
+                        <div class="text-center text-gray-400 py-8">Loading strategy recommendations...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Intelligence Tab -->
+            <div id="revenue-tab" class="tab-content">
+                <div class="card mb-6">
+                    <h3 class="card-title">💰 Revenue Intelligence Dashboard</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="syncShopifyData('sales')" class="btn btn-primary btn-small">
+                            💰 Sync Sales
+                        </button>
+                        <button onclick="syncShopifyData('traffic')" class="btn btn-primary btn-small">
+                            📊 Sync Traffic
+                        </button>
+                        <button onclick="syncShopifyData('products')" class="btn btn-primary btn-small">
+                            🛍️ Sync Products
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">📈 Sales Performance</h3>
+                        <div id="salesPerformance">
+                            <div class="text-center text-gray-400 py-8">Connect Shopify to view sales data</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">🔗 Social-Commerce Correlation</h3>
+                        <div id="socialCorrelation">
+                            <div class="text-center text-gray-400 py-8">Connect Shopify to view correlations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campaign Calendar Tab -->
+            <div id="calendar-tab" class="tab-content">
+                <!-- Strategic Calendar Views -->
+                <div class="card mb-6">
+                    <h3 class="card-title">📊 Strategic Calendar Views</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="switchCalendarView('tactical7')" id="view-tactical7" class="btn btn-secondary btn-small">
+                            📅 7-Day Tactical
+                        </button>
+                        <button onclick="switchCalendarView('strategic30')" id="view-strategic30" class="btn btn-secondary btn-small">
+                            🎯 30-Day Strategic  
+                        </button>
+                        <button onclick="switchCalendarView('strategic60')" id="view-strategic60" class="btn btn-secondary btn-small">
+                            🌟 60-Day Planning
+                        </button>
+                        <button onclick="switchCalendarView('strategic90')" id="view-strategic90" class="btn btn-secondary btn-small">
+                            🚀 90+ Long-term
+                        </button>
+                        <button onclick="openQuarterlyStrategy()" class="btn btn-primary btn-small">
+                            📋 Quarterly Strategy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Creation Tools -->
+                <div class="card mb-6">
+                    <h3 class="card-title">🎨 Content Creation Tools</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="generateCampaign()" class="btn btn-primary btn-small">
+                            🎯 Campaign Generator
+                        </button>
+                        <button onclick="analyzeTrends()" class="btn btn-primary btn-small">
+                            📈 Trend Analysis
+                        </button>
+                        <button onclick="createContentCalendar()" class="btn btn-primary btn-small">
+                            📅 Content Calendar Creator
+                        </button>
+                        <button onclick="planCulturalMoments()" class="btn btn-primary btn-small">
+                            🌍 Cultural Moment Planner
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 7-Day Tactical View -->
+                <div id="tactical7-view" class="calendar-view-content active">
+                    <div class="grid grid-cols-2">
+                        <div class="card">
+                            <h3 class="card-title">📋 Weekly Content Pipeline</h3>
+                            <div id="weeklyPipeline">
+                                <div class="text-center text-gray-400 py-8">Loading weekly content...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">🎬 Asset Mapping</h3>
+                            <div id="assetMapping">
+                                <div class="text-center text-gray-400 py-8">Loading asset assignments...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 30-Day Strategic View -->
+                <div id="strategic30-view" class="calendar-view-content">
+                    <div class="grid grid-cols-2">
+                        <div class="card">
+                            <h3 class="card-title">✅ Approved Content</h3>
+                            <div id="approvedContent">
+                                <div class="text-center text-gray-400 py-8">Loading approved content...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title">💡 Opportunities</h3>
+                            <div id="contentOpportunities">
+                                <div class="text-center text-gray-400 py-8">Loading opportunities...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 60-Day Planning View -->
+                <div id="strategic60-view" class="calendar-view-content">
+                    <div class="card">
+                        <h3 class="card-title">🌟 60-Day Content Strategy</h3>
+                        <div id="longTermStrategy">
+                            <div class="text-center text-gray-400 py-8">Loading long-term strategy...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 90+ Long-term View -->
+                <div id="strategic90-view" class="calendar-view-content">
+                    <div class="card">
+                        <h3 class="card-title">🚀 Long-term Planning</h3>
+                        <div id="longTermPlanning">
+                            <div class="text-center text-gray-400 py-8">Loading long-term planning...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Widget -->
+                <div class="card">
+                    <h3 class="card-title">📅 Campaign Calendar</h3>
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            <button class="calendar-nav-btn" onclick="previousMonth()">‹</button>
+                            <div class="calendar-month-year" id="monthYear"></div>
+                            <button class="calendar-nav-btn" onclick="nextMonth()">›</button>
+                        </div>
+                        <div class="calendar-grid" id="calendarGrid">
+                            <!-- Calendar will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Media Library Tab -->
+            <div id="media-tab" class="tab-content">
+                <div class="card mb-6">
+                    <h3 class="card-title">🎬 Media Library Management</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button onclick="document.getElementById('mediaUpload').click()" class="btn btn-primary btn-small">
+                            📤 Upload Media
+                        </button>
+                        <button onclick="loadAssetLibrary()" class="btn btn-secondary btn-small">
+                            🔄 Refresh Library
+                        </button>
+                        <button onclick="organizeAssets()" class="btn btn-secondary btn-small">
+                            📁 Organize Assets
+                        </button>
+                    </div>
+                    <input type="file" id="mediaUpload" multiple accept="image/*,video/*,audio/*" style="display: none;" onchange="handleMediaUpload(event)">
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">📁 Asset Library</h3>
+                    <div id="assetLibrary" class="media-grid">
+                        <div class="text-center text-gray-400 py-8">Loading media assets...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Ingest Tab -->
+            <div id="ingest-tab" class="tab-content">
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">📁 File Upload</h3>
+                        <div style="margin-bottom: 1rem;">
+                            <input type="file" id="fileUpload" accept=".json,.jsonl,.csv" onchange="handleFileUpload(event)" class="input">
+                        </div>
+                        <button onclick="processUploadedFile()" class="btn btn-primary">
+                            🚀 Process File
+                        </button>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">📋 JSON Paste</h3>
+                        <textarea id="jsonPasteArea" placeholder="Paste JSON data here..." class="textarea" style="height: 150px;"></textarea>
+                        <button onclick="processJsonPaste()" class="btn btn-primary" style="margin-top: 1rem;">
+                            🚀 Process JSON
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">📊 Processing Status</h3>
+                    <div id="processingStatus">
+                        <div class="text-center text-gray-400 py-8">No processing activity</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shopify Setup Tab -->
+            <div id="shopify-setup-tab" class="tab-content">
+                <div class="card">
+                    <h3 class="card-title">🛒 Shopify Integration Setup</h3>
+                    <div class="grid grid-cols-2">
+                        <div>
+                            <label for="shopUrl" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Shop Domain:</label>
+                            <input type="text" id="shopUrl" placeholder="crooksonline (just the shop name)" class="input" style="margin-bottom: 1rem;">
+                            
+                            <label for="accessToken" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Access Token:</label>
+                            <input type="password" id="accessToken" placeholder="Your private app access token" class="input" style="margin-bottom: 1rem;">
+                            
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="testShopifyConnection()" class="btn btn-secondary">
+                                    🔍 Test Connection
+                                </button>
+                                <button onclick="saveShopifyConfig()" class="btn btn-primary">
+                                    💾 Save Configuration
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--crooks-orange); margin-bottom: 1rem;">Setup Instructions:</h4>
+                            <ol style="color: #9ca3af; line-height: 1.6;">
+                                <li>Go to your Shopify admin panel</li>
+                                <li>Navigate to Apps → App and sales channel settings</li>
+                                <li
