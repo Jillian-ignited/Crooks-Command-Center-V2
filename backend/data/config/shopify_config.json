@@ -1,0 +1,8 @@
+{
+  "shop_domain": "test",
+  "original_input": "test",
+  "access_token": "test123",
+  "setup_date": "2025-09-25T15:09:18.090496",
+  "status": "error",
+  "error": "Invalid access token. Please check your Shopify private app credentials."
+}
