@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import pandas as pd
 import re
+from collections import Counter
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ class ReportRequest(BaseModel):
     include_trends: bool = True
 
 def safe_load_uploaded_data() -> pd.DataFrame:
-    """Safely load uploaded data without crashing"""
+    """Load all uploaded data files safely"""
     try:
         data_dir = Path("data/uploads")
         if not data_dir.exists():
@@ -29,9 +30,22 @@ def safe_load_uploaded_data() -> pd.DataFrame:
                     for line in f:
                         try:
                             data = json.loads(line.strip())
-                            all_data.append(data)
+                            if data:  # Only add non-empty data
+                                all_data.append(data)
                         except json.JSONDecodeError:
                             continue
+            except Exception:
+                continue
+        
+        # Also check for JSON files
+        for file_path in data_dir.glob("*.json"):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        all_data.extend(data)
+                    elif isinstance(data, dict):
+                        all_data.append(data)
             except Exception:
                 continue
         
@@ -39,33 +53,71 @@ def safe_load_uploaded_data() -> pd.DataFrame:
             return pd.DataFrame()
         
         df = pd.DataFrame(all_data)
+        
+        # Remove duplicates based on content
+        if 'text' in df.columns:
+            df = df.drop_duplicates(subset=['text'], keep='first')
+        elif 'id' in df.columns:
+            df = df.drop_duplicates(subset=['id'], keep='first')
+        
         return df
         
     except Exception:
         return pd.DataFrame()
 
-def safe_analyze_sentiment(text: str) -> Dict[str, float]:
-    """Basic sentiment analysis that won't crash"""
+def enhanced_sentiment_analysis(text: str) -> Dict[str, float]:
+    """Enhanced sentiment analysis with cultural context"""
     try:
         if not text or not isinstance(text, str):
-            return {"positive": 0.5, "negative": 0.3, "neutral": 0.2, "compound": 0.1}
+            return {"positive": 0.33, "negative": 0.33, "neutral": 0.34, "compound": 0.0}
         
         text = text.lower()
         
-        # Simple keyword-based sentiment
-        positive_words = ['good', 'great', 'awesome', 'love', 'amazing', 'perfect', 'excellent', 'fire', 'dope', 'sick', 'clean']
-        negative_words = ['bad', 'hate', 'terrible', 'awful', 'worst', 'sucks', 'trash', 'wack']
+        # Streetwear/culture specific positive words
+        positive_words = [
+            'fire', 'dope', 'sick', 'clean', 'fresh', 'hard', 'cold', 'heat',
+            'love', 'amazing', 'perfect', 'excellent', 'awesome', 'great', 'good',
+            'vibes', 'mood', 'aesthetic', 'style', 'drip', 'fit', 'look'
+        ]
+        
+        # Negative words
+        negative_words = [
+            'trash', 'wack', 'mid', 'basic', 'boring', 'ugly', 'hate', 'bad',
+            'terrible', 'awful', 'worst', 'sucks', 'lame', 'weak', 'corny'
+        ]
+        
+        # Neutral/descriptive words
+        neutral_words = [
+            'okay', 'alright', 'decent', 'normal', 'regular', 'standard',
+            'typical', 'average', 'fine', 'whatever'
+        ]
+        
+        words = text.split()
+        total_words = len(words)
+        
+        if total_words == 0:
+            return {"positive": 0.33, "negative": 0.33, "neutral": 0.34, "compound": 0.0}
         
         positive_count = sum(1 for word in positive_words if word in text)
         negative_count = sum(1 for word in negative_words if word in text)
+        neutral_count = sum(1 for word in neutral_words if word in text)
         
-        total_words = len(text.split())
-        if total_words == 0:
-            return {"positive": 0.5, "negative": 0.3, "neutral": 0.2, "compound": 0.1}
+        # Calculate scores with cultural weighting
+        positive_score = min((positive_count / total_words) * 15, 1.0)
+        negative_score = min((negative_count / total_words) * 15, 1.0)
+        neutral_score = min((neutral_count / total_words) * 10, 1.0)
         
-        positive_score = min(positive_count / total_words * 10, 1.0)
-        negative_score = min(negative_count / total_words * 10, 1.0)
-        neutral_score = max(0, 1.0 - positive_score - negative_score)
+        # Normalize scores
+        total_score = positive_score + negative_score + neutral_score
+        if total_score > 1.0:
+            positive_score /= total_score
+            negative_score /= total_score
+            neutral_score /= total_score
+        else:
+            # Fill remaining with neutral
+            remaining = 1.0 - total_score
+            neutral_score += remaining
+        
         compound_score = positive_score - negative_score
         
         return {
@@ -76,25 +128,158 @@ def safe_analyze_sentiment(text: str) -> Dict[str, float]:
         }
         
     except Exception:
-        return {"positive": 0.5, "negative": 0.3, "neutral": 0.2, "compound": 0.1}
+        return {"positive": 0.33, "negative": 0.33, "neutral": 0.34, "compound": 0.0}
 
-def safe_extract_hashtags(text: str) -> List[str]:
-    """Safely extract hashtags from text"""
+def extract_hashtags(text: str) -> List[str]:
+    """Extract hashtags with streetwear context"""
     try:
         if not text or not isinstance(text, str):
             return []
         
+        # Find hashtags
         hashtags = re.findall(r'#\w+', text.lower())
-        return list(set(hashtags))  # Remove duplicates
+        
+        # Remove duplicates and filter relevant ones
+        unique_hashtags = list(set(hashtags))
+        
+        # Prioritize streetwear/fashion hashtags
+        streetwear_hashtags = [
+            h for h in unique_hashtags 
+            if any(keyword in h for keyword in [
+                'street', 'wear', 'fashion', 'style', 'fit', 'outfit',
+                'hypebeast', 'supreme', 'nike', 'jordan', 'yeezy',
+                'crooks', 'castles', 'urban', 'hip', 'hop'
+            ])
+        ]
+        
+        # Return streetwear hashtags first, then others
+        return streetwear_hashtags + [h for h in unique_hashtags if h not in streetwear_hashtags]
         
     except Exception:
         return []
 
-def safe_brand_intelligence(df: pd.DataFrame) -> Dict[str, Any]:
-    """Generate brand intelligence that won't crash"""
+def detect_brands(text: str) -> List[str]:
+    """Detect brand mentions in text"""
     try:
+        if not text or not isinstance(text, str):
+            return []
+        
+        text = text.lower()
+        
+        # Comprehensive brand list
+        brands = [
+            'crooks', 'castles', 'crooks & castles', 'crooksandcastles',
+            'supreme', 'nike', 'adidas', 'jordan', 'yeezy', 'off-white',
+            'balenciaga', 'gucci', 'louis vuitton', 'prada', 'versace',
+            'fear of god', 'essentials', 'stone island', 'palm angels',
+            'rhude', 'amiri', 'gallery dept', 'human made', 'bape',
+            'kith', 'uniqlo', 'zara', 'h&m', 'forever 21'
+        ]
+        
+        detected_brands = []
+        for brand in brands:
+            if brand in text:
+                detected_brands.append(brand)
+        
+        return list(set(detected_brands))  # Remove duplicates
+        
+    except Exception:
+        return []
+
+def calculate_competitor_momentum(df: pd.DataFrame) -> Dict[str, str]:
+    """Calculate momentum indicators for competitors"""
+    try:
+        if df.empty or 'brand' not in df.columns:
+            return {}
+        
+        # Simple momentum calculation based on post frequency
+        brand_counts = df['brand'].value_counts()
+        momentum = {}
+        
+        for brand, count in brand_counts.items():
+            if count > 50:
+                momentum[brand] = "rising"  # ↗
+            elif count > 20:
+                momentum[brand] = "stable"  # →
+            else:
+                momentum[brand] = "declining"  # ↘
+        
+        return momentum
+        
+    except Exception:
+        return {}
+
+def generate_strategic_insights(df: pd.DataFrame, sentiment_data: List[Dict], hashtag_data: List[Dict]) -> List[str]:
+    """Generate strategic insights from data analysis"""
+    try:
+        insights = []
+        
         if df.empty:
-            return {
+            return [
+                "Upload competitor data to begin strategic analysis",
+                "Connect social media scrapers for real-time insights",
+                "Add more data sources for comprehensive intelligence"
+            ]
+        
+        total_posts = len(df)
+        brands_tracked = df['brand'].nunique() if 'brand' in df.columns else 0
+        
+        # Basic insights
+        insights.append(f"Analyzing {total_posts} posts from {brands_tracked} competitors")
+        
+        # Sentiment insights
+        if sentiment_data:
+            avg_positive = sum(s['positive'] for s in sentiment_data) / len(sentiment_data)
+            if avg_positive > 0.6:
+                insights.append("High positive sentiment detected - market is receptive to current trends")
+            elif avg_positive < 0.3:
+                insights.append("Low positive sentiment - opportunity for differentiation")
+            else:
+                insights.append(f"Balanced sentiment landscape - {avg_positive*100:.1f}% positive engagement")
+        
+        # Hashtag insights
+        if hashtag_data:
+            top_hashtag = hashtag_data[0]
+            insights.append(f"Trending: {top_hashtag['hashtag']} with {top_hashtag['count']} uses")
+            
+            # Look for opportunities
+            streetwear_hashtags = [h for h in hashtag_data if 'street' in h['hashtag'] or 'wear' in h['hashtag']]
+            if streetwear_hashtags:
+                insights.append("Strong streetwear conversation - align content with #streetwear trends")
+        
+        # Competitor insights
+        if 'brand' in df.columns:
+            top_brands = df['brand'].value_counts().head(3)
+            insights.append(f"Most active competitors: {', '.join(top_brands.index.tolist())}")
+            
+            # Crooks & Castles specific insights
+            if 'crooks' in df['brand'].str.lower().values or 'castles' in df['brand'].str.lower().values:
+                insights.append("Crooks & Castles mentioned in competitor data - monitor brand perception")
+        
+        # Content gap analysis
+        if hashtag_data:
+            culture_hashtags = [h for h in hashtag_data if any(term in h['hashtag'] for term in ['culture', 'heritage', 'community'])]
+            if not culture_hashtags:
+                insights.append("Opportunity: Limited cultural content - leverage heritage storytelling")
+        
+        return insights[:6]  # Return top 6 insights
+        
+    except Exception:
+        return [
+            "Error generating insights - check data quality",
+            "Ensure uploaded files contain proper brand and text data",
+            "Contact support if issues persist"
+        ]
+
+@router.post("/report")
+async def generate_intelligence_report(request: ReportRequest):
+    """Generate comprehensive intelligence report"""
+    try:
+        # Load data
+        df = safe_load_uploaded_data()
+        
+        if df.empty:
+            return JSONResponse({
                 "success": True,
                 "data_status": "no_data",
                 "message": "No data uploaded yet. Upload competitor data to see insights.",
@@ -103,7 +288,8 @@ def safe_brand_intelligence(df: pd.DataFrame) -> Dict[str, Any]:
                 "sentiment_analysis": {
                     "overall_positive": 0,
                     "overall_negative": 0,
-                    "overall_neutral": 0
+                    "overall_neutral": 0,
+                    "compound_score": 0
                 },
                 "competitor_rankings": [],
                 "trending_hashtags": [],
@@ -111,70 +297,104 @@ def safe_brand_intelligence(df: pd.DataFrame) -> Dict[str, Any]:
                     "Upload competitor data to begin analysis",
                     "Connect social media scrapers for real-time insights",
                     "Add more data sources for comprehensive intelligence"
-                ]
-            }
+                ],
+                "momentum_indicators": {},
+                "content_opportunities": [],
+                "last_updated": datetime.now().isoformat()
+            })
         
-        # Basic data processing
+        # Basic metrics
         total_posts = len(df)
         brands_tracked = df['brand'].nunique() if 'brand' in df.columns else 0
         
-        # Sentiment analysis
+        # Enhanced sentiment analysis
         sentiment_scores = []
         if 'text' in df.columns:
             for text in df['text'].fillna('').astype(str):
-                sentiment = safe_analyze_sentiment(text)
+                sentiment = enhanced_sentiment_analysis(text)
                 sentiment_scores.append(sentiment)
         
+        # Calculate average sentiment
         if sentiment_scores:
             avg_positive = sum(s['positive'] for s in sentiment_scores) / len(sentiment_scores)
             avg_negative = sum(s['negative'] for s in sentiment_scores) / len(sentiment_scores)
             avg_neutral = sum(s['neutral'] for s in sentiment_scores) / len(sentiment_scores)
+            avg_compound = sum(s['compound'] for s in sentiment_scores) / len(sentiment_scores)
         else:
             avg_positive = avg_negative = avg_neutral = 0.33
+            avg_compound = 0.0
         
-        # Competitor analysis
+        # Competitor analysis with momentum
         competitor_rankings = []
+        momentum_indicators = {}
+        
         if 'brand' in df.columns:
             brand_counts = df['brand'].value_counts()
-            for i, (brand, count) in enumerate(brand_counts.head(10).items()):
+            momentum_indicators = calculate_competitor_momentum(df)
+            
+            for i, (brand, count) in enumerate(brand_counts.head(15).items()):
+                momentum = momentum_indicators.get(brand, "stable")
                 competitor_rankings.append({
                     "rank": i + 1,
                     "brand": brand,
                     "posts": int(count),
                     "percentage": round((count / total_posts) * 100, 1),
-                    "trend": "stable"  # Default trend
+                    "momentum": momentum,
+                    "trend_indicator": "↗" if momentum == "rising" else "→" if momentum == "stable" else "↘"
                 })
         
-        # Hashtag analysis
+        # Enhanced hashtag analysis
         all_hashtags = []
         if 'text' in df.columns:
             for text in df['text'].fillna('').astype(str):
-                hashtags = safe_extract_hashtags(text)
+                hashtags = extract_hashtags(text)
                 all_hashtags.extend(hashtags)
         
         if 'hashtags' in df.columns:
             for hashtag_text in df['hashtags'].fillna('').astype(str):
-                hashtags = safe_extract_hashtags(hashtag_text)
+                hashtags = extract_hashtags(hashtag_text)
                 all_hashtags.extend(hashtags)
         
-        hashtag_counts = pd.Series(all_hashtags).value_counts()
+        hashtag_counts = Counter(all_hashtags)
         trending_hashtags = [
-            {"hashtag": tag, "count": int(count), "trend": "rising"}
-            for tag, count in hashtag_counts.head(10).items()
+            {
+                "hashtag": tag,
+                "count": count,
+                "trend": "rising" if count > 10 else "stable",
+                "category": "streetwear" if any(term in tag for term in ['street', 'wear', 'fashion', 'style']) else "general"
+            }
+            for tag, count in hashtag_counts.most_common(15)
         ]
         
-        # Strategic insights
-        insights = [
-            f"Analyzing {total_posts} posts from {brands_tracked} competitors",
-            f"Overall sentiment: {avg_positive*100:.1f}% positive, {avg_negative*100:.1f}% negative",
-            f"Top hashtag: {trending_hashtags[0]['hashtag']} ({trending_hashtags[0]['count']} uses)" if trending_hashtags else "No hashtags detected"
-        ]
+        # Generate strategic insights
+        strategic_insights = generate_strategic_insights(df, sentiment_scores, trending_hashtags)
         
-        if competitor_rankings:
-            top_brand = competitor_rankings[0]
-            insights.append(f"Most active competitor: {top_brand['brand']} with {top_brand['posts']} posts")
+        # Content opportunities
+        content_opportunities = []
+        if trending_hashtags:
+            # Find underutilized hashtags
+            mid_tier_hashtags = [h for h in trending_hashtags if 5 <= h['count'] <= 20]
+            if mid_tier_hashtags:
+                content_opportunities.append({
+                    "type": "hashtag_opportunity",
+                    "description": f"Leverage emerging hashtag: {mid_tier_hashtags[0]['hashtag']}",
+                    "impact": "medium",
+                    "effort": "low"
+                })
         
-        return {
+        # Brand mention opportunities
+        if 'text' in df.columns:
+            all_text = ' '.join(df['text'].fillna('').astype(str))
+            crooks_mentions = all_text.lower().count('crooks')
+            if crooks_mentions < 5:
+                content_opportunities.append({
+                    "type": "brand_visibility",
+                    "description": "Low Crooks & Castles brand mentions - increase brand presence",
+                    "impact": "high",
+                    "effort": "medium"
+                })
+        
+        return JSONResponse({
             "success": True,
             "data_status": "real_data",
             "total_posts": total_posts,
@@ -182,57 +402,19 @@ def safe_brand_intelligence(df: pd.DataFrame) -> Dict[str, Any]:
             "sentiment_analysis": {
                 "overall_positive": round(avg_positive * 100, 1),
                 "overall_negative": round(avg_negative * 100, 1),
-                "overall_neutral": round(avg_neutral * 100, 1)
+                "overall_neutral": round(avg_neutral * 100, 1),
+                "compound_score": round(avg_compound, 3)
             },
             "competitor_rankings": competitor_rankings,
             "trending_hashtags": trending_hashtags,
-            "strategic_insights": insights,
+            "strategic_insights": strategic_insights,
+            "momentum_indicators": momentum_indicators,
+            "content_opportunities": content_opportunities,
+            "analysis_period": f"last_{request.days_back}_days",
             "last_updated": datetime.now().isoformat()
-        }
+        })
         
     except Exception as e:
-        # Return safe fallback data instead of crashing
-        return {
-            "success": True,
-            "data_status": "error",
-            "message": f"Analysis error: {str(e)}",
-            "total_posts": 0,
-            "brands_tracked": 0,
-            "sentiment_analysis": {
-                "overall_positive": 0,
-                "overall_negative": 0,
-                "overall_neutral": 0
-            },
-            "competitor_rankings": [],
-            "trending_hashtags": [],
-            "strategic_insights": [
-                "Error processing data - please check uploaded files",
-                "Ensure data files are in proper JSON/JSONL format",
-                "Contact support if issues persist"
-            ]
-        }
-
-@router.post("/report")
-async def generate_intelligence_report(request: ReportRequest):
-    """Generate intelligence report without crashing"""
-    try:
-        # Load data safely
-        df = safe_load_uploaded_data()
-        
-        # Generate intelligence
-        intelligence = safe_brand_intelligence(df)
-        
-        # Add request parameters to response
-        intelligence["request_params"] = {
-            "days_back": request.days_back,
-            "include_competitors": request.include_competitors,
-            "include_trends": request.include_trends
-        }
-        
-        return JSONResponse(intelligence)
-        
-    except Exception as e:
-        # Return error response instead of crashing
         return JSONResponse({
             "success": False,
             "error": f"Intelligence report generation failed: {str(e)}",
@@ -242,7 +424,8 @@ async def generate_intelligence_report(request: ReportRequest):
             "sentiment_analysis": {
                 "overall_positive": 0,
                 "overall_negative": 0,
-                "overall_neutral": 0
+                "overall_neutral": 0,
+                "compound_score": 0
             },
             "competitor_rankings": [],
             "trending_hashtags": [],
@@ -250,7 +433,9 @@ async def generate_intelligence_report(request: ReportRequest):
                 "Unable to generate intelligence report",
                 "Check server logs for detailed error information",
                 "Ensure data files are properly formatted"
-            ]
+            ],
+            "momentum_indicators": {},
+            "content_opportunities": []
         })
 
 @router.get("/competitors")
@@ -266,42 +451,52 @@ async def get_competitor_analysis():
                 "message": "No competitor data available. Upload data to see analysis."
             })
         
-        # Analyze competitors
         competitors = []
         if 'brand' in df.columns:
             brand_groups = df.groupby('brand')
             
             for brand, group in brand_groups:
-                # Calculate metrics for each brand
                 post_count = len(group)
                 
-                # Sentiment analysis for this brand
+                # Enhanced sentiment analysis for each brand
                 sentiment_scores = []
                 if 'text' in group.columns:
                     for text in group['text'].fillna('').astype(str):
-                        sentiment = safe_analyze_sentiment(text)
+                        sentiment = enhanced_sentiment_analysis(text)
                         sentiment_scores.append(sentiment)
                 
                 if sentiment_scores:
                     avg_sentiment = sum(s['compound'] for s in sentiment_scores) / len(sentiment_scores)
+                    avg_positive = sum(s['positive'] for s in sentiment_scores) / len(sentiment_scores)
                 else:
                     avg_sentiment = 0
+                    avg_positive = 0.33
                 
                 # Hashtag analysis for this brand
                 brand_hashtags = []
                 if 'text' in group.columns:
                     for text in group['text'].fillna('').astype(str):
-                        hashtags = safe_extract_hashtags(text)
+                        hashtags = extract_hashtags(text)
                         brand_hashtags.extend(hashtags)
                 
-                top_hashtags = pd.Series(brand_hashtags).value_counts().head(5).to_dict()
+                top_hashtags = dict(Counter(brand_hashtags).most_common(5))
+                
+                # Activity classification
+                if post_count > 50:
+                    activity_level = "high"
+                elif post_count > 20:
+                    activity_level = "medium"
+                else:
+                    activity_level = "low"
                 
                 competitors.append({
                     "brand": brand,
                     "posts": post_count,
                     "avg_sentiment": round(avg_sentiment, 3),
+                    "positive_sentiment": round(avg_positive * 100, 1),
                     "top_hashtags": top_hashtags,
-                    "activity_level": "high" if post_count > 50 else "medium" if post_count > 20 else "low"
+                    "activity_level": activity_level,
+                    "market_share": round((post_count / len(df)) * 100, 1)
                 })
         
         # Sort by post count
@@ -324,7 +519,7 @@ async def get_competitor_analysis():
 
 @router.get("/trends")
 async def get_trend_analysis():
-    """Get trending hashtags and content analysis"""
+    """Get comprehensive trend analysis"""
     try:
         df = safe_load_uploaded_data()
         
@@ -339,31 +534,51 @@ async def get_trend_analysis():
         all_hashtags = []
         if 'text' in df.columns:
             for text in df['text'].fillna('').astype(str):
-                hashtags = safe_extract_hashtags(text)
-                all_hashtags.extend(hashtags)
-        
-        if 'hashtags' in df.columns:
-            for hashtag_text in df['hashtags'].fillna('').astype(str):
-                hashtags = safe_extract_hashtags(hashtag_text)
+                hashtags = extract_hashtags(text)
                 all_hashtags.extend(hashtags)
         
         # Analyze hashtag trends
-        hashtag_counts = pd.Series(all_hashtags).value_counts()
+        hashtag_counts = Counter(all_hashtags)
         
         trends = []
-        for hashtag, count in hashtag_counts.head(20).items():
+        for hashtag, count in hashtag_counts.most_common(25):
+            # Categorize hashtags
+            if any(term in hashtag for term in ['street', 'wear', 'fashion', 'style', 'fit', 'outfit']):
+                category = "streetwear"
+            elif any(term in hashtag for term in ['culture', 'heritage', 'community', 'hip', 'hop']):
+                category = "culture"
+            elif any(term in hashtag for term in ['brand', 'nike', 'supreme', 'jordan']):
+                category = "brands"
+            else:
+                category = "general"
+            
+            # Determine trend direction based on usage
+            if count > 20:
+                trend_direction = "rising"
+            elif count > 10:
+                trend_direction = "stable"
+            else:
+                trend_direction = "emerging"
+            
             trends.append({
                 "hashtag": hashtag,
-                "count": int(count),
+                "count": count,
                 "percentage": round((count / len(all_hashtags)) * 100, 2) if all_hashtags else 0,
-                "trend_direction": "rising",  # Default trend
-                "category": "general"  # Default category
+                "trend_direction": trend_direction,
+                "category": category,
+                "momentum": "↗" if trend_direction == "rising" else "→" if trend_direction == "stable" else "↗"
             })
         
         return JSONResponse({
             "success": True,
             "trends": trends,
             "total_hashtags": len(set(all_hashtags)),
+            "categories": {
+                "streetwear": len([t for t in trends if t['category'] == 'streetwear']),
+                "culture": len([t for t in trends if t['category'] == 'culture']),
+                "brands": len([t for t in trends if t['category'] == 'brands']),
+                "general": len([t for t in trends if t['category'] == 'general'])
+            },
             "analysis_period": "last_30_days",
             "last_updated": datetime.now().isoformat()
         })
@@ -386,8 +601,10 @@ async def intelligence_health_check():
             "status": "healthy",
             "data_available": not df.empty,
             "total_records": len(df),
+            "unique_brands": df['brand'].nunique() if 'brand' in df.columns else 0,
+            "data_sources": len(list(Path("data/uploads").glob("*.jsonl"))) + len(list(Path("data/uploads").glob("*.json"))),
             "last_check": datetime.now().isoformat(),
-            "message": "Intelligence module operational"
+            "message": "Intelligence module operational with enhanced analytics"
         })
         
     except Exception as e:
@@ -397,42 +614,4 @@ async def intelligence_health_check():
             "total_records": 0,
             "error": str(e),
             "message": "Intelligence module health check failed"
-        })
-
-@router.get("/summary")
-async def get_intelligence_summary():
-    """Get quick intelligence summary"""
-    try:
-        df = safe_load_uploaded_data()
-        intelligence = safe_brand_intelligence(df)
-        
-        # Extract key metrics for summary
-        summary = {
-            "posts_analyzed": intelligence.get("total_posts", 0),
-            "brands_tracked": intelligence.get("brands_tracked", 0),
-            "sentiment_positive": intelligence.get("sentiment_analysis", {}).get("overall_positive", 0),
-            "top_competitor": intelligence.get("competitor_rankings", [{}])[0].get("brand", "None") if intelligence.get("competitor_rankings") else "None",
-            "trending_hashtag": intelligence.get("trending_hashtags", [{}])[0].get("hashtag", "None") if intelligence.get("trending_hashtags") else "None",
-            "data_status": intelligence.get("data_status", "no_data"),
-            "last_updated": datetime.now().isoformat()
-        }
-        
-        return JSONResponse({
-            "success": True,
-            "summary": summary
-        })
-        
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": f"Summary generation failed: {str(e)}",
-            "summary": {
-                "posts_analyzed": 0,
-                "brands_tracked": 0,
-                "sentiment_positive": 0,
-                "top_competitor": "Error",
-                "trending_hashtag": "Error",
-                "data_status": "error",
-                "last_updated": datetime.now().isoformat()
-            }
         })
