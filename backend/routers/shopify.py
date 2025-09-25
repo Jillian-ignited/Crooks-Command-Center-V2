@@ -1,677 +1,332 @@
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Form
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
-import json
 import requests
-from pathlib import Path
-from datetime import datetime, timedelta
+import json
 import os
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any
 
 router = APIRouter()
 
+# Shopify configuration storage
+SHOPIFY_CONFIG_FILE = "data/config/shopify_config.json"
+
 class ShopifyConfig(BaseModel):
-    shop_url: str
-    access_token: str
-    api_version: str = "2023-10"
-
-class ShopifyConnectionTest(BaseModel):
-    shop_url: str
+    store_url: str
     access_token: str
 
-# Global configuration storage (in production, use proper config management)
-shopify_config = None
-
-def save_shopify_config(config: ShopifyConfig):
-    """Save Shopify configuration"""
-    global shopify_config
-    shopify_config = config
-    
-    # Also save to file for persistence
-    config_dir = Path("data/shopify")
-    config_dir.mkdir(parents=True, exist_ok=True)
-    
-    config_file = config_dir / "config.json"
-    with open(config_file, 'w') as f:
-        json.dump({
-            "shop_url": config.shop_url,
-            "access_token": config.access_token,
-            "api_version": config.api_version,
-            "configured_at": datetime.now().isoformat()
-        }, f, indent=2)
-
-def load_shopify_config() -> Optional[ShopifyConfig]:
-    """Load Shopify configuration"""
-    global shopify_config
-    
-    if shopify_config:
-        return shopify_config
-    
-    # Try to load from file
-    config_file = Path("data/shopify/config.json")
-    if config_file.exists():
-        try:
-            with open(config_file, 'r') as f:
-                config_data = json.load(f)
-                shopify_config = ShopifyConfig(
-                    shop_url=config_data["shop_url"],
-                    access_token=config_data["access_token"],
-                    api_version=config_data.get("api_version", "2023-10")
-                )
-                return shopify_config
-        except Exception:
-            pass
-    
+def load_shopify_config() -> Optional[Dict[str, str]]:
+    """Load Shopify configuration from file"""
+    try:
+        if os.path.exists(SHOPIFY_CONFIG_FILE):
+            with open(SHOPIFY_CONFIG_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading Shopify config: {e}")
     return None
 
-def make_shopify_request(endpoint: str, params: Dict = None) -> Dict[str, Any]:
+def save_shopify_config(store_url: str, access_token: str):
+    """Save Shopify configuration to file"""
+    try:
+        os.makedirs(os.path.dirname(SHOPIFY_CONFIG_FILE), exist_ok=True)
+        config = {
+            "store_url": store_url,
+            "access_token": access_token,
+            "connected_at": datetime.now().isoformat()
+        }
+        with open(SHOPIFY_CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving Shopify config: {e}")
+        return False
+
+def make_shopify_request(endpoint: str, config: Dict[str, str]) -> Optional[Dict]:
     """Make authenticated request to Shopify API"""
-    config = load_shopify_config()
-    if not config:
-        raise HTTPException(status_code=400, detail="Shopify not configured")
-    
-    url = f"https://{config.shop_url}/admin/api/{config.api_version}/{endpoint}"
-    headers = {
-        "X-Shopify-Access-Token": config.access_token,
-        "Content-Type": "application/json"
-    }
-    
-    response = requests.get(url, headers=headers, params=params or {})
-    
-    if response.status_code == 401:
-        raise HTTPException(status_code=401, detail="Invalid Shopify credentials")
-    elif response.status_code == 403:
-        raise HTTPException(status_code=403, detail="Insufficient Shopify permissions")
-    elif response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=f"Shopify API error: {response.text}")
-    
-    return response.json()
-
-def calculate_conversion_metrics(orders_data: List[Dict], sessions_estimate: int = None) -> Dict[str, Any]:
-    """Calculate conversion metrics from orders data"""
     try:
-        if not orders_data:
-            return {
-                "conversion_rate": 0,
-                "revenue_per_session": 0,
-                "orders_per_session": 0,
-                "average_order_value": 0,
-                "total_revenue": 0,
-                "total_orders": 0,
-                "estimated_sessions": 0
-            }
+        store_url = config["store_url"]
+        if not store_url.endswith('.myshopify.com'):
+            store_url = f"{store_url}.myshopify.com"
         
-        # Calculate basic metrics
-        total_orders = len(orders_data)
-        total_revenue = sum(float(order.get("total_price", 0)) for order in orders_data)
-        average_order_value = total_revenue / total_orders if total_orders > 0 else 0
-        
-        # Estimate sessions if not provided (industry standard: 50-100 sessions per order)
-        if sessions_estimate is None:
-            sessions_estimate = total_orders * 75  # Conservative estimate
-        
-        # Calculate conversion metrics
-        conversion_rate = (total_orders / sessions_estimate * 100) if sessions_estimate > 0 else 0
-        revenue_per_session = total_revenue / sessions_estimate if sessions_estimate > 0 else 0
-        orders_per_session = total_orders / sessions_estimate if sessions_estimate > 0 else 0
-        
-        return {
-            "conversion_rate": round(conversion_rate, 2),
-            "revenue_per_session": round(revenue_per_session, 2),
-            "orders_per_session": round(orders_per_session, 4),
-            "average_order_value": round(average_order_value, 2),
-            "total_revenue": round(total_revenue, 2),
-            "total_orders": total_orders,
-            "estimated_sessions": sessions_estimate
-        }
-        
-    except Exception as e:
-        return {
-            "conversion_rate": 0,
-            "revenue_per_session": 0,
-            "orders_per_session": 0,
-            "average_order_value": 0,
-            "total_revenue": 0,
-            "total_orders": 0,
-            "estimated_sessions": 0,
-            "error": str(e)
-        }
-
-def analyze_traffic_sources(orders_data: List[Dict]) -> Dict[str, Any]:
-    """Analyze traffic sources and their conversion performance"""
-    try:
-        source_analysis = {}
-        
-        for order in orders_data:
-            # Extract referrer information (this would be more sophisticated with actual data)
-            referring_site = order.get("referring_site", "direct")
-            source_name = order.get("source_name", "unknown")
-            
-            # Determine traffic source
-            if "instagram" in referring_site.lower() or "instagram" in source_name.lower():
-                source = "instagram"
-            elif "tiktok" in referring_site.lower() or "tiktok" in source_name.lower():
-                source = "tiktok"
-            elif "twitter" in referring_site.lower() or "twitter" in source_name.lower():
-                source = "twitter"
-            elif "facebook" in referring_site.lower() or "facebook" in source_name.lower():
-                source = "facebook"
-            elif referring_site and referring_site != "":
-                source = "referral"
-            else:
-                source = "direct"
-            
-            if source not in source_analysis:
-                source_analysis[source] = {
-                    "orders": 0,
-                    "revenue": 0,
-                    "estimated_sessions": 0
-                }
-            
-            source_analysis[source]["orders"] += 1
-            source_analysis[source]["revenue"] += float(order.get("total_price", 0))
-            source_analysis[source]["estimated_sessions"] += 75  # Estimated sessions per order
-        
-        # Calculate conversion rates for each source
-        for source, data in source_analysis.items():
-            if data["estimated_sessions"] > 0:
-                data["conversion_rate"] = round((data["orders"] / data["estimated_sessions"]) * 100, 2)
-                data["revenue_per_session"] = round(data["revenue"] / data["estimated_sessions"], 2)
-            else:
-                data["conversion_rate"] = 0
-                data["revenue_per_session"] = 0
-            
-            data["average_order_value"] = round(data["revenue"] / data["orders"], 2) if data["orders"] > 0 else 0
-        
-        return source_analysis
-        
-    except Exception as e:
-        return {"error": str(e)}
-
-def save_shopify_data(data: Dict[str, Any]):
-    """Save Shopify data for persistence"""
-    data_dir = Path("data/shopify")
-    data_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Save latest data
-    latest_file = data_dir / "latest_data.json"
-    with open(latest_file, 'w') as f:
-        json.dump({
-            **data,
-            "last_updated": datetime.now().isoformat()
-        }, f, indent=2)
-    
-    # Save historical data
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    historical_file = data_dir / f"data_{timestamp}.json"
-    with open(historical_file, 'w') as f:
-        json.dump(data, f, indent=2)
-
-@router.post("/connect")
-async def connect_shopify(config: ShopifyConfig):
-    """Connect to Shopify store"""
-    try:
-        # Test the connection
-        test_url = f"https://{config.shop_url}/admin/api/{config.api_version}/shop.json"
+        url = f"https://{store_url}/admin/api/2023-10/{endpoint}"
         headers = {
-            "X-Shopify-Access-Token": config.access_token,
+            "X-Shopify-Access-Token": config["access_token"],
             "Content-Type": "application/json"
         }
         
-        response = requests.get(test_url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         
-        if response.status_code == 401:
-            return JSONResponse({
-                "success": False,
-                "error": "Invalid access token or shop URL"
-            })
-        elif response.status_code == 403:
-            return JSONResponse({
-                "success": False,
-                "error": "Insufficient permissions. Please check your private app permissions."
-            })
-        elif response.status_code != 200:
-            return JSONResponse({
-                "success": False,
-                "error": f"Connection failed: {response.text}"
-            })
-        
-        shop_data = response.json()
-        
-        # Save configuration
-        save_shopify_config(config)
-        
-        return JSONResponse({
-            "success": True,
-            "message": "Successfully connected to Shopify",
-            "shop_info": {
-                "name": shop_data["shop"]["name"],
-                "domain": shop_data["shop"]["domain"],
-                "email": shop_data["shop"]["email"],
-                "currency": shop_data["shop"]["currency"],
-                "timezone": shop_data["shop"]["timezone"]
-            },
-            "connection_status": "connected",
-            "configured_at": datetime.now().isoformat()
-        })
-        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Shopify API error: {response.status_code} - {response.text}")
+            return None
+            
     except Exception as e:
-        return JSONResponse({
+        print(f"Error making Shopify request: {e}")
+        return None
+
+@router.get("/setup")
+async def get_shopify_setup():
+    """Get current Shopify setup status"""
+    try:
+        config = load_shopify_config()
+        if config:
+            return {
+                "connected": True,
+                "store_url": config.get("store_url", ""),
+                "connected_at": config.get("connected_at", ""),
+                "status": "Connected"
+            }
+        else:
+            return {
+                "connected": False,
+                "store_url": "",
+                "connected_at": "",
+                "status": "Not Connected"
+            }
+    except Exception as e:
+        return {
+            "connected": False,
+            "store_url": "",
+            "connected_at": "",
+            "status": f"Error: {str(e)}"
+        }
+
+@router.post("/connect")
+async def connect_shopify(store_url: str = Form(...), access_token: str = Form(...)):
+    """Connect to Shopify store"""
+    try:
+        # Clean up store URL
+        store_url = store_url.strip().lower()
+        if store_url.startswith('http://') or store_url.startswith('https://'):
+            store_url = store_url.split('://', 1)[1]
+        if store_url.startswith('www.'):
+            store_url = store_url[4:]
+        if not store_url.endswith('.myshopify.com'):
+            if '.' in store_url and not store_url.endswith('.myshopify.com'):
+                # If it's a custom domain, we need the myshopify.com version
+                return {
+                    "success": False,
+                    "message": "Please use your store's .myshopify.com URL (e.g., your-store.myshopify.com)"
+                }
+            else:
+                store_url = f"{store_url}.myshopify.com"
+        
+        # Test connection
+        config = {"store_url": store_url, "access_token": access_token}
+        test_response = make_shopify_request("shop.json", config)
+        
+        if test_response and "shop" in test_response:
+            # Save configuration
+            if save_shopify_config(store_url, access_token):
+                return {
+                    "success": True,
+                    "message": "Successfully connected to Shopify!",
+                    "shop_name": test_response["shop"].get("name", "Unknown"),
+                    "shop_domain": test_response["shop"].get("domain", store_url)
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "Connected to Shopify but failed to save configuration"
+                }
+        else:
+            return {
+                "success": False,
+                "message": "Connection failed: Unable to connect to your Shopify store. Please check your store URL and access token."
+            }
+            
+    except Exception as e:
+        return {
             "success": False,
-            "error": f"Connection failed: {str(e)}"
-        })
+            "message": f"Connection failed: {str(e)}"
+        }
 
 @router.get("/status")
-async def get_connection_status():
+async def get_shopify_status():
     """Get Shopify connection status"""
     try:
         config = load_shopify_config()
-        
         if not config:
-            return JSONResponse({
-                "connected": False,
-                "status": "not_configured",
-                "message": "Shopify not configured"
-            })
+            return {"connected": False, "message": "Not connected"}
         
         # Test current connection
-        try:
-            shop_data = make_shopify_request("shop.json")
-            return JSONResponse({
+        test_response = make_shopify_request("shop.json", config)
+        if test_response and "shop" in test_response:
+            return {
                 "connected": True,
-                "status": "connected",
-                "shop_info": {
-                    "name": shop_data["shop"]["name"],
-                    "domain": shop_data["shop"]["domain"],
-                    "currency": shop_data["shop"]["currency"]
-                },
-                "last_check": datetime.now().isoformat()
-            })
-        except Exception as e:
-            return JSONResponse({
-                "connected": False,
-                "status": "connection_error",
-                "error": str(e),
-                "message": "Connection configured but not working"
-            })
-        
-    except Exception as e:
-        return JSONResponse({
-            "connected": False,
-            "status": "error",
-            "error": str(e)
-        })
-
-@router.post("/sync/sales")
-async def sync_sales_data(days_back: int = 30):
-    """Sync sales data from Shopify"""
-    try:
-        # Calculate date range
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days_back)
-        
-        # Get orders from Shopify
-        params = {
-            "created_at_min": start_date.isoformat(),
-            "created_at_max": end_date.isoformat(),
-            "status": "any",
-            "limit": 250
-        }
-        
-        orders_response = make_shopify_request("orders.json", params)
-        orders = orders_response.get("orders", [])
-        
-        # Calculate metrics
-        total_orders = len(orders)
-        total_revenue = sum(float(order.get("total_price", 0)) for order in orders)
-        average_order_value = total_revenue / total_orders if total_orders > 0 else 0
-        
-        # Calculate conversion metrics
-        conversion_metrics = calculate_conversion_metrics(orders)
-        
-        # Analyze traffic sources
-        traffic_sources = analyze_traffic_sources(orders)
-        
-        # Prepare sales data
-        sales_data = {
-            "sync_timestamp": datetime.now().isoformat(),
-            "date_range": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat(),
-                "days": days_back
-            },
-            "sales_metrics": {
-                "total_revenue": round(total_revenue, 2),
-                "total_orders": total_orders,
-                "average_order_value": round(average_order_value, 2)
-            },
-            "conversion_metrics": conversion_metrics,
-            "traffic_sources": traffic_sources,
-            "orders_data": orders[:50]  # Store sample of orders for analysis
-        }
-        
-        # Save data
-        save_shopify_data(sales_data)
-        
-        return JSONResponse({
-            "success": True,
-            "message": f"Sales data synced successfully ({total_orders} orders)",
-            "sales_data": sales_data,
-            "data_refresh_triggered": True
-        })
-        
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": f"Sales sync failed: {str(e)}",
-            "data_refresh_triggered": False
-        })
-
-@router.post("/sync/traffic")
-async def sync_traffic_data(days_back: int = 30):
-    """Sync traffic data from Shopify (estimated from orders)"""
-    try:
-        # Get recent orders to estimate traffic
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days_back)
-        
-        params = {
-            "created_at_min": start_date.isoformat(),
-            "created_at_max": end_date.isoformat(),
-            "status": "any",
-            "limit": 250
-        }
-        
-        orders_response = make_shopify_request("orders.json", params)
-        orders = orders_response.get("orders", [])
-        
-        # Estimate traffic metrics (industry benchmarks)
-        total_orders = len(orders)
-        estimated_sessions = total_orders * 75  # Conservative estimate
-        estimated_page_views = estimated_sessions * 3.5  # Average pages per session
-        
-        # Calculate funnel metrics
-        funnel_metrics = {
-            "sessions": estimated_sessions,
-            "product_views": round(estimated_sessions * 0.6),  # 60% view products
-            "add_to_cart": round(estimated_sessions * 0.15),   # 15% add to cart
-            "checkout_initiated": round(estimated_sessions * 0.08),  # 8% start checkout
-            "orders_completed": total_orders,
-            "conversion_rates": {
-                "session_to_product_view": 60.0,
-                "product_view_to_cart": 25.0,
-                "cart_to_checkout": 53.3,
-                "checkout_to_order": round((total_orders / max(estimated_sessions * 0.08, 1)) * 100, 1)
+                "message": "Connected",
+                "shop_name": test_response["shop"].get("name", "Unknown"),
+                "store_url": config["store_url"]
             }
-        }
-        
-        traffic_data = {
-            "sync_timestamp": datetime.now().isoformat(),
-            "date_range": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat(),
-                "days": days_back
-            },
-            "traffic_metrics": {
-                "estimated_sessions": estimated_sessions,
-                "estimated_page_views": estimated_page_views,
-                "bounce_rate_estimate": 45.0,  # Industry average
-                "avg_session_duration": "2:34"  # Industry average
-            },
-            "funnel_metrics": funnel_metrics,
-            "data_source": "estimated_from_orders",
-            "note": "Traffic metrics estimated from order data using industry benchmarks"
-        }
-        
-        return JSONResponse({
-            "success": True,
-            "message": f"Traffic data synced successfully (estimated from {total_orders} orders)",
-            "traffic_data": traffic_data,
-            "data_refresh_triggered": True
-        })
-        
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": f"Traffic sync failed: {str(e)}",
-            "data_refresh_triggered": False
-        })
-
-@router.get("/revenue")
-async def get_revenue_intelligence():
-    """Get revenue intelligence dashboard data"""
-    try:
-        # Load saved Shopify data
-        data_file = Path("data/shopify/latest_data.json")
-        if not data_file.exists():
-            return JSONResponse({
-                "success": False,
-                "error": "No Shopify data available. Please sync sales data first.",
-                "revenue_intelligence": {}
-            })
-        
-        with open(data_file, 'r') as f:
-            shopify_data = json.load(f)
-        
-        # Extract key metrics
-        sales_metrics = shopify_data.get("sales_metrics", {})
-        conversion_metrics = shopify_data.get("conversion_metrics", {})
-        traffic_sources = shopify_data.get("traffic_sources", {})
-        
-        # Calculate social media correlation (mock data for now)
-        social_correlation = {
-            "instagram": {
-                "revenue_correlation": 23.5,
-                "conversion_rate": 3.2,
-                "average_order_value": 85.50,
-                "revenue_per_post": 125.30
-            },
-            "tiktok": {
-                "revenue_correlation": 18.7,
-                "conversion_rate": 2.8,
-                "average_order_value": 78.20,
-                "revenue_per_post": 98.45
-            },
-            "twitter": {
-                "revenue_correlation": 12.3,
-                "conversion_rate": 2.1,
-                "average_order_value": 92.10,
-                "revenue_per_post": 67.80
-            }
-        }
-        
-        # Generate insights
-        insights = []
-        if conversion_metrics.get("conversion_rate", 0) > 3.0:
-            insights.append("Conversion rate is above industry average (3%)")
-        if sales_metrics.get("average_order_value", 0) > 80:
-            insights.append("Average order value indicates premium positioning")
-        
-        revenue_intelligence = {
-            "sales_performance": sales_metrics,
-            "conversion_performance": conversion_metrics,
-            "traffic_source_analysis": traffic_sources,
-            "social_media_correlation": social_correlation,
-            "key_insights": insights,
-            "optimization_opportunities": [
-                "Focus on Instagram content - highest revenue correlation",
-                "Improve TikTok conversion rate to match Instagram performance",
-                "Leverage high AOV for premium product positioning"
-            ],
-            "last_updated": shopify_data.get("last_updated"),
-            "data_freshness": "current"
-        }
-        
-        return JSONResponse({
-            "success": True,
-            "revenue_intelligence": revenue_intelligence
-        })
-        
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": f"Revenue intelligence retrieval failed: {str(e)}",
-            "revenue_intelligence": {}
-        })
-
-@router.get("/conversion/funnel")
-async def get_conversion_funnel():
-    """Get detailed conversion funnel analysis"""
-    try:
-        # This would integrate with Google Analytics or similar
-        # For now, return estimated funnel based on Shopify data
-        
-        funnel_data = {
-            "funnel_stages": [
-                {
-                    "stage": "Sessions",
-                    "count": 15750,
-                    "percentage": 100.0,
-                    "drop_off": 0
-                },
-                {
-                    "stage": "Product Views",
-                    "count": 9450,
-                    "percentage": 60.0,
-                    "drop_off": 40.0
-                },
-                {
-                    "stage": "Add to Cart",
-                    "count": 2363,
-                    "percentage": 15.0,
-                    "drop_off": 75.0
-                },
-                {
-                    "stage": "Checkout Initiated",
-                    "count": 1260,
-                    "percentage": 8.0,
-                    "drop_off": 46.7
-                },
-                {
-                    "stage": "Order Completed",
-                    "count": 210,
-                    "percentage": 1.33,
-                    "drop_off": 83.3
-                }
-            ],
-            "conversion_insights": [
-                "Largest drop-off occurs between product view and add to cart",
-                "Checkout completion rate is strong at 16.7%",
-                "Overall conversion rate of 1.33% is industry average"
-            ],
-            "optimization_recommendations": [
-                "Improve product page CTAs to increase add-to-cart rate",
-                "Implement exit-intent popups on product pages",
-                "Add social proof and reviews to product pages",
-                "Optimize checkout flow to reduce abandonment"
-            ]
-        }
-        
-        return JSONResponse({
-            "success": True,
-            "funnel_analysis": funnel_data
-        })
-        
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": f"Funnel analysis failed: {str(e)}",
-            "funnel_analysis": {}
-        })
-
-@router.get("/conversion/sources")
-async def get_traffic_source_conversion():
-    """Get conversion rates by traffic source"""
-    try:
-        # Load Shopify data
-        data_file = Path("data/shopify/latest_data.json")
-        if data_file.exists():
-            with open(data_file, 'r') as f:
-                shopify_data = json.load(f)
-            traffic_sources = shopify_data.get("traffic_sources", {})
         else:
-            traffic_sources = {}
-        
-        # Add estimated data if no real data
-        if not traffic_sources:
-            traffic_sources = {
-                "instagram": {
-                    "orders": 45,
-                    "revenue": 3847.50,
-                    "estimated_sessions": 3375,
-                    "conversion_rate": 1.33,
-                    "revenue_per_session": 1.14,
-                    "average_order_value": 85.50
-                },
-                "direct": {
-                    "orders": 89,
-                    "revenue": 8234.60,
-                    "estimated_sessions": 6675,
-                    "conversion_rate": 1.33,
-                    "revenue_per_session": 1.23,
-                    "average_order_value": 92.52
-                },
-                "tiktok": {
-                    "orders": 32,
-                    "revenue": 2502.40,
-                    "estimated_sessions": 2400,
-                    "conversion_rate": 1.33,
-                    "revenue_per_session": 1.04,
-                    "average_order_value": 78.20
-                }
+            return {
+                "connected": False,
+                "message": "Connection lost or invalid credentials"
             }
-        
-        return JSONResponse({
-            "success": True,
-            "traffic_source_conversion": traffic_sources,
-            "insights": [
-                "Instagram drives highest revenue per session",
-                "Direct traffic has highest average order value",
-                "TikTok shows growth potential with optimization"
-            ]
-        })
-        
     except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": f"Traffic source analysis failed: {str(e)}",
-            "traffic_source_conversion": {}
-        })
+        return {
+            "connected": False,
+            "message": f"Error checking status: {str(e)}"
+        }
 
-@router.get("/health")
-async def shopify_health_check():
-    """Health check for Shopify module"""
+@router.get("/sales")
+async def get_sales_data(days: int = 30):
+    """Get sales data from Shopify"""
     try:
         config = load_shopify_config()
-        
         if not config:
-            return JSONResponse({
-                "status": "not_configured",
-                "connected": False,
-                "message": "Shopify integration not configured"
-            })
+            raise HTTPException(status_code=400, detail="Shopify not connected")
         
-        # Test connection
-        try:
-            make_shopify_request("shop.json")
-            return JSONResponse({
-                "status": "healthy",
-                "connected": True,
-                "last_check": datetime.now().isoformat(),
-                "message": "Shopify integration operational"
-            })
-        except Exception as e:
-            return JSONResponse({
-                "status": "connection_error",
-                "connected": False,
-                "error": str(e),
-                "message": "Shopify configured but connection failed"
-            })
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get orders
+        endpoint = f"orders.json?status=any&created_at_min={start_date.isoformat()}&created_at_max={end_date.isoformat()}&limit=250"
+        orders_response = make_shopify_request(endpoint, config)
+        
+        if not orders_response or "orders" not in orders_response:
+            return {
+                "success": False,
+                "message": "Failed to fetch sales data",
+                "data": {
+                    "total_revenue": 0,
+                    "total_orders": 0,
+                    "average_order_value": 0,
+                    "conversion_rate": 0,
+                    "orders": []
+                }
+            }
+        
+        orders = orders_response["orders"]
+        
+        # Calculate metrics
+        total_revenue = sum(float(order.get("total_price", 0)) for order in orders)
+        total_orders = len(orders)
+        average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+        
+        # Estimate conversion rate (basic calculation)
+        estimated_sessions = total_orders * 25  # Rough estimate: 4% conversion rate
+        conversion_rate = (total_orders / estimated_sessions * 100) if estimated_sessions > 0 else 0
+        
+        return {
+            "success": True,
+            "message": "Sales data retrieved successfully",
+            "data": {
+                "total_revenue": round(total_revenue, 2),
+                "total_orders": total_orders,
+                "average_order_value": round(average_order_value, 2),
+                "conversion_rate": round(conversion_rate, 2),
+                "period_days": days,
+                "orders": orders[:10]  # Return first 10 orders for analysis
+            }
+        }
         
     except Exception as e:
-        return JSONResponse({
-            "status": "error",
-            "connected": False,
-            "error": str(e),
-            "message": "Shopify module health check failed"
-        })
+        return {
+            "success": False,
+            "message": f"Error fetching sales data: {str(e)}",
+            "data": {
+                "total_revenue": 0,
+                "total_orders": 0,
+                "average_order_value": 0,
+                "conversion_rate": 0,
+                "orders": []
+            }
+        }
+
+@router.get("/traffic")
+async def get_traffic_data(days: int = 30):
+    """Get traffic data (estimated from orders)"""
+    try:
+        config = load_shopify_config()
+        if not config:
+            raise HTTPException(status_code=400, detail="Shopify not connected")
+        
+        # Get sales data first
+        sales_response = await get_sales_data(days)
+        
+        if not sales_response["success"]:
+            return sales_response
+        
+        sales_data = sales_response["data"]
+        total_orders = sales_data["total_orders"]
+        
+        # Estimate traffic metrics (industry averages)
+        estimated_sessions = total_orders * 25  # 4% conversion rate
+        estimated_page_views = estimated_sessions * 3  # 3 pages per session
+        bounce_rate = 65  # Industry average
+        
+        return {
+            "success": True,
+            "message": "Traffic data estimated from sales",
+            "data": {
+                "sessions": estimated_sessions,
+                "page_views": estimated_page_views,
+                "bounce_rate": bounce_rate,
+                "conversion_rate": sales_data["conversion_rate"],
+                "orders": total_orders,
+                "revenue": sales_data["total_revenue"],
+                "note": "Traffic metrics are estimated based on industry averages and actual order data"
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error estimating traffic data: {str(e)}",
+            "data": {
+                "sessions": 0,
+                "page_views": 0,
+                "bounce_rate": 0,
+                "conversion_rate": 0,
+                "orders": 0,
+                "revenue": 0
+            }
+        }
+
+@router.post("/sync")
+async def sync_shopify_data():
+    """Sync all Shopify data"""
+    try:
+        config = load_shopify_config()
+        if not config:
+            raise HTTPException(status_code=400, detail="Shopify not connected")
+        
+        # Get sales and traffic data
+        sales_data = await get_sales_data(30)
+        traffic_data = await get_traffic_data(30)
+        
+        return {
+            "success": True,
+            "message": "Shopify data synced successfully",
+            "sales": sales_data,
+            "traffic": traffic_data,
+            "synced_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error syncing Shopify data: {str(e)}"
+        }
+
+@router.delete("/disconnect")
+async def disconnect_shopify():
+    """Disconnect from Shopify"""
+    try:
+        if os.path.exists(SHOPIFY_CONFIG_FILE):
+            os.remove(SHOPIFY_CONFIG_FILE)
+        
+        return {
+            "success": True,
+            "message": "Disconnected from Shopify successfully"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error disconnecting: {str(e)}"
+        }
