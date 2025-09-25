@@ -33,11 +33,11 @@ app.add_middleware(
 
 # Include all routers with proper prefixes
 app.include_router(intelligence_COMPLETE.router, prefix="/intelligence", tags=["intelligence"])
-app.include_router(summary_COMPLETE.router, prefix="/summary", tags=["summary"])
-app.include_router(calendar_COMPLETE.router, prefix="/calendar", tags=["calendar"])
-app.include_router(agency_COMPLETE.router, prefix="/agency", tags=["agency"])
-app.include_router(ingest_COMPLETE.router, prefix="/ingest", tags=["ingest"])
-app.include_router(shopify_COMPLETE.router, prefix="/shopify", tags=["shopify"])
+app.include_router(summary.router, prefix="/summary", tags=["summary"])
+app.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
+app.include_router(agency.router, prefix="/agency", tags=["agency"])
+app.include_router(ingest_ENHANCED.router, prefix="/ingest", tags=["ingest"])
+app.include_router(shopify.router, prefix="/shopify", tags=["shopify"])
 
 # Ensure required directories exist
 def ensure_directories():
