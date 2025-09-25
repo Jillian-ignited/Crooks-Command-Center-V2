@@ -3,864 +3,942 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👑 Crooks & Castles Command Center V2</title>
+    <title>👑 Crooks & Castles Command Center V2 - Revenue Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
-            font-family: 'Arial', sans-serif;
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'crooks-black': '#0a0a0a',
+                        'crooks-orange': '#ff6b35',
+                        'crooks-gold': '#ffd700',
+                        'crooks-gray': '#1a1a1a'
+                    }
+                }
+            }
         }
+    </script>
+    <style>
         .gradient-border {
-            background: linear-gradient(45deg, #ff6b35, #f7931e, #ffcc02);
+            background: linear-gradient(45deg, #ff6b35, #ffd700, #ff6b35);
             padding: 2px;
             border-radius: 12px;
         }
         .gradient-border-content {
-            background: #1a1a1a;
+            background: #0a0a0a;
             border-radius: 10px;
             padding: 1.5rem;
         }
-        .crown-glow {
-            text-shadow: 0 0 20px #ff6b35;
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
         }
-        .stat-card {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            border: 1px solid #ff6b35;
-            transition: all 0.3s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
-        }
-        .upload-zone {
-            border: 2px dashed #ff6b35;
-            background: rgba(255, 107, 53, 0.1);
-            transition: all 0.3s ease;
-        }
-        .upload-zone:hover {
-            background: rgba(255, 107, 53, 0.2);
-            border-color: #f7931e;
-        }
-        .asset-item {
-            background: #2d2d2d;
-            border: 1px solid #444;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        .asset-item:hover {
-            border-color: #ff6b35;
-            background: #333;
-        }
-        .calendar-day {
-            background: #2d2d2d;
-            border: 1px solid #444;
-            min-height: 100px;
-            transition: all 0.3s ease;
-        }
-        .calendar-day:hover {
-            border-color: #ff6b35;
-        }
-        .content-theme {
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            color: black;
-            font-weight: bold;
-        }
+        .priority-1 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .priority-2 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .priority-3 { background: linear-gradient(135deg, #10b981, #059669); }
+        .impact-high { color: #ef4444; }
+        .impact-medium { color: #f59e0b; }
+        .impact-low { color: #10b981; }
+        .health-excellent { color: #10b981; }
+        .health-good { color: #3b82f6; }
+        .health-fair { color: #f59e0b; }
+        .health-needs-attention { color: #ef4444; }
+        .revenue-positive { color: #10b981; }
+        .revenue-negative { color: #ef4444; }
+        .correlation-strong { color: #10b981; }
+        .correlation-moderate { color: #f59e0b; }
+        .correlation-weak { color: #ef4444; }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen">
+<body class="bg-crooks-black text-white min-h-screen">
     <!-- Header -->
-    <header class="p-6 border-b border-gray-800">
-        <div class="flex justify-between items-center">
-            <h1 class="text-4xl font-bold text-orange-500 crown-glow">👑 Crooks & Castles Command Center</h1>
-            <div class="flex space-x-6">
-                <button onclick="showTab('dashboard')" id="tab-dashboard" class="tab-btn text-lg font-semibold text-orange-500 border-b-2 border-orange-500">Dashboard</button>
-                <button onclick="showTab('intelligence')" id="tab-intelligence" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Intelligence</button>
-                <button onclick="showTab('assets')" id="tab-assets" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Asset Library</button>
-                <button onclick="showTab('calendar')" id="tab-calendar" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Content Calendar</button>
-                <button onclick="showTab('agency')" id="tab-agency" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Agency</button>
-                <button onclick="showTab('ingest')" id="tab-ingest" class="tab-btn text-lg font-semibold text-gray-300 hover:text-orange-500">Data Ingest</button>
+    <header class="bg-gradient-to-r from-crooks-black via-crooks-gray to-crooks-black border-b border-crooks-orange/30">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <span class="text-3xl">👑</span>
+                    <div>
+                        <h1 class="text-2xl font-bold text-crooks-orange">Crooks & Castles</h1>
+                        <p class="text-sm text-gray-400">Revenue Intelligence Command Center</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <div class="text-sm text-gray-400">Shopify Status</div>
+                        <div id="shopifyStatus" class="text-red-400 font-semibold">🔴 Not Connected</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-400">System Status</div>
+                        <div id="systemStatus" class="text-green-400 font-semibold">🟢 Online</div>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Dashboard Tab -->
-    <div id="dashboard-content" class="tab-content p-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Stats Cards -->
-            <div class="stat-card p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-2 text-orange-400">Total Brands</h3>
-                <p class="text-4xl font-bold" id="total-brands">16</p>
-                <p class="text-sm text-gray-400 mt-2">Competitors Tracked</p>
-            </div>
-            <div class="stat-card p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-2 text-orange-400">Total Posts</h3>
-                <p class="text-4xl font-bold" id="total-posts">557</p>
-                <p class="text-sm text-gray-400 mt-2">Social Media Posts</p>
-            </div>
-            <div class="stat-card p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-2 text-orange-400">Positive Sentiment</h3>
-                <p class="text-4xl font-bold text-green-400" id="sentiment">89.7%</p>
-                <p class="text-sm text-gray-400 mt-2">Overall Market Mood</p>
-            </div>
-            <div class="stat-card p-6 rounded-lg">
-                <h3 class="text-xl font-semibold mb-2 text-orange-400">C&C Rank</h3>
-                <p class="text-4xl font-bold text-yellow-400" id="cc-rank">#10</p>
-                <p class="text-sm text-gray-400 mt-2">Market Position</p>
+    <!-- Navigation -->
+    <nav class="bg-crooks-gray border-b border-crooks-orange/20">
+        <div class="container mx-auto px-6">
+            <div class="flex space-x-8">
+                <button onclick="showTab('revenue')" id="tab-revenue" class="tab-button px-4 py-3 text-crooks-orange border-b-2 border-crooks-orange font-semibold">
+                    💰 Revenue Intelligence
+                </button>
+                <button onclick="showTab('overview')" id="tab-overview" class="tab-button px-4 py-3 text-gray-400 hover:text-white transition-colors">
+                    📊 Strategic Overview
+                </button>
+                <button onclick="showTab('intelligence')" id="tab-intelligence" class="tab-button px-4 py-3 text-gray-400 hover:text-white transition-colors">
+                    🧠 Intelligence
+                </button>
+                <button onclick="showTab('shopify')" id="tab-shopify" class="tab-button px-4 py-3 text-gray-400 hover:text-white transition-colors">
+                    🛒 Shopify Setup
+                </button>
+                <button onclick="showTab('ingest')" id="tab-ingest" class="tab-button px-4 py-3 text-gray-400 hover:text-white transition-colors">
+                    ⬆️ Data Ingest
+                </button>
             </div>
         </div>
+    </nav>
 
-        <!-- Executive Summary -->
-        <div class="gradient-border mb-8">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">👑 Executive Summary</h2>
-                <div id="executive-summary" class="space-y-4">
-                    <p class="text-lg">Crooks & Castles maintains strong brand recognition in the streetwear market with <span class="text-orange-400 font-bold">89.7% positive sentiment</span> across social platforms.</p>
-                    <p>Key competitors showing momentum: Supreme, Off-White, and Fear of God. Opportunity identified in <span class="text-green-400 font-bold">cultural collaboration</span> space.</p>
-                    <p>Trending hashtags: <span class="text-blue-400">#streetwear #hypebeast #crooksandcastles #streetstyle</span></p>
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        
+        <!-- Revenue Intelligence Tab -->
+        <div id="revenue-content" class="tab-content">
+            <!-- Revenue Dashboard Header -->
+            <div class="gradient-border mb-8 glow-effect">
+                <div class="gradient-border-content">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-crooks-orange mb-2">💰 Revenue Intelligence Dashboard</h2>
+                            <p class="text-gray-400">Social media impact on actual sales performance</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-400">Correlation Strength</div>
+                            <div id="correlationStrength" class="text-2xl font-bold">--</div>
+                            <div id="correlationStatus" class="text-sm font-semibold">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Metrics Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-crooks-gray border border-green-500/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Total Revenue (30d)</p>
+                            <p id="totalRevenue" class="text-2xl font-bold text-green-400">--</p>
+                        </div>
+                        <span class="text-2xl">💵</span>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-blue-500/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Total Orders</p>
+                            <p id="totalOrders" class="text-2xl font-bold text-blue-400">--</p>
+                        </div>
+                        <span class="text-2xl">🛒</span>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Avg Order Value</p>
+                            <p id="avgOrderValue" class="text-2xl font-bold text-crooks-orange">--</p>
+                        </div>
+                        <span class="text-2xl">💳</span>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-purple-500/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Social-Revenue Correlation</p>
+                            <p id="socialCorrelation" class="text-2xl font-bold text-purple-400">--%</p>
+                        </div>
+                        <span class="text-2xl">📈</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Drivers Analysis -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="gradient-border">
+                    <div class="gradient-border-content">
+                        <h3 class="text-xl font-bold text-crooks-orange mb-4">🎯 Top Revenue-Driving Hashtags</h3>
+                        <div id="revenueHashtags" class="space-y-4">
+                            <div class="text-gray-400">Loading hashtag revenue analysis...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gradient-border">
+                    <div class="gradient-border-content">
+                        <h3 class="text-xl font-bold text-crooks-orange mb-4">📊 Social-Sales Correlation</h3>
+                        <div id="correlationInsights" class="space-y-3">
+                            <div class="text-gray-400">Loading correlation analysis...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Performance Chart -->
+            <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6 mb-8">
+                <h3 class="text-xl font-semibold text-crooks-orange mb-4">📈 Revenue vs Social Activity</h3>
+                <div class="h-64">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Strategic Revenue Insights -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-crooks-gray border border-green-500/30 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-green-400 mb-3">💡 Revenue Optimization Opportunities</h4>
+                    <div id="revenueOpportunities" class="space-y-2">
+                        <div class="text-gray-400">Loading revenue insights...</div>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-blue-500/30 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-blue-400 mb-3">🎯 High-Performing Content Themes</h4>
+                    <div id="contentThemes" class="space-y-2">
+                        <div class="text-gray-400">Loading content analysis...</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Trending Hashtags -->
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">🔥 Trending Now</h2>
-                <div class="flex flex-wrap gap-3" id="trending-hashtags">
-                    <span class="bg-orange-500 text-black px-3 py-1 rounded-full font-semibold">#streetwear</span>
-                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full">#hypebeast</span>
-                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full">#crooksandcastles</span>
-                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full">#streetstyle</span>
-                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full">#fashion</span>
-                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full">#urban</span>
+        <!-- Strategic Overview Tab -->
+        <div id="overview-content" class="tab-content hidden">
+            <!-- Health Score Banner -->
+            <div class="gradient-border mb-8 glow-effect">
+                <div class="gradient-border-content">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-crooks-orange mb-2">👑 Strategic Command Overview</h2>
+                            <p class="text-gray-400">Real-time competitive intelligence and strategic insights</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-400">Overall Health</div>
+                            <div id="healthScore" class="text-3xl font-bold">--</div>
+                            <div id="healthStatus" class="text-sm font-semibold">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Total Posts Analyzed</p>
+                            <p id="totalPosts" class="text-2xl font-bold text-white">--</p>
+                        </div>
+                        <span class="text-2xl">📊</span>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Brands Tracked</p>
+                            <p id="totalBrands" class="text-2xl font-bold text-white">--</p>
+                        </div>
+                        <span class="text-2xl">🏢</span>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Positive Sentiment</p>
+                            <p id="positiveSentiment" class="text-2xl font-bold text-green-400">--%</p>
+                        </div>
+                        <span class="text-2xl">😊</span>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">C&C Rank</p>
+                            <p id="ccRank" class="text-2xl font-bold text-crooks-orange">--</p>
+                        </div>
+                        <span class="text-2xl">👑</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prioritized Actions -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="gradient-border">
+                    <div class="gradient-border-content">
+                        <h3 class="text-xl font-bold text-crooks-orange mb-4">🎯 Top 3 Prioritized Actions</h3>
+                        <div id="prioritizedActions" class="space-y-4">
+                            <div class="text-gray-400">Loading strategic recommendations...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Analysis -->
+                <div class="gradient-border">
+                    <div class="gradient-border-content">
+                        <h3 class="text-xl font-bold text-crooks-orange mb-4">📈 Strategic Analysis</h3>
+                        <div id="enhancedAnalysis" class="space-y-3">
+                            <div class="text-gray-400">Loading enhanced insights...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Intelligence Tab -->
-    <div id="intelligence-content" class="tab-content p-8 hidden">
-        <div class="gradient-border mb-8">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">🧠 Competitive Intelligence</h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Intelligence Tab -->
+        <div id="intelligence-content" class="tab-content hidden">
+            <div class="gradient-border mb-6">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold text-crooks-orange mb-4">🧠 Competitive Intelligence</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-white" id="intPosts">--</div>
+                            <div class="text-gray-400">Posts Analyzed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-crooks-orange" id="intBrands">--</div>
+                            <div class="text-gray-400">Competitors Tracked</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-green-400" id="intSentiment">--%</div>
+                            <div class="text-gray-400">Market Sentiment</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-crooks-orange mb-4">📊 Competitor Rankings</h3>
+                    <div id="competitorRankings" class="space-y-3">
+                        <div class="text-gray-400">Loading competitor analysis...</div>
+                    </div>
+                </div>
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-crooks-orange mb-4">💡 Strategic Insights</h3>
+                    <div id="strategicInsights" class="space-y-3">
+                        <div class="text-gray-400">Loading strategic recommendations...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shopify Setup Tab -->
+        <div id="shopify-content" class="tab-content hidden">
+            <div class="gradient-border mb-6">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold text-crooks-orange mb-4">🛒 Shopify Integration Setup</h2>
+                    <p class="text-gray-400">Connect your Shopify store to correlate social media with actual sales</p>
+                </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div id="shopifyConnectionStatus" class="bg-crooks-gray border border-red-500/30 rounded-lg p-6 mb-6">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">🔴</span>
                     <div>
-                        <h3 class="text-xl font-semibold mb-3 text-orange-400">Top Competitors</h3>
-                        <div class="space-y-3" id="competitor-list">
-                            <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                                <span class="font-semibold">Supreme</span>
-                                <span class="text-green-400">↗ +15%</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                                <span class="font-semibold">Off-White</span>
-                                <span class="text-green-400">↗ +12%</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                                <span class="font-semibold">Fear of God</span>
-                                <span class="text-yellow-400">→ +3%</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-800 rounded border border-orange-500">
-                                <span class="font-semibold text-orange-400">Crooks & Castles</span>
-                                <span class="text-orange-400">#10</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-semibold mb-3 text-orange-400">Strategic Insights</h3>
-                        <div class="space-y-3" id="strategic-insights">
-                            <div class="p-3 bg-blue-900 rounded border-l-4 border-blue-400">
-                                <p class="font-semibold">Opportunity: Cultural Collaborations</p>
-                                <p class="text-sm text-gray-300">Hip-hop partnerships showing 40% higher engagement</p>
-                            </div>
-                            <div class="p-3 bg-green-900 rounded border-l-4 border-green-400">
-                                <p class="font-semibold">Strength: Authentic Street Credibility</p>
-                                <p class="text-sm text-gray-300">89.7% positive sentiment in community discussions</p>
-                            </div>
-                            <div class="p-3 bg-yellow-900 rounded border-l-4 border-yellow-400">
-                                <p class="font-semibold">Watch: Emerging Competitors</p>
-                                <p class="text-sm text-gray-300">3 new brands gaining traction in streetwear space</p>
-                            </div>
-                        </div>
+                        <h3 class="text-lg font-semibold text-red-400">Not Connected</h3>
+                        <p class="text-gray-400">Enter your Shopify credentials below to enable revenue intelligence</p>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Content Gaps -->
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">🎯 Content Opportunities</h2>
-                <div id="content-gaps" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="p-4 bg-purple-900 rounded border-l-4 border-purple-400">
-                        <p class="font-semibold">Underutilized: #hiphopculture</p>
-                        <p class="text-sm text-gray-300">High engagement potential</p>
-                    </div>
-                    <div class="p-4 bg-indigo-900 rounded border-l-4 border-indigo-400">
-                        <p class="font-semibold">Missing: Behind-the-scenes</p>
-                        <p class="text-sm text-gray-300">Authentic storytelling opportunity</p>
-                    </div>
-                    <div class="p-4 bg-pink-900 rounded border-l-4 border-pink-400">
-                        <p class="font-semibold">Opportunity: Cultural celebrations</p>
-                        <p class="text-sm text-gray-300">Community engagement focus</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Asset Library Tab -->
-    <div id="assets-content" class="tab-content p-8 hidden">
-        <div class="gradient-border mb-8">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">📁 Interactive Asset Library</h2>
-                
-                <!-- Asset Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="stat-card p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold text-orange-400">Total Files</h3>
-                        <p class="text-2xl font-bold" id="total-files">0</p>
-                    </div>
-                    <div class="stat-card p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold text-orange-400">Total Size</h3>
-                        <p class="text-2xl font-bold" id="total-size">0 MB</p>
-                    </div>
-                    <div class="stat-card p-4 rounded-lg">
-                        <h3 class="text-lg font-semibold text-orange-400">Data Records</h3>
-                        <p class="text-2xl font-bold" id="total-records">0</p>
-                    </div>
-                </div>
-
-                <!-- Asset Grid -->
-                <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Assets will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Upload New Assets -->
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">⬆️ Upload New Assets</h2>
-                <div class="upload-zone p-8 rounded-lg text-center">
-                    <div class="mb-4">
-                        <svg class="mx-auto h-12 w-12 text-orange-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </div>
-                    <p class="text-lg font-semibold mb-2">Drop files here or click to upload</p>
-                    <p class="text-gray-400 mb-4">Supports JSON, JSONL, CSV, Images, Videos</p>
-                    <input type="file" id="asset-upload" class="hidden" multiple accept=".json,.jsonl,.csv,.jpg,.jpeg,.png,.gif,.mp4,.mov" onchange="handleAssetUpload(event)">
-                    <button onclick="document.getElementById('asset-upload').click()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                        Choose Files
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Content Calendar Tab -->
-    <div id="calendar-content" class="tab-content p-8 hidden">
-        <div class="gradient-border mb-8">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">📅 Strategic Content Calendar</h2>
-                
-                <!-- Calendar Controls -->
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex space-x-4">
-                        <button onclick="loadCalendar('7')" class="calendar-btn bg-orange-500 text-white px-4 py-2 rounded">7 Days</button>
-                        <button onclick="loadCalendar('30')" class="calendar-btn bg-gray-700 text-white px-4 py-2 rounded">30 Days</button>
-                        <button onclick="loadCalendar('60')" class="calendar-btn bg-gray-700 text-white px-4 py-2 rounded">60 Days</button>
-                        <button onclick="loadCalendar('90')" class="calendar-btn bg-gray-700 text-white px-4 py-2 rounded">90 Days</button>
-                    </div>
-                    <button onclick="generateContentPlan()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-                        Generate Content Plan
-                    </button>
-                </div>
-
-                <!-- Cultural Moments -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold mb-3 text-orange-400">🎭 Cultural Moments</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="cultural-moments">
-                        <div class="p-4 bg-purple-900 rounded border-l-4 border-purple-400">
-                            <p class="font-semibold">Hispanic Heritage Month</p>
-                            <p class="text-sm text-gray-300">Sep 15 - Oct 15</p>
+            <!-- Setup Form -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-crooks-orange mb-4">🔑 Store Credentials</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Shop Domain</label>
+                            <input type="text" id="shopDomain" placeholder="your-store-name" class="w-full bg-crooks-black border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-crooks-orange focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">Just the store name (without .myshopify.com)</p>
                         </div>
-                        <div class="p-4 bg-blue-900 rounded border-l-4 border-blue-400">
-                            <p class="font-semibold">Black Friday/Cyber Monday</p>
-                            <p class="text-sm text-gray-300">November</p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Private App Access Token</label>
+                            <input type="password" id="accessToken" placeholder="shpat_..." class="w-full bg-crooks-black border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-crooks-orange focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">Create a private app in your Shopify admin</p>
                         </div>
-                        <div class="p-4 bg-green-900 rounded border-l-4 border-green-400">
-                            <p class="font-semibold">Hip-Hop Anniversary</p>
-                            <p class="text-sm text-gray-300">Ongoing celebration</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Content Themes -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold mb-3 text-orange-400">🎨 Content Themes</h3>
-                    <div class="flex flex-wrap gap-3" id="content-themes">
-                        <span class="content-theme px-3 py-1 rounded-full">Street Culture</span>
-                        <span class="content-theme px-3 py-1 rounded-full">Hip-Hop Heritage</span>
-                        <span class="content-theme px-3 py-1 rounded-full">Community Spotlight</span>
-                        <span class="content-theme px-3 py-1 rounded-full">Behind the Scenes</span>
-                        <span class="content-theme px-3 py-1 rounded-full">Cultural Collaborations</span>
-                        <span class="content-theme px-3 py-1 rounded-full">Lifestyle Content</span>
-                    </div>
-                </div>
-
-                <!-- Calendar Grid -->
-                <div id="calendar-grid" class="grid grid-cols-7 gap-2">
-                    <!-- Calendar will be generated here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Optimal Posting Times -->
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">⏰ Optimal Posting Times</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="posting-times">
-                    <div class="p-4 bg-gray-800 rounded">
-                        <h3 class="font-semibold text-orange-400 mb-2">Instagram</h3>
-                        <p class="text-sm">12:00 PM, 3:00 PM, 7:00 PM</p>
-                    </div>
-                    <div class="p-4 bg-gray-800 rounded">
-                        <h3 class="font-semibold text-orange-400 mb-2">TikTok</h3>
-                        <p class="text-sm">6:00 AM, 10:00 AM, 7:00 PM, 9:00 PM</p>
-                    </div>
-                    <div class="p-4 bg-gray-800 rounded">
-                        <h3 class="font-semibold text-orange-400 mb-2">Twitter</h3>
-                        <p class="text-sm">9:00 AM, 12:00 PM, 3:00 PM</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Agency Tab -->
-    <div id="agency-content" class="tab-content p-8 hidden">
-        <div class="gradient-border mb-8">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">🤝 HVD Partnership Dashboard</h2>
-                
-                <!-- Phase Progression -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold mb-3 text-orange-400">📈 Phase Progression</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="stat-card p-4 rounded-lg border-l-4 border-green-400">
-                            <h4 class="font-semibold text-green-400">Phase 1: Foundation</h4>
-                            <p class="text-2xl font-bold">$4K</p>
-                            <p class="text-sm text-gray-300">4 creatives/month</p>
-                        </div>
-                        <div class="stat-card p-4 rounded-lg border-l-4 border-yellow-400">
-                            <h4 class="font-semibold text-yellow-400">Phase 2: Growth</h4>
-                            <p class="text-2xl font-bold">$7.5K</p>
-                            <p class="text-sm text-gray-300">7 creatives/month</p>
-                        </div>
-                        <div class="stat-card p-4 rounded-lg border-l-4 border-orange-400">
-                            <h4 class="font-semibold text-orange-400">Phase 3: Scale</h4>
-                            <p class="text-2xl font-bold">$10K</p>
-                            <p class="text-sm text-gray-300">10 creatives/month</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Deliverables Tracking -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold mb-3 text-orange-400">📋 Deliverables Status</h3>
-                    <div class="space-y-3" id="deliverables-status">
-                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                            <span class="font-semibold">Weekly Creative Package</span>
-                            <span class="text-green-400">✓ Delivered</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                            <span class="font-semibold">Performance Analytics Report</span>
-                            <span class="text-yellow-400">⏳ In Progress</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded">
-                            <span class="font-semibold">Brand Compliance Review</span>
-                            <span class="text-blue-400">📅 Scheduled</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Performance Metrics -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-3 text-orange-400">📊 Performance Metrics</h3>
-                        <div class="space-y-3">
-                            <div class="p-3 bg-gray-800 rounded">
-                                <div class="flex justify-between">
-                                    <span>Engagement Rate</span>
-                                    <span class="text-green-400">4.2%</span>
-                                </div>
-                            </div>
-                            <div class="p-3 bg-gray-800 rounded">
-                                <div class="flex justify-between">
-                                    <span>Brand Compliance</span>
-                                    <span class="text-green-400">95%</span>
-                                </div>
-                            </div>
-                            <div class="p-3 bg-gray-800 rounded">
-                                <div class="flex justify-between">
-                                    <span>Delivery Timeliness</span>
-                                    <span class="text-green-400">100%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-semibold mb-3 text-orange-400">🎯 Strategic Goals</h3>
-                        <div class="space-y-3">
-                            <div class="p-3 bg-blue-900 rounded border-l-4 border-blue-400">
-                                <p class="font-semibold">Increase Cultural Authenticity</p>
-                                <p class="text-sm text-gray-300">Focus on community-driven content</p>
-                            </div>
-                            <div class="p-3 bg-green-900 rounded border-l-4 border-green-400">
-                                <p class="font-semibold">Expand Hip-Hop Partnerships</p>
-                                <p class="text-sm text-gray-300">Target emerging artist collaborations</p>
-                            </div>
-                            <div class="p-3 bg-purple-900 rounded border-l-4 border-purple-400">
-                                <p class="font-semibold">Optimize Content Performance</p>
-                                <p class="text-sm text-gray-300">Data-driven creative optimization</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Data Ingest Tab -->
-    <div id="ingest-content" class="tab-content p-8 hidden">
-        <div class="gradient-border mb-8">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">⬆️ Manual Data Ingest</h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- File Upload -->
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4 text-orange-400">Upload Data File</h3>
-                        <div class="upload-zone p-8 rounded-lg text-center">
-                            <div class="mb-4">
-                                <svg class="mx-auto h-12 w-12 text-orange-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                            </div>
-                            <p class="text-lg font-semibold mb-2">Drop files here or click to upload</p>
-                            <p class="text-gray-400 mb-4">Supports JSON, JSONL, CSV formats</p>
-                            <input type="file" id="file-upload" class="hidden" accept=".json,.jsonl,.csv" onchange="handleFileUpload(event)">
-                            <button onclick="document.getElementById('file-upload').click()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                                Choose File
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- JSON Paste -->
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4 text-orange-400">Paste JSON Data</h3>
-                        <textarea id="json-paste" class="w-full h-40 bg-gray-800 border border-gray-600 rounded-lg p-4 text-white" placeholder='{"items": [{"brand": "Supreme", "engagement": 1250, "sentiment": "positive"}, ...]}'></textarea>
-                        <button onclick="handleJsonPaste()" class="mt-4 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                            Process JSON Data
+                        <button onclick="setupShopifyIntegration()" class="w-full bg-crooks-orange hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                            Connect Shopify Store
                         </button>
                     </div>
                 </div>
 
-                <!-- Processing Status -->
-                <div id="processing-status" class="mt-8 hidden">
-                    <div class="bg-blue-900 border border-blue-400 rounded-lg p-4">
-                        <div class="flex items-center">
-                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mr-3"></div>
-                            <span class="text-blue-400 font-semibold">Processing data...</span>
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-crooks-orange mb-4">📋 Setup Instructions</h3>
+                    <div class="space-y-3 text-sm text-gray-300">
+                        <div class="flex items-start space-x-2">
+                            <span class="text-crooks-orange font-bold">1.</span>
+                            <span>Go to your Shopify Admin → Apps → App and sales channel settings</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-crooks-orange font-bold">2.</span>
+                            <span>Click "Develop apps" → "Create an app"</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-crooks-orange font-bold">3.</span>
+                            <span>Configure API scopes: read_orders, read_customers, read_products</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-crooks-orange font-bold">4.</span>
+                            <span>Install the app and copy the Admin API access token</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-crooks-orange font-bold">5.</span>
+                            <span>Enter your store name and token above</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- System Health -->
-        <div class="gradient-border">
-            <div class="gradient-border-content">
-                <h2 class="text-2xl font-bold mb-4 text-orange-500">🔧 System Health</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                        <span class="font-semibold">API Status</span>
-                        <span class="flex items-center text-green-400">
-                            <span class="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
-                            Online
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                        <span class="font-semibold">Database</span>
-                        <span class="flex items-center text-green-400">
-                            <span class="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
-                            Connected
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                        <span class="font-semibold">Last Update</span>
-                        <span class="text-gray-400">Just now</span>
-                    </div>
+            <!-- Test Connection -->
+            <div id="connectionTest" class="hidden mt-6 bg-blue-900/30 border border-blue-500/50 rounded-lg p-4">
+                <div class="flex items-center space-x-3">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+                    <span class="text-blue-400 font-semibold">Testing connection...</span>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- Data Ingest Tab -->
+        <div id="ingest-content" class="tab-content hidden">
+            <div class="gradient-border mb-6">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold text-crooks-orange mb-4">⬆️ Manual Data Ingest</h2>
+                    <p class="text-gray-400">Upload competitive intelligence data and social media scraper results</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- File Upload -->
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-crooks-orange mb-4">📁 File Upload</h3>
+                    <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-crooks-orange transition-colors">
+                        <input type="file" id="fileInput" accept=".json,.jsonl,.csv" class="hidden" onchange="handleFileUpload()">
+                        <button onclick="document.getElementById('fileInput').click()" class="bg-crooks-orange hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                            Choose File
+                        </button>
+                        <p class="text-gray-400 mt-2">Supports JSON, JSONL, CSV files</p>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Data Source</label>
+                        <input type="text" id="dataSource" placeholder="e.g., Instagram Scraper, TikTok Data" class="w-full bg-crooks-black border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-crooks-orange focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- JSON Paste -->
+                <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-crooks-orange mb-4">📝 JSON Paste</h3>
+                    <textarea id="jsonPaste" placeholder='{"posts": [...], "brand": "competitor_name"}' class="w-full h-32 bg-crooks-black border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-crooks-orange focus:outline-none font-mono text-sm"></textarea>
+                    <div class="mt-4 flex space-x-4">
+                        <input type="text" id="pasteSource" placeholder="Data source name" class="flex-1 bg-crooks-black border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-crooks-orange focus:outline-none">
+                        <button onclick="handleJSONPaste()" class="bg-crooks-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                            Process Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Status -->
+            <div id="processingStatus" class="hidden bg-blue-900/30 border border-blue-500/50 rounded-lg p-4 mb-6">
+                <div class="flex items-center space-x-3">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+                    <span class="text-blue-400 font-semibold">Processing data...</span>
+                </div>
+            </div>
+
+            <!-- Asset Library -->
+            <div class="bg-crooks-gray border border-crooks-orange/30 rounded-lg p-6">
+                <h3 class="text-xl font-semibold text-crooks-orange mb-4">📚 Asset Library</h3>
+                <div id="assetLibrary" class="space-y-3">
+                    <div class="text-gray-400">Loading asset library...</div>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
-        // Tab switching functionality
+        let currentTab = 'revenue';
+        let dataLoaded = false;
+        let shopifyConnected = false;
+        let revenueChart = null;
+
+        // Tab Management
         function showTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.add('hidden');
             });
             
-            // Remove active styling from all tabs
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('text-orange-500', 'border-b-2', 'border-orange-500');
-                btn.classList.add('text-gray-300');
+            // Remove active state from all tabs
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('text-crooks-orange', 'border-b-2', 'border-crooks-orange');
+                button.classList.add('text-gray-400');
             });
             
             // Show selected tab content
             document.getElementById(tabName + '-content').classList.remove('hidden');
             
-            // Add active styling to selected tab
+            // Add active state to selected tab
             const activeTab = document.getElementById('tab-' + tabName);
-            activeTab.classList.remove('text-gray-300');
-            activeTab.classList.add('text-orange-500', 'border-b-2', 'border-orange-500');
+            activeTab.classList.remove('text-gray-400');
+            activeTab.classList.add('text-crooks-orange', 'border-b-2', 'border-crooks-orange');
+            
+            currentTab = tabName;
             
             // Load data for specific tabs
-            if (tabName === 'dashboard') {
-                loadDashboardData();
+            if (tabName === 'revenue') {
+                loadRevenueIntelligence();
+            } else if (tabName === 'overview' && !dataLoaded) {
+                loadOverviewData();
             } else if (tabName === 'intelligence') {
                 loadIntelligenceData();
-            } else if (tabName === 'assets') {
+            } else if (tabName === 'shopify') {
+                checkShopifyStatus();
+            } else if (tabName === 'ingest') {
                 loadAssetLibrary();
-            } else if (tabName === 'calendar') {
-                loadContentCalendar();
-            } else if (tabName === 'agency') {
-                loadAgencyData();
             }
         }
 
-        // Load dashboard data
-        async function loadDashboardData() {
+        // Check Shopify Status
+        async function checkShopifyStatus() {
             try {
-                const response = await fetch('/summary/overview');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('total-brands').textContent = data.total_brands || '16';
-                    document.getElementById('total-posts').textContent = data.total_posts || '557';
-                    document.getElementById('sentiment').textContent = (data.positive_sentiment || 89.7) + '%';
-                    document.getElementById('cc-rank').textContent = '#' + (data.cc_rank || '10');
+                const response = await fetch('/shopify/status');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('shopifyConnectionStatus');
+                const headerStatus = document.getElementById('shopifyStatus');
+                
+                if (data.connected) {
+                    shopifyConnected = true;
+                    statusElement.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🟢</span>
+                            <div>
+                                <h3 class="text-lg font-semibold text-green-400">Connected to ${data.shop_info.shop_name}</h3>
+                                <p class="text-gray-400">Revenue intelligence is active</p>
+                            </div>
+                        </div>
+                    `;
+                    statusElement.className = 'bg-crooks-gray border border-green-500/30 rounded-lg p-6 mb-6';
+                    headerStatus.innerHTML = '🟢 Connected';
+                    headerStatus.className = 'text-green-400 font-semibold';
+                } else {
+                    shopifyConnected = false;
+                    headerStatus.innerHTML = '🔴 Not Connected';
+                    headerStatus.className = 'text-red-400 font-semibold';
                 }
             } catch (error) {
-                console.log('Using default dashboard data');
+                console.error('Error checking Shopify status:', error);
             }
         }
 
-        // Load intelligence data
+        // Setup Shopify Integration
+        async function setupShopifyIntegration() {
+            const shopDomain = document.getElementById('shopDomain').value.trim();
+            const accessToken = document.getElementById('accessToken').value.trim();
+            
+            if (!shopDomain || !accessToken) {
+                alert('Please enter both shop domain and access token');
+                return;
+            }
+            
+            document.getElementById('connectionTest').classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/shopify/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shop_domain: shopDomain,
+                        access_token: accessToken
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Successfully connected to ${result.shop_info.shop_name}!`);
+                    checkShopifyStatus();
+                    document.getElementById('shopDomain').value = '';
+                    document.getElementById('accessToken').value = '';
+                } else {
+                    alert('Connection failed: ' + result.detail);
+                }
+            } catch (error) {
+                console.error('Setup error:', error);
+                alert('Setup failed: ' + error.message);
+            } finally {
+                document.getElementById('connectionTest').classList.add('hidden');
+            }
+        }
+
+        // Load Revenue Intelligence
+        async function loadRevenueIntelligence() {
+            try {
+                // Check if Shopify is connected
+                if (!shopifyConnected) {
+                    document.getElementById('correlationStrength').textContent = 'N/A';
+                    document.getElementById('correlationStatus').textContent = 'Shopify Not Connected';
+                    document.getElementById('revenueHashtags').innerHTML = '<div class="text-red-400">Connect Shopify to see revenue intelligence</div>';
+                    document.getElementById('correlationInsights').innerHTML = '<div class="text-red-400">Shopify integration required</div>';
+                    return;
+                }
+                
+                // Get unified dashboard data
+                const response = await fetch('/shopify/dashboard');
+                const data = await response.json();
+                
+                if (data.success && data.dashboard.sales_data_available) {
+                    const dashboard = data.dashboard;
+                    
+                    // Update revenue metrics
+                    if (dashboard.sales_metrics) {
+                        document.getElementById('totalRevenue').textContent = '$' + dashboard.sales_metrics.total_revenue.toLocaleString();
+                        document.getElementById('totalOrders').textContent = dashboard.sales_metrics.total_orders.toLocaleString();
+                        document.getElementById('avgOrderValue').textContent = '$' + dashboard.sales_metrics.avg_order_value.toFixed(2);
+                    }
+                    
+                    // Update correlation data
+                    if (dashboard.correlation_insights && dashboard.correlation_insights.correlation_found) {
+                        const correlations = dashboard.correlation_insights.correlations;
+                        const strongCorrelations = dashboard.correlation_insights.strong_correlations;
+                        
+                        // Find strongest correlation
+                        let maxCorr = 0;
+                        Object.values(correlations).forEach(corr => {
+                            if (Math.abs(corr) > Math.abs(maxCorr)) maxCorr = corr;
+                        });
+                        
+                        document.getElementById('socialCorrelation').textContent = (Math.abs(maxCorr) * 100).toFixed(1) + '%';
+                        
+                        if (Math.abs(maxCorr) > 0.5) {
+                            document.getElementById('correlationStrength').textContent = 'Strong';
+                            document.getElementById('correlationStatus').textContent = 'High Impact';
+                            document.getElementById('correlationStatus').className = 'text-sm font-semibold correlation-strong';
+                        } else if (Math.abs(maxCorr) > 0.3) {
+                            document.getElementById('correlationStrength').textContent = 'Moderate';
+                            document.getElementById('correlationStatus').textContent = 'Medium Impact';
+                            document.getElementById('correlationStatus').className = 'text-sm font-semibold correlation-moderate';
+                        } else {
+                            document.getElementById('correlationStrength').textContent = 'Weak';
+                            document.getElementById('correlationStatus').textContent = 'Low Impact';
+                            document.getElementById('correlationStatus').className = 'text-sm font-semibold correlation-weak';
+                        }
+                        
+                        // Update correlation insights
+                        const insightsContainer = document.getElementById('correlationInsights');
+                        insightsContainer.innerHTML = '';
+                        dashboard.correlation_insights.insights.forEach(insight => {
+                            const div = document.createElement('div');
+                            div.className = 'text-gray-300 text-sm';
+                            div.textContent = '• ' + insight;
+                            insightsContainer.appendChild(div);
+                        });
+                    }
+                    
+                    // Update hashtag revenue analysis
+                    if (dashboard.hashtag_insights && dashboard.hashtag_insights.success) {
+                        const hashtagsContainer = document.getElementById('revenueHashtags');
+                        hashtagsContainer.innerHTML = '';
+                        
+                        dashboard.hashtag_insights.top_revenue_hashtags.slice(0, 5).forEach((hashtag, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'flex items-center justify-between bg-crooks-black border border-gray-600 rounded p-3';
+                            div.innerHTML = `
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-crooks-orange font-bold">#${index + 1}</span>
+                                    <span class="text-white">${hashtag.hashtag}</span>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-green-400 font-semibold">$${hashtag.avg_revenue_per_post.toFixed(2)}</div>
+                                    <div class="text-gray-400 text-xs">${hashtag.post_count} posts</div>
+                                </div>
+                            `;
+                            hashtagsContainer.appendChild(div);
+                        });
+                    }
+                    
+                } else {
+                    document.getElementById('correlationStrength').textContent = 'N/A';
+                    document.getElementById('correlationStatus').textContent = 'No Data';
+                    document.getElementById('revenueHashtags').innerHTML = '<div class="text-gray-400">Upload social media data to see revenue correlation</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error loading revenue intelligence:', error);
+                document.getElementById('correlationStatus').textContent = 'Error loading data';
+            }
+        }
+
+        // Load Strategic Overview Data
+        async function loadOverviewData() {
+            try {
+                const response = await fetch('/summary/overview');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const overview = data.overview;
+                    
+                    // Update key metrics
+                    document.getElementById('totalPosts').textContent = overview.key_metrics.total_posts;
+                    document.getElementById('totalBrands').textContent = overview.key_metrics.total_brands;
+                    document.getElementById('positiveSentiment').textContent = overview.key_metrics.positive_sentiment + '%';
+                    document.getElementById('ccRank').textContent = overview.key_metrics.cc_rank;
+                    
+                    // Update health score
+                    document.getElementById('healthScore').textContent = overview.key_metrics.overall_health + '%';
+                    const healthStatus = document.getElementById('healthStatus');
+                    healthStatus.textContent = overview.key_metrics.health_status;
+                    healthStatus.className = `text-sm font-semibold health-${overview.key_metrics.health_status.toLowerCase().replace(' ', '-')}`;
+                    
+                    // Update prioritized actions
+                    const actionsContainer = document.getElementById('prioritizedActions');
+                    actionsContainer.innerHTML = '';
+                    overview.prioritized_actions.forEach(action => {
+                        const actionDiv = document.createElement('div');
+                        actionDiv.className = 'bg-crooks-black border border-gray-600 rounded-lg p-4';
+                        actionDiv.innerHTML = `
+                            <div class="flex items-start justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="priority-${action.priority} text-white text-xs px-2 py-1 rounded-full font-bold">${action.priority}</span>
+                                    <span class="font-semibold text-white">${action.action}</span>
+                                </div>
+                                <span class="impact-${action.impact.toLowerCase()} text-xs font-semibold">${action.impact} Impact</span>
+                            </div>
+                            <p class="text-gray-300 text-sm mb-2">${action.description}</p>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-gray-400">${action.category}</span>
+                                <span class="text-crooks-orange">${action.timeline}</span>
+                            </div>
+                        `;
+                        actionsContainer.appendChild(actionDiv);
+                    });
+                    
+                    // Update enhanced analysis
+                    const analysisContainer = document.getElementById('enhancedAnalysis');
+                    const analysis = overview.enhanced_analysis;
+                    analysisContainer.innerHTML = `
+                        <div class="space-y-3">
+                            <div><span class="text-crooks-orange font-semibold">Content Performance:</span> <span class="text-gray-300">${analysis.content_performance}</span></div>
+                            <div><span class="text-crooks-orange font-semibold">Trend Analysis:</span> <span class="text-gray-300">${analysis.trend_analysis}</span></div>
+                            <div><span class="text-crooks-orange font-semibold">Cultural Insights:</span> <span class="text-gray-300">${analysis.cultural_insights}</span></div>
+                        </div>
+                    `;
+                    
+                    dataLoaded = true;
+                }
+            } catch (error) {
+                console.error('Error loading overview data:', error);
+                document.getElementById('healthStatus').textContent = 'Error loading data';
+            }
+        }
+
+        // Load Intelligence Data
         async function loadIntelligenceData() {
             try {
                 const response = await fetch('/intelligence/report', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        brands: ["Crooks & Castles", "Supreme", "Off-White", "Fear of God"],
-                        lookback_days: 30
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ brands: [], lookback_days: 7 })
                 });
+                const data = await response.json();
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Update competitor list
-                    if (data.competitor_analysis) {
-                        const competitorList = document.getElementById('competitor-list');
-                        competitorList.innerHTML = '';
-                        
-                        data.competitor_analysis.forEach(comp => {
-                            const div = document.createElement('div');
-                            div.className = `flex justify-between items-center p-3 bg-gray-800 rounded ${comp.brand.toLowerCase().includes('crooks') ? 'border border-orange-500' : ''}`;
-                            div.innerHTML = `
-                                <span class="font-semibold ${comp.brand.toLowerCase().includes('crooks') ? 'text-orange-400' : ''}">${comp.brand}</span>
-                                <span class="text-${comp.momentum === '↗' ? 'green' : comp.momentum === '↘' ? 'red' : 'yellow'}-400">${comp.momentum} #${comp.rank}</span>
-                            `;
-                            competitorList.appendChild(div);
-                        });
-                    }
-                    
-                    // Update strategic insights
-                    if (data.prioritized_actions) {
-                        const insights = document.getElementById('strategic-insights');
-                        insights.innerHTML = '';
-                        
-                        data.prioritized_actions.slice(0, 3).forEach((action, index) => {
-                            const colors = ['blue', 'green', 'yellow'];
-                            const div = document.createElement('div');
-                            div.className = `p-3 bg-${colors[index]}-900 rounded border-l-4 border-${colors[index]}-400`;
-                            div.innerHTML = `
-                                <p class="font-semibold">${action}</p>
-                                <p class="text-sm text-gray-300">Based on competitive analysis</p>
-                            `;
-                            insights.appendChild(div);
-                        });
-                    }
-                    
-                    // Update content gaps
-                    if (data.content_gaps) {
-                        const gaps = document.getElementById('content-gaps');
-                        gaps.innerHTML = '';
-                        
-                        data.content_gaps.forEach((gap, index) => {
-                            const colors = ['purple', 'indigo', 'pink'];
-                            const div = document.createElement('div');
-                            div.className = `p-4 bg-${colors[index % 3]}-900 rounded border-l-4 border-${colors[index % 3]}-400`;
-                            div.innerHTML = `
-                                <p class="font-semibold">${gap}</p>
-                                <p class="text-sm text-gray-300">Opportunity identified</p>
-                            `;
-                            gaps.appendChild(div);
-                        });
-                    }
+                // Update intelligence metrics
+                document.getElementById('intPosts').textContent = data.metrics?.total_posts || '--';
+                document.getElementById('intBrands').textContent = data.metrics?.total_brands || '--';
+                document.getElementById('intSentiment').textContent = (data.metrics?.positive_sentiment || 0) + '%';
+                
+                // Update competitor rankings
+                const rankingsContainer = document.getElementById('competitorRankings');
+                rankingsContainer.innerHTML = '';
+                if (data.competitor_analysis && data.competitor_analysis.length > 0) {
+                    data.competitor_analysis.slice(0, 5).forEach(comp => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center justify-between bg-crooks-black border border-gray-600 rounded p-3';
+                        div.innerHTML = `
+                            <div class="flex items-center space-x-3">
+                                <span class="text-crooks-orange font-bold">#${comp.rank}</span>
+                                <span class="text-white">${comp.brand}</span>
+                                <span class="text-lg">${comp.momentum}</span>
+                            </div>
+                            <span class="text-green-400">${comp.sentiment}%</span>
+                        `;
+                        rankingsContainer.appendChild(div);
+                    });
+                } else {
+                    rankingsContainer.innerHTML = '<div class="text-gray-400">No competitor data available</div>';
                 }
+                
+                // Update strategic insights
+                const insightsContainer = document.getElementById('strategicInsights');
+                insightsContainer.innerHTML = '';
+                if (data.highlights && data.highlights.length > 0) {
+                    data.highlights.forEach(highlight => {
+                        const div = document.createElement('div');
+                        div.className = 'text-gray-300 text-sm';
+                        div.textContent = '• ' + highlight;
+                        insightsContainer.appendChild(div);
+                    });
+                } else {
+                    insightsContainer.innerHTML = '<div class="text-gray-400">Upload data to see insights</div>';
+                }
+                
             } catch (error) {
-                console.log('Using default intelligence data');
+                console.error('Error loading intelligence data:', error);
+                document.getElementById('competitorRankings').innerHTML = '<div class="text-red-400">Error loading competitor data</div>';
             }
         }
 
-        // Load asset library
+        // Load Asset Library
         async function loadAssetLibrary() {
             try {
-                const response = await fetch('/intelligence/uploads');
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    const assetGrid = document.getElementById('asset-grid');
-                    assetGrid.innerHTML = '';
-                    
-                    let totalRecords = 0;
-                    
-                    data.files?.forEach(file => {
+                const response = await fetch('/ingest/sources');
+                const data = await response.json();
+                
+                const libraryContainer = document.getElementById('assetLibrary');
+                libraryContainer.innerHTML = '';
+                
+                if (data.sources && data.sources.length > 0) {
+                    data.sources.forEach(source => {
                         const div = document.createElement('div');
-                        div.className = 'asset-item p-4 rounded-lg';
-                        
-                        // Determine file type and icon
-                        let icon = '📄';
-                        let fileType = 'Document';
-                        if (file.endsWith('.json') || file.endsWith('.jsonl')) {
-                            icon = '📊';
-                            fileType = 'Data';
-                        } else if (file.endsWith('.csv')) {
-                            icon = '📈';
-                            fileType = 'Spreadsheet';
-                        }
-                        
+                        div.className = 'flex items-center justify-between bg-crooks-black border border-gray-600 rounded p-3';
                         div.innerHTML = `
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-2xl">${icon}</span>
-                                <button onclick="downloadAsset('${file}')" class="text-orange-400 hover:text-orange-300">
-                                    ⬇️
-                                </button>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">📊</span>
+                                <div>
+                                    <div class="text-white font-semibold">${source.name}</div>
+                                    <div class="text-gray-400 text-sm">${source.total_records} records • ${source.total_files} files</div>
+                                </div>
                             </div>
-                            <h3 class="font-semibold text-orange-400 mb-1">${file}</h3>
-                            <p class="text-sm text-gray-400">${fileType}</p>
-                            <button onclick="deleteAsset('${file}')" class="mt-2 text-red-400 hover:text-red-300 text-sm">
-                                🗑️ Delete
-                            </button>
+                            <div class="text-right">
+                                <div class="text-green-400 text-sm">${source.status}</div>
+                                <div class="text-gray-400 text-xs">${new Date(source.last_updated).toLocaleDateString()}</div>
+                            </div>
                         `;
-                        assetGrid.appendChild(div);
+                        libraryContainer.appendChild(div);
                     });
-                    
-                    document.getElementById('total-files').textContent = data.files?.length || 0;
-                    document.getElementById('total-size').textContent = '0 MB'; // Could calculate from real data
-                    document.getElementById('total-records').textContent = totalRecords;
+                } else {
+                    libraryContainer.innerHTML = '<div class="text-gray-400">No assets uploaded yet. Upload data files to begin analysis.</div>';
                 }
             } catch (error) {
-                console.log('Error loading asset library');
+                console.error('Error loading asset library:', error);
+                document.getElementById('assetLibrary').innerHTML = '<div class="text-red-400">Error loading asset library</div>';
             }
         }
 
-        // Load content calendar
-        function loadContentCalendar() {
-            // Generate calendar grid for current month
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth();
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const startingDayOfWeek = firstDay.getDay();
+        // File Upload Handler
+        async function handleFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const sourceInput = document.getElementById('dataSource');
+            const file = fileInput.files[0];
             
-            const calendarGrid = document.getElementById('calendar-grid');
-            calendarGrid.innerHTML = '';
-            
-            // Add day headers
-            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            dayHeaders.forEach(day => {
-                const header = document.createElement('div');
-                header.className = 'p-2 text-center font-semibold text-orange-400';
-                header.textContent = day;
-                calendarGrid.appendChild(header);
-            });
-            
-            // Add empty cells for days before the first day of the month
-            for (let i = 0; i < startingDayOfWeek; i++) {
-                const emptyDay = document.createElement('div');
-                emptyDay.className = 'calendar-day p-2 rounded';
-                calendarGrid.appendChild(emptyDay);
+            if (!file) return;
+            if (!sourceInput.value.trim()) {
+                alert('Please enter a data source name');
+                return;
             }
             
-            // Add days of the month
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day p-2 rounded';
-                dayDiv.innerHTML = `
-                    <div class="font-semibold mb-1">${day}</div>
-                    <div class="text-xs text-gray-400">
-                        ${day % 7 === 0 ? 'Cultural Content' : day % 5 === 0 ? 'Product Showcase' : day % 3 === 0 ? 'Community Spotlight' : ''}
-                    </div>
-                `;
-                calendarGrid.appendChild(dayDiv);
-            }
-        }
-
-        // Load agency data
-        function loadAgencyData() {
-            // Agency data is mostly static for now
-            console.log('Agency data loaded');
-        }
-
-        // File upload handler
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('source', 'manual_upload');
-                
-                document.getElementById('processing-status').classList.remove('hidden');
-                
-                fetch('/ingest/upload', {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('source', sourceInput.value.trim());
+            
+            document.getElementById('processingStatus').classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/ingest/upload', {
                     method: 'POST',
                     body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('processing-status').classList.add('hidden');
-                    alert('File uploaded successfully! Processed ' + data.records_processed + ' records.');
-                    loadDashboardData(); // Refresh dashboard
-                    loadIntelligenceData(); // Refresh intelligence
-                    loadAssetLibrary(); // Refresh assets
-                })
-                .catch(error => {
-                    document.getElementById('processing-status').classList.add('hidden');
-                    alert('Upload failed: ' + error.message);
                 });
-            }
-        }
-
-        // Asset upload handler
-        function handleAssetUpload(event) {
-            const files = event.target.files;
-            if (files.length > 0) {
-                for (let file of files) {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('source', 'asset_upload');
-                    
-                    fetch('/ingest/upload', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Asset uploaded:', data);
-                        loadAssetLibrary(); // Refresh asset library
-                    })
-                    .catch(error => {
-                        console.error('Asset upload failed:', error);
-                    });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`File uploaded successfully! Processed ${result.processing_results.total_records} records.`);
+                    sourceInput.value = '';
+                    fileInput.value = '';
+                    loadAssetLibrary();
+                    if (currentTab === 'overview') {
+                        dataLoaded = false;
+                        loadOverviewData();
+                    }
+                    if (currentTab === 'revenue') {
+                        loadRevenueIntelligence();
+                    }
+                } else {
+                    alert('Upload failed: ' + result.message);
                 }
-                alert(`${files.length} file(s) uploaded successfully!`);
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed: ' + error.message);
+            } finally {
+                document.getElementById('processingStatus').classList.add('hidden');
             }
         }
 
-        // JSON paste handler
-        function handleJsonPaste() {
-            const jsonData = document.getElementById('json-paste').value;
-            if (jsonData.trim()) {
-                try {
-                    const parsedData = JSON.parse(jsonData);
-                    
-                    document.getElementById('processing-status').classList.remove('hidden');
-                    
-                    fetch('/ingest/paste', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(parsedData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById('processing-status').classList.add('hidden');
-                        alert('JSON data processed successfully! Processed ' + data.records_processed + ' records.');
-                        document.getElementById('json-paste').value = '';
-                        loadDashboardData(); // Refresh dashboard
-                        loadIntelligenceData(); // Refresh intelligence
-                    })
-                    .catch(error => {
-                        document.getElementById('processing-status').classList.add('hidden');
-                        alert('Processing failed: ' + error.message);
-                    });
-                } catch (error) {
-                    alert('Invalid JSON format. Please check your data.');
-                }
-            }
-        }
-
-        // Asset management functions
-        function downloadAsset(filename) {
-            window.open(`/intelligence/upload/${filename}`, '_blank');
-        }
-
-        function deleteAsset(filename) {
-            if (confirm(`Are you sure you want to delete ${filename}?`)) {
-                fetch(`/intelligence/upload/${filename}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert('Asset deleted successfully!');
-                    loadAssetLibrary(); // Refresh asset library
-                })
-                .catch(error => {
-                    alert('Delete failed: ' + error.message);
-                });
-            }
-        }
-
-        // Calendar functions
-        function loadCalendar(days) {
-            // Update calendar button styling
-            document.querySelectorAll('.calendar-btn').forEach(btn => {
-                btn.className = 'calendar-btn bg-gray-700 text-white px-4 py-2 rounded';
-            });
-            event.target.className = 'calendar-btn bg-orange-500 text-white px-4 py-2 rounded';
+        // JSON Paste Handler
+        async function handleJSONPaste() {
+            const jsonInput = document.getElementById('jsonPaste');
+            const sourceInput = document.getElementById('pasteSource');
             
-            // Load calendar for specified timeframe
-            loadContentCalendar();
+            if (!jsonInput.value.trim()) {
+                alert('Please paste JSON data');
+                return;
+            }
+            
+            if (!sourceInput.value.trim()) {
+                alert('Please enter a data source name');
+                return;
+            }
+            
+            try {
+                const jsonData = JSON.parse(jsonInput.value);
+                
+                document.getElementById('processingStatus').classList.remove('hidden');
+                
+                const response = await fetch('/ingest/paste', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: jsonData,
+                        source: sourceInput.value.trim()
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Data processed successfully! Processed ${result.processing_results.total_records} records.`);
+                    jsonInput.value = '';
+                    sourceInput.value = '';
+                    loadAssetLibrary();
+                    if (currentTab === 'overview') {
+                        dataLoaded = false;
+                        loadOverviewData();
+                    }
+                    if (currentTab === 'revenue') {
+                        loadRevenueIntelligence();
+                    }
+                } else {
+                    alert('Processing failed: ' + result.message);
+                }
+            } catch (error) {
+                console.error('JSON processing error:', error);
+                alert('Invalid JSON or processing failed: ' + error.message);
+            } finally {
+                document.getElementById('processingStatus').classList.add('hidden');
+            }
         }
 
-        function generateContentPlan() {
-            alert('Content plan generated! Check the calendar for strategic recommendations.');
-            loadContentCalendar();
-        }
-
-        // Initialize dashboard on page load
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardData();
+            checkShopifyStatus();
+            showTab('revenue');
         });
     </script>
 </body>
