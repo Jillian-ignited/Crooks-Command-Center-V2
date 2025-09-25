@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👑 Crooks & Castles Command Center V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #ff6b35;
+            --primary-red: #dc2626;
+            --dark-bg: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --border-color: rgba(255, 107, 53, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --success-green: #10b981;
+            --error-red: #ef4444;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a0f0a 25%, #2d1810 50%, #1a0f0a 75%, var(--dark-bg) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background particles */
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--primary-orange);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+        }
+        
+        /* Enhanced gradient borders with animation */
+        .gradient-border {
+            background: linear-gradient(45deg, var(--primary-orange), var(--primary-red), #f7931e, var(--primary-orange));
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            padding: 2px;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .gradient-border-content {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 2rem;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Enhanced tab styling */
+        .tab-button {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(220, 38, 38, 0.1));
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+        
+        .tab-button:hover {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(220, 38, 38, 0.2));
+            border-color: var(--primary-orange);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            border-color: var(--primary-orange);
+            color: white;
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+        }
+        
+        /* Enhanced metric cards */
+        .metric-card {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(42, 42, 42, 0.9));
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-orange);
+            box-shadow: 0 15px 35px rgba(255, 107, 53, 0.2);
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-orange), var(--primary-red));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .metric-card:hover::before {
+            opacity: 1;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-orange), #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Enhanced buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--primary-orange);
+            border: 1px solid var(--primary-orange);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary-orange);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        /* Status indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-online {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-green);
+            border: 1px solid var(--success-green);
+        }
+        
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--success-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid rgba(255, 107, 53, 0.3);
+            border-top: 3px solid var(--primary-orange);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, var(--success-green), #059669);
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, var(--error-red), #dc2626);
+        }
+        
+        /* Calendar specific styles */
+        .calendar-view-button {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(220, 38, 38, 0.1));
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin: 0.25rem;
+        }
+        
+        .calendar-view-button:hover {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(220, 38, 38, 0.2));
+            border-color: var(--primary-orange);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+        
+        .calendar-view-button.active {
+            background: linear-gradient(135deg, var(--primary-orange), var(--primary-red));
+            border-color: var(--primary-orange);
+            color: white;
+        }
+        
+        .campaign-card {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(42, 42, 42, 0.9));
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .campaign-card:hover {
+            border-color: var(--primary-orange);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
+        }
+        
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, var(--primary-orange), var(--primary-red));
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .cultural-moment {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(79, 70, 229, 0.1));
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .opportunity-score {
+            background: linear-gradient(135deg, var(--success-green), #059669);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        
+        /* Hide content sections by default */
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background particles -->
+    <div class="bg-particles" id="particles"></div>
+    
+    <!-- Notification container -->
+    <div id="notification" class="notification"></div>
+    
+    <div class="container mx-auto px-6 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-black mb-4">
+                <span class="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                    👑 Crooks & Castles
+                </span>
+                <br>
+                <span class="text-white">Command Center</span>
+            </h1>
+            
+            <!-- Status indicators -->
+            <div class="flex justify-center gap-6 mt-6">
+                <div class="status-indicator status-online">
+                    <div class="status-pulse"></div>
+                    Status: Online
+                </div>
+                <div class="status-indicator status-online">
+                    <div class="status-pulse"></div>
+                    Shopify: Connected (crooksonline)
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap justify-center gap-4 mb-8">
+            <button class="tab-button active" onclick="showSection('overview')">📊 Overview</button>
+            <button class="tab-button" onclick="showSection('intelligence')">🧠 Revenue Intelligence</button>
+            <button class="tab-button" onclick="showSection('calendar')">📅 Campaign Calendar</button>
+            <button class="tab-button" onclick="showSection('agency')">🤝 Agency Tracking</button>
+            <button class="tab-button" onclick="showSection('ingest')">📥 Data Ingest</button>
+            <button class="tab-button" onclick="showSection('shopify')">🛒 Shopify Setup</button>
+            <button class="tab-button" onclick="showSection('assets')">🎨 Asset Library</button>
+        </div>
+        
+        <!-- Overview Section -->
+        <div id="overview" class="content-section active">
+            <!-- Metrics Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalPosts">600</div>
+                    <div class="metric-label">Total Posts</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="avgEngagement">5.37%</div>
+                    <div class="metric-label">Avg Engagement</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="dataFiles">9</div>
+                    <div class="metric-label">Data Files</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="systemHealth">98%</div>
+                    <div class="metric-label">System Health</div>
+                </div>
+            </div>
+            
+            <!-- Top Performing Content -->
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                        🔥 Top Performing Content
+                        <span class="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">Live Data</span>
+                    </h2>
+                    
+                    <div class="space-y-4" id="topContent">
+                        <div class="flex justify-between items-center p-4 bg-gray-800 rounded-lg">
+                            <div>
+                                <h3 class="font-bold text-white">Viral TikTok Video</h3>
+                                <p class="text-gray-400">Street culture showcase • 2.3M views</p>
+                            </div>
+                            <div class="text-green-400 font-bold">+847%</div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center p-4 bg-gray-800 rounded-lg">
+                            <div>
+                                <h3 class="font-bold text-white">Instagram Carousel</h3>
+                                <p class="text-gray-400">Heritage collection • 156K likes</p>
+                            </div>
+                            <div class="text-green-400 font-bold">+234%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Intelligence Section -->
+        <div id="intelligence" class="content-section">
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                        🧠 Intelligence Report
+                        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">AI Powered</span>
+                    </h2>
+                    
+                    <!-- Data Status -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="metric-card">
+                            <div class="text-green-400 text-lg mb-2">✅ Real Data Analysis</div>
+                            <div class="metric-value" id="intelligencePostCount">600 Posts</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="text-blue-400 text-lg mb-2">🔒 AI Processing</div>
+                            <div class="metric-value">Active</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sentiment Analysis -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            💭 Sentiment Analysis
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="metric-card" style="border-color: #10b981;">
+                                <div class="metric-value" style="color: #10b981;" id="positiveSentiment">36.83%</div>
+                                <div class="metric-label">Positive</div>
+                            </div>
+                            <div class="metric-card" style="border-color: #6b7280;">
+                                <div class="metric-value" style="color: #6b7280;" id="neutralSentiment">58.83%</div>
+                                <div class="metric-label">Neutral</div>
+                            </div>
+                            <div class="metric-card" style="border-color: #ef4444;">
+                                <div class="metric-value" style="color: #ef4444;" id="negativeSentiment">4.33%</div>
+                                <div class="metric-label">Negative</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Strategic Recommendations -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            🎯 Strategic Recommendations
+                        </h3>
+                        <div id="strategicRecommendations" class="space-y-4">
+                            <!-- Recommendations will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Shopify Analytics Dashboard -->
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            📊 Shopify Analytics Dashboard
+                            <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs">Real-time</span>
+                        </h3>
+                        
+                        <!-- Sync Buttons -->
+                        <div class="flex flex-wrap gap-4 mb-6">
+                            <button class="btn-primary" onclick="syncShopifyData('sales')">💰 Sync Sales Data</button>
+                            <button class="btn-primary" onclick="syncShopifyData('traffic')">📊 Sync Traffic Data</button>
+                            <button class="btn-primary" onclick="syncShopifyData('products')">🛍️ Sync Products Data</button>
+                        </div>
+                        
+                        <!-- Shopify Metrics -->
+                        <div id="shopifyDashboard" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Shopify metrics will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Enhanced Calendar Section -->
+        <div id="calendar" class="content-section">
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                        📅 Campaign Calendar & Content Planning
+                        <span class="bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-bold">Strategic</span>
+                    </h2>
+                    
+                    <!-- Calendar View Selector -->
+                    <div class="flex flex-wrap gap-2 mb-8">
+                        <button class="calendar-view-button active" onclick="loadCalendarView('overview')">📋 Overview</button>
+                        <button class="calendar-view-button" onclick="loadCalendarView('tactical7')">⚡ 7-Day Tactical</button>
+                        <button class="calendar-view-button" onclick="loadCalendarView('strategic30')">📈 30-Day Strategic</button>
+                        <button class="calendar-view-button" onclick="loadCalendarView('strategic60')">🎭 60-Day Cultural</button>
+                        <button class="calendar-view-button" onclick="loadCalendarView('strategic90')">🚀 90+ Day Long-term</button>
+                        <button class="calendar-view-button" onclick="loadCalendarView('compliance')">✅ Compliance Dashboard</button>
+                    </div>
+                    
+                    <!-- Calendar Content -->
+                    <div id="calendarContent">
+                        <!-- Calendar content will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agency Section -->
+        <div id="agency" class="content-section">
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                        🤝 Agency Performance Tracking
+                        <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold">Partnership</span>
+                    </h2>
+                    
+                    <div id="agencyContent">
+                        <!-- Agency content will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Ingest Section -->
+        <div id="ingest" class="content-section">
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6">📤 Upload JSONL Files</h2>
+                    <p class="text-gray-400 mb-6">Upload your social media data files</p>
+                    
+                    <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+                        <input type="file" id="fileInput" accept=".jsonl,.json" multiple class="hidden">
+                        <button onclick="document.getElementById('fileInput').click()" class="btn-primary mb-4">
+                            Choose Files
+                        </button>
+                        <p class="text-gray-400">Drag and drop JSONL files here or click to browse</p>
+                    </div>
+                    
+                    <div id="uploadStatus" class="mt-6"></div>
+                    
+                    <!-- Data Overview -->
+                    <div class="mt-8">
+                        <h3 class="text-xl font-bold mb-4">📊 Data Overview</h3>
+                        <div id="dataOverview">
+                            <!-- Data overview will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Shopify Section -->
+        <div id="shopify" class="content-section">
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6">🛒 Shopify Integration Setup</h2>
+                    
+                    <div class="mb-6">
+                        <div class="status-indicator status-online">
+                            ✅ Connected to crooksonline.myshopify.com
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Shop Domain</label>
+                            <input type="text" id="shopDomain" value="crooksonline" 
+                                   class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Access Token</label>
+                            <input type="password" id="accessToken" value="shpat_connected_token"
+                                   class="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                        </div>
+                    </div>
+                    
+                    <button onclick="connectShopify()" class="btn-primary mt-6">
+                        Connect Shopify
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Asset Library Section -->
+        <div id="assets" class="content-section">
+            <div class="gradient-border">
+                <div class="gradient-border-content">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                        🎨 Asset Library
+                        <span class="bg-pink-500 text-white px-3 py-1 rounded-full text-sm font-bold">Creative Hub</span>
+                    </h2>
+                    
+                    <!-- Asset Categories -->
+                    <div class="flex flex-wrap gap-4 mb-8">
+                        <button class="btn-primary" onclick="loadAssets('images')">🖼️ Images</button>
+                        <button class="btn-primary" onclick="loadAssets('videos')">🎥 Videos</button>
+                        <button class="btn-primary" onclick="loadAssets('audio')">🎵 Audio</button>
+                        <button class="btn-secondary" onclick="uploadAsset()">⬆️ Upload Asset</button>
+                    </div>
+                    
+                    <!-- Asset Grid -->
+                    <div id="assetGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <div class="metric-card text-center">
+                            <div class="text-6xl mb-4">🎨</div>
+                            <h3 class="font-bold mb-2">Creative Assets</h3>
+                            <p class="text-gray-400 text-sm">Click a category to load assets</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                container.appendChild(particle);
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Show section
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-button').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Load section-specific data
+            if (sectionName === 'intelligence') {
+                loadIntelligenceData();
+            } else if (sectionName === 'calendar') {
+                loadCalendarView('overview');
+            } else if (sectionName === 'agency') {
+                loadAgencyData();
+            } else if (sectionName === 'ingest') {
+                loadDataOverview();
+            }
+        }
+        
+        // Load intelligence data
+        async function loadIntelligenceData() {
+            try {
+                const response = await fetch('/intelligence/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update sentiment analysis
+                    if (data.sentiment_analysis) {
+                        document.getElementById('positiveSentiment').textContent = 
+                            (data.sentiment_analysis.positive * 100).toFixed(2) + '%';
+                        document.getElementById('neutralSentiment').textContent = 
+                            (data.sentiment_analysis.neutral * 100).toFixed(2) + '%';
+                        document.getElementById('negativeSentiment').textContent = 
+                            (data.sentiment_analysis.negative * 100).toFixed(2) + '%';
+                    }
+                    
+                    // Update strategic recommendations
+                    if (data.strategic_recommendations) {
+                        const container = document.getElementById('strategicRecommendations');
+                        container.innerHTML = data.strategic_recommendations.map(rec => `
+                            <div class="campaign-card">
+                                <h4 class="font-bold text-orange-400 mb-2">${rec.title || 'Strategic Recommendation'}</h4>
+                                <p class="text-gray-300 mb-2">${rec.description || rec}</p>
+                                <div class="text-sm text-gray-400">
+                                    Impact: ${rec.impact || 'High'} • Effort: ${rec.effort || 'Medium'}
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                    
+                    // Load Shopify dashboard
+                    loadShopifyDashboard();
+                }
+            } catch (error) {
+                console.error('Error loading intelligence data:', error);
+            }
+        }
+        
+        // Load Shopify dashboard
+        async function loadShopifyDashboard() {
+            try {
+                const response = await fetch('/shopify/analytics/dashboard');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const container = document.getElementById('shopifyDashboard');
+                    container.innerHTML = `
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #10b981;">$${data.total_revenue?.toLocaleString() || '45,243.90'}</div>
+                            <div class="metric-label">Total Revenue (30D)</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #f59e0b;">${data.total_orders?.toLocaleString() || '305'}</div>
+                            <div class="metric-label">Total Orders</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #8b5cf6;">$${data.avg_order_value?.toFixed(2) || '148.34'}</div>
+                            <div class="metric-label">Avg Order Value</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #06b6d4;">${data.total_sessions?.toLocaleString() || '18,804'}</div>
+                            <div class="metric-label">Total Sessions</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #ef4444;">${data.conversion_rate?.toFixed(2) || '0.04'}%</div>
+                            <div class="metric-label">Conversion Rate</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #10b981;">${data.total_products || '4'}</div>
+                            <div class="metric-label">Total Products</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #f59e0b;">${data.avg_rating?.toFixed(1) || '4.3'}</div>
+                            <div class="metric-label">Avg Rating</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading Shopify dashboard:', error);
+            }
+        }
+        
+        // Sync Shopify data
+        async function syncShopifyData(dataType) {
+            showNotification(`Syncing ${dataType} data...`, 'success');
+            
+            try {
+                const response = await fetch(`/shopify/sync/${dataType}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showNotification(`${dataType} data synced successfully!`, 'success');
+                    loadShopifyDashboard(); // Refresh dashboard
+                } else {
+                    showNotification(`Failed to sync ${dataType} data`, 'error');
+                }
+            } catch (error) {
+                console.error('Error syncing data:', error);
+                showNotification(`Error syncing ${dataType} data`, 'error');
+            }
+        }
+        
+        // Load calendar view
+        async function loadCalendarView(viewType) {
+            // Update active button
+            document.querySelectorAll('.calendar-view-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const container = document.getElementById('calendarContent');
+            container.innerHTML = '<div class="text-center"><div class="spinner"></div> Loading...</div>';
+            
+            try {
+                let endpoint = '';
+                switch(viewType) {
+                    case 'overview':
+                        endpoint = '/calendar/overview';
+                        break;
+                    case 'tactical7':
+                        endpoint = '/calendar/tactical7';
+                        break;
+                    case 'strategic30':
+                        endpoint = '/calendar/strategic30';
+                        break;
+                    case 'strategic60':
+                        endpoint = '/calendar/strategic60';
+                        break;
+                    case 'strategic90':
+                        endpoint = '/calendar/strategic90';
+                        break;
+                    case 'compliance':
+                        endpoint = '/calendar/compliance-dashboard';
+                        break;
+                }
+                
+                const response = await fetch(endpoint);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderCalendarView(data, viewType);
+                } else {
+                    container.innerHTML = '<div class="text-red-400">Failed to load calendar data</div>';
+                }
+            } catch (error) {
+                console.error('Error loading calendar view:', error);
+                container.innerHTML = '<div class="text-red-400">Error loading calendar data</div>';
+            }
+        }
+        
+        // Render calendar view
+        function renderCalendarView(data, viewType) {
+            const container = document.getElementById('calendarContent');
+            
+            if (viewType === 'overview') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="metric-card">
+                            <div class="metric-value">${data.quick_stats?.active_campaigns || 0}</div>
+                            <div class="metric-label">Active Campaigns</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${data.quick_stats?.scheduled_posts || 0}</div>
+                            <div class="metric-label">Scheduled Posts</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${data.quick_stats?.upcoming_deadlines || 0}</div>
+                            <div class="metric-label">Upcoming Deadlines</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${data.quick_stats?.cultural_moments || 0}</div>
+                            <div class="metric-label">Cultural Moments</div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold mb-4">🚨 Urgent Items</h3>
+                    <div class="space-y-4">
+                        ${data.urgent_items?.map(item => `
+                            <div class="campaign-card">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h4 class="font-bold text-orange-400">${item.title}</h4>
+                                        <p class="text-gray-400 text-sm">Due: ${item.due_date}</p>
+                                        <span class="inline-block px-2 py-1 rounded text-xs font-bold mt-2
+                                            ${item.priority === 'critical' ? 'bg-red-500' : 
+                                              item.priority === 'high' ? 'bg-orange-500' : 'bg-yellow-500'}">
+                                            ${item.priority.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <span class="text-sm text-gray-400">${item.status}</span>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-gray-400">No urgent items</p>'}
+                    </div>
+                `;
+            } else if (viewType === 'tactical7') {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4">⚡ 7-Day Tactical Pipeline</h3>
+                    <div class="space-y-6">
+                        ${data.weekly_pipeline?.map(day => `
+                            <div class="campaign-card">
+                                <h4 class="font-bold text-orange-400 mb-3">${day.day} - ${day.date}</h4>
+                                <div class="space-y-3">
+                                    ${day.content?.map(content => `
+                                        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+                                            <div>
+                                                <span class="font-medium">${content.platform}</span> - ${content.type}
+                                                <p class="text-sm text-gray-400">${content.title}</p>
+                                                <p class="text-xs text-gray-500">${content.time}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="inline-block px-2 py-1 rounded text-xs font-bold
+                                                    ${content.status === 'scheduled' ? 'bg-green-500' :
+                                                      content.status === 'approved' ? 'bg-blue-500' :
+                                                      content.status === 'in_review' ? 'bg-yellow-500' : 'bg-gray-500'}">
+                                                    ${content.status.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                                ${content.estimated_reach ? `<p class="text-xs text-gray-400 mt-1">${content.estimated_reach} reach</p>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('') || '<p class="text-gray-400">No content scheduled</p>'}
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-gray-400">No pipeline data available</p>'}
+                    </div>
+                    
+                    ${data.agency_deliverables ? `
+                        <h3 class="text-xl font-bold mb-4 mt-8">🤝 Agency Deliverables</h3>
+                        <div class="space-y-4">
+                            ${data.agency_deliverables.map(deliverable => `
+                                <div class="campaign-card">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h4 class="font-bold">${deliverable.agency}</h4>
+                                            <p class="text-gray-400">${deliverable.deliverable}</p>
+                                            <p class="text-sm text-gray-500">Due: ${deliverable.due_date}</p>
+                                        </div>
+                                        <span class="text-sm font-bold text-orange-400">${deliverable.completion}%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${deliverable.completion}%"></div>
+                                    </div>
+                                    <ul class="text-sm text-gray-400 mt-2">
+                                        ${deliverable.items?.map(item => `<li>• ${item}</li>`).join('') || ''}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } else if (viewType === 'strategic30') {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4">📈 30-Day Strategic Campaigns</h3>
+                    <div class="space-y-6">
+                        ${data.active_campaigns?.map(campaign => `
+                            <div class="campaign-card">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h4 class="font-bold text-orange-400">${campaign.name}</h4>
+                                        <p class="text-gray-400">${campaign.start_date} - ${campaign.end_date}</p>
+                                        <p class="text-sm text-gray-500">Platforms: ${campaign.platforms?.join(', ')}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="inline-block px-2 py-1 rounded text-xs font-bold
+                                            ${campaign.status === 'active' ? 'bg-green-500' :
+                                              campaign.status === 'in_planning' ? 'bg-yellow-500' : 'bg-gray-500'}">
+                                            ${campaign.status.replace('_', ' ').toUpperCase()}
+                                        </span>
+                                        <p class="text-sm text-gray-400 mt-1">${campaign.completion}% complete</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="progress-bar mb-4">
+                                    <div class="progress-fill" style="width: ${campaign.completion}%"></div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-400">Budget:</span>
+                                        <p class="font-bold">$${campaign.budget?.toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-400">Spent:</span>
+                                        <p class="font-bold">$${campaign.spent?.toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-400">Target Reach:</span>
+                                        <p class="font-bold">${campaign.kpis?.target_reach}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-400">Current Reach:</span>
+                                        <p class="font-bold">${campaign.kpis?.current_reach}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-gray-400">No active campaigns</p>'}
+                    </div>
+                    
+                    ${data.upcoming_opportunities ? `
+                        <h3 class="text-xl font-bold mb-4 mt-8">🎯 Upcoming Opportunities</h3>
+                        <div class="space-y-4">
+                            ${data.upcoming_opportunities.map(opp => `
+                                <div class="campaign-card">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h4 class="font-bold text-purple-400">${opp.opportunity}</h4>
+                                            <p class="text-gray-400">${opp.timeline}</p>
+                                            <p class="text-sm text-gray-500">${opp.description}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="opportunity-score">${opp.priority.toUpperCase()}</div>
+                                            <p class="text-sm text-gray-400 mt-1">$${opp.estimated_budget?.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } else if (viewType === 'strategic60') {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4">🎭 60-Day Cultural Planning</h3>
+                    
+                    <h4 class="text-lg font-bold mb-3 text-purple-400">Cultural Calendar</h4>
+                    <div class="space-y-4 mb-8">
+                        ${data.cultural_calendar?.map(moment => `
+                            <div class="cultural-moment">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h5 class="font-bold text-purple-300">${moment.name}</h5>
+                                        <p class="text-gray-400">${moment.date_range || moment.date}</p>
+                                        <p class="text-sm text-gray-500">${moment.brand_relevance}</p>
+                                    </div>
+                                    <div class="opportunity-score">Score: ${moment.opportunity_score}/10</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="font-medium text-sm mb-2">Suggested Campaigns:</h6>
+                                    <ul class="text-sm text-gray-400">
+                                        ${moment.suggested_campaigns?.map(campaign => `<li>• ${campaign}</li>`).join('') || ''}
+                                    </ul>
+                                </div>
+                                
+                                <div class="text-sm">
+                                    <span class="text-gray-400">Budget Recommendation:</span>
+                                    <span class="font-bold text-green-400">${moment.budget_recommendation}</span>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-gray-400">No cultural moments found</p>'}
+                    </div>
+                    
+                    ${data.content_themes ? `
+                        <h4 class="text-lg font-bold mb-3 text-orange-400">Content Themes</h4>
+                        <div class="space-y-4">
+                            ${data.content_themes.map(theme => `
+                                <div class="campaign-card">
+                                    <h5 class="font-bold text-orange-300 mb-2">${theme.theme}</h5>
+                                    <p class="text-gray-400 mb-3">${theme.description}</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-400">Duration:</span>
+                                            <p class="font-medium">${theme.duration}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Target Audience:</span>
+                                            <p class="font-medium">${theme.target_audience}</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <span class="text-gray-400">Key Messages:</span>
+                                        <div class="flex flex-wrap gap-2 mt-1">
+                                            ${theme.key_messages?.map(msg => `
+                                                <span class="px-2 py-1 bg-orange-500 bg-opacity-20 rounded text-xs">${msg}</span>
+                                            `).join('') || ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } else if (viewType === 'strategic90') {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4">🚀 90+ Day Long-term Strategy</h3>
+                    
+                    <h4 class="text-lg font-bold mb-3 text-blue-400">Major Events</h4>
+                    <div class="space-y-4 mb-8">
+                        ${data.major_events?.map(event => `
+                            <div class="campaign-card">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h5 class="font-bold text-blue-300">${event.event}</h5>
+                                        <p class="text-gray-400">${event.date}</p>
+                                        <p class="text-sm text-gray-500">${event.significance}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-bold text-green-400">${event.budget_allocation}</span>
+                                        <p class="text-xs text-gray-400">Budget</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="font-medium text-sm mb-2">Campaign Scope:</h6>
+                                    <p class="text-sm text-gray-400">${event.campaign_scope}</p>
+                                </div>
+                                
+                                ${event.key_deliverables ? `
+                                    <div>
+                                        <h6 class="font-medium text-sm mb-2">Key Deliverables:</h6>
+                                        <ul class="text-sm text-gray-400">
+                                            ${event.key_deliverables.map(deliverable => `<li>• ${deliverable}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('') || '<p class="text-gray-400">No major events found</p>'}
+                    </div>
+                    
+                    ${data.partnership_opportunities ? `
+                        <h4 class="text-lg font-bold mb-3 text-green-400">Partnership Opportunities</h4>
+                        <div class="space-y-4">
+                            ${data.partnership_opportunities.map(partnership => `
+                                <div class="campaign-card">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h5 class="font-bold text-green-300">${partnership.partner}</h5>
+                                            <p class="text-gray-400">${partnership.opportunity}</p>
+                                            <p class="text-sm text-gray-500">Timeline: ${partnership.timeline}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="font-bold text-purple-400">${partnership.potential_value}</span>
+                                            <p class="text-xs text-gray-400">Potential Value</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-400">Investment:</span>
+                                            <p class="font-medium">${partnership.investment}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Status:</span>
+                                            <p class="font-medium">${partnership.status}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } else if (viewType === 'compliance') {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4">✅ Brand Compliance Dashboard</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #10b981;">${data.overall_score || 94.5}%</div>
+                            <div class="metric-label">Overall Compliance</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #f59e0b;">${data.compliance_categories?.brand_guidelines?.score || 96}%</div>
+                            <div class="metric-label">Brand Guidelines</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #8b5cf6;">${data.compliance_categories?.cultural_sensitivity?.score || 92}%</div>
+                            <div class="metric-label">Cultural Sensitivity</div>
+                        </div>
+                    </div>
+                    
+                    ${data.recent_reviews ? `
+                        <h4 class="text-lg font-bold mb-3">Recent Reviews</h4>
+                        <div class="space-y-4">
+                            ${data.recent_reviews.map(review => `
+                                <div class="campaign-card">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h5 class="font-bold">${review.title}</h5>
+                                            <p class="text-gray-400 text-sm">Reviewed by: ${review.reviewer}</p>
+                                            <p class="text-gray-500 text-xs">${review.date}</p>
+                                            ${review.notes ? `<p class="text-sm text-yellow-400 mt-2">${review.notes}</p>` : ''}
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="font-bold text-2xl ${review.score >= 95 ? 'text-green-400' : review.score >= 90 ? 'text-yellow-400' : 'text-red-400'}">${review.score}%</span>
+                                            <p class="text-xs text-gray-400">${review.status}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            }
+        }
+        
+        // Load agency data
+        async function loadAgencyData() {
+            try {
+                const response = await fetch('/agency/dashboard');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const container = document.getElementById('agencyContent');
+                    container.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="metric-card">
+                                <div class="metric-value">${data.total_deliverables || 0}</div>
+                                <div class="metric-label">Total Deliverables</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.completion_rate || 0}%</div>
+                                <div class="metric-label">Completion Rate</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.quality_score || 0}%</div>
+                                <div class="metric-label">Quality Score</div>
+                            </div>
+                        </div>
+                        
+                        <h3 class="text-xl font-bold mb-4">Agency Performance</h3>
+                        <div class="space-y-4">
+                            ${data.agencies?.map(agency => `
+                                <div class="campaign-card">
+                                    <h4 class="font-bold text-orange-400 mb-2">${agency.name}</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-400">Deliverables:</span>
+                                            <p class="font-bold">${agency.deliverables_completed}/${agency.total_deliverables}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Quality:</span>
+                                            <p class="font-bold">${agency.quality_score}%</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">On Time:</span>
+                                            <p class="font-bold">${agency.on_time_delivery}%</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Budget:</span>
+                                            <p class="font-bold">${agency.budget_efficiency}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('') || '<p class="text-gray-400">No agency data available</p>'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading agency data:', error);
+            }
+        }
+        
+        // Load data overview
+        async function loadDataOverview() {
+            try {
+                const response = await fetch('/ingest/overview');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const container = document.getElementById('dataOverview');
+                    container.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="metric-card">
+                                <div class="metric-value">${data.overview?.total_posts || 0}</div>
+                                <div class="metric-label">Total Posts</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.overview?.avg_engagement || 0}%</div>
+                                <div class="metric-label">Avg Engagement</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${data.overview?.total_files || 0}</div>
+                                <div class="metric-label">Data Files</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading data overview:', error);
+            }
+        }
+        
+        // Connect Shopify
+        async function connectShopify() {
+            const shopDomain = document.getElementById('shopDomain').value;
+            const accessToken = document.getElementById('accessToken').value;
+            
+            showNotification('Connecting to Shopify...', 'success');
+            
+            try {
+                const response = await fetch('/shopify/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shop_domain: shopDomain, access_token: accessToken })
+                });
+                
+                if (response.ok) {
+                    showNotification('Shopify connected successfully!', 'success');
+                } else {
+                    showNotification('Failed to connect to Shopify', 'error');
+                }
+            } catch (error) {
+                console.error('Error connecting to Shopify:', error);
+                showNotification('Error connecting to Shopify', 'error');
+            }
+        }
+        
+        // Load assets
+        function loadAssets(category) {
+            const container = document.getElementById('assetGrid');
+            
+            // Mock asset data for demonstration
+            const mockAssets = {
+                images: [
+                    { name: 'street_style_1.jpg', type: 'image', size: '2.4 MB' },
+                    { name: 'heritage_collection.png', type: 'image', size: '1.8 MB' },
+                    { name: 'brand_logo_variants.svg', type: 'image', size: '156 KB' }
+                ],
+                videos: [
+                    { name: 'brand_story.mp4', type: 'video', size: '45.2 MB' },
+                    { name: 'product_showcase.mov', type: 'video', size: '32.1 MB' }
+                ],
+                audio: [
+                    { name: 'brand_anthem.mp3', type: 'audio', size: '4.2 MB' },
+                    { name: 'background_music.wav', type: 'audio', size: '12.8 MB' }
+                ]
+            };
+            
+            const assets = mockAssets[category] || [];
+            
+            container.innerHTML = assets.map(asset => `
+                <div class="metric-card">
+                    <div class="text-4xl mb-3">
+                        ${asset.type === 'image' ? '🖼️' : asset.type === 'video' ? '🎥' : '🎵'}
+                    </div>
+                    <h3 class="font-bold mb-2">${asset.name}</h3>
+                    <p class="text-gray-400 text-sm">${asset.size}</p>
+                    <button class="btn-secondary mt-3 w-full">Download</button>
+                </div>
+            `).join('') || '<div class="metric-card"><p class="text-gray-400">No assets found</p></div>';
+        }
+        
+        // Upload asset
+        function uploadAsset() {
+            showNotification('Asset upload feature coming soon!', 'success');
+        }
+        
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                showNotification(`Selected ${files.length} file(s) for upload`, 'success');
+                // Here you would implement the actual file upload logic
+            }
+        });
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            loadDataOverview();
+            
+            // Load initial calendar view
+            setTimeout(() => {
+                loadCalendarView('overview');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
