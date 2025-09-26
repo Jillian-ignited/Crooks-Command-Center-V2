@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import IntelligencePanel from "../components/IntelligencePanel";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function IntelligencePage() {
   const [brands, setBrands] = useState("Crooks & Castles, Stussy, Supreme");
