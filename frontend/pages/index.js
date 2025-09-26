@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Head from 'next/head';
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function HomePage() {
   const [systemHealth, setSystemHealth] = useState(null);
