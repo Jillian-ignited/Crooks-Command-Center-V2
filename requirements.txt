@@ -1,38 +1,16 @@
-# ===== CORE FASTAPI SERVER =====
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 gunicorn==21.2.0
-
-# ===== INTELLIGENCE ANALYSIS & SENTIMENT =====
-textblob==0.17.1
+Pillow==10.0.0
 pandas==2.0.3
 numpy==1.24.3
-
-# ===== SHOPIFY DATA PROCESSING =====
 openpyxl==3.1.2
-xlrd==2.0.1
-
-# ===== CAMPAIGN & CALENDAR PLANNING =====
-python-dateutil==2.8.2
-pytz==2023.3
-
-# ===== CONTENT CREATION TOOLS =====
-jinja2==3.1.2
-markdown==3.4.4
-
-# ===== DATA PROCESSING & FILE HANDLING =====
-jsonlines==3.1.0
-pyyaml==6.0.1
+xlsxwriter==3.1.2
+textblob==0.17.1
 requests==2.31.0
-
-# ===== AGENCY TRACKING & PROJECT MANAGEMENT =====
 pydantic==2.4.2
-
-# ===== ASYNC PROCESSING =====
-aiofiles==23.1.0
-
-# ===== UTILITIES (FIXED VERSION CONFLICT) =====
-typing-extensions>=4.8.0
-python-dotenv==1.0.0
-pip install Pillow  # For image processing in media router
+jinja2==3.1.2
+python-dateutil==2.8.2
+aiofiles==23.2.1
+python-magic==0.4.27
