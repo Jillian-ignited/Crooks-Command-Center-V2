@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Head from 'next/head';
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function ExecutiveOverviewPage() {
   const [dashboardData, setDashboardData] = useState(null);
