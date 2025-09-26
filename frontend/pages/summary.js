@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ExecutiveSummaryCard from "../components/ExecutiveSummaryCard";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function SummaryPage() {
   const [brands, setBrands] = useState("Crooks & Castles, Stussy, Supreme");
