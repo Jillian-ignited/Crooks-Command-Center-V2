@@ -35,3 +35,4 @@ aiofiles==23.1.0
 # ===== UTILITIES (FIXED VERSION CONFLICT) =====
 typing-extensions>=4.8.0
 python-dotenv==1.0.0
+pip install Pillow  # For image processing in media router
