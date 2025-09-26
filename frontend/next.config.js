@@ -36,11 +36,7 @@ const nextConfig = {
     NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || '/api'
   },
   
-  // Experimental features
-  experimental: {
-    // Enable app directory if using Next.js 13+
-    appDir: false
-  }
+ 
 };
 
 module.exports = nextConfig;
