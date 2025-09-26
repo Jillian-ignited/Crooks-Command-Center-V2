@@ -9,13 +9,20 @@ export default function Layout({ children }) {
           <div className="pill">Crooks Command Center</div>
           <nav className="row" style={{gap:10}}>
             <Link href="/">Dashboard</Link>
+            <Link href="/executive" style={{ 
+              fontWeight: 'bold',
+              color: 'var(--brand)',
+              textDecoration: 'underline'
+            }}>
+              Executive Overview
+            </Link>
             <Link href="/intelligence">Intelligence</Link>
             <Link href="/summary">Executive Summary</Link>
             <Link href="/calendar">Calendar</Link>
             <Link href="/agency">Agency</Link>
           </nav>
         </div>
-        <div className="muted">v1.0</div>
+        <div className="muted">v2.1</div>
       </header>
       {children}
     </div>
