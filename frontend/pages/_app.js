@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
-import "../styles/globals.css";
+
 
 // Global Error Boundary Component
 function ErrorBoundary({ children }) {
