@@ -1,168 +1,118 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 import uvicorn
-from datetime import datetime
 
-# Create FastAPI app optimized for Next.js integration
+# Import all your routers
+from routers.executive import router as executive_router
+from routers.intelligence import router as intelligence_router
+from routers.agency import router as agency_router
+from routers.ingest import router as ingest_router
+from routers.content_creation import router as content_router
+from routers.calendar import router as calendar_router
+from routers.summary import router as summary_router
+
+# Create FastAPI app
 app = FastAPI(
     title="Crooks & Castles Command Center V2 - Backend API",
     description="Enhanced backend API for Next.js frontend with real data intelligence",
     version="2.2.0"
 )
 
-# Configure CORS for Next.js frontend
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "*"],  # Add your Next.js dev server
+    allow_origins=["*"],  # In production, specify your domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Import and register all enhanced routers
-try:
-    from routers.executive import router as executive_router
-    app.include_router(executive_router, prefix="/executive", tags=["executive"])
-    print("✅ Executive router loaded - REAL DATA EXECUTIVE DASHBOARD")
-except Exception as e:
-    print(f"⚠️ Executive router failed: {e}")
+# Include API routers with /api prefix
+app.include_router(executive_router, prefix="/api/executive", tags=["executive"])
+app.include_router(intelligence_router, prefix="/api/intelligence", tags=["intelligence"])
+app.include_router(agency_router, prefix="/api/agency", tags=["agency"])
+app.include_router(ingest_router, prefix="/api/ingest", tags=["ingest"])
+app.include_router(content_router, prefix="/api/content", tags=["content"])
+app.include_router(calendar_router, prefix="/api/calendar", tags=["calendar"])
+app.include_router(summary_router, prefix="/api/summary", tags=["summary"])
 
-try:
-    from routers.intelligence import router as intelligence_router
-    app.include_router(intelligence_router, prefix="/intelligence", tags=["intelligence"])
-    print("✅ Intelligence router loaded - SOPHISTICATED ANALYSIS")
-except Exception as e:
-    print(f"⚠️ Intelligence router failed: {e}")
-
-try:
-    from routers.agency_REAL_TRACKING import router as agency_router
-    app.include_router(agency_router, prefix="/agency", tags=["agency"])
-    print("✅ Agency router loaded - REAL PROJECT TRACKING")
-except Exception as e:
-    print(f"⚠️ Agency router failed: {e}")
-
-try:
-    from routers.ingest_ENHANCED_MULTI_FORMAT import router as ingest_router
-    app.include_router(ingest_router, prefix="/ingest", tags=["ingest"])
-    print("✅ Ingest router loaded - MULTI-FORMAT UPLOAD")
-except Exception as e:
-    print(f"⚠️ Ingest router failed: {e}")
-
-try:
-    from routers.content_creation import router as content_router
-    app.include_router(content_router, prefix="/content", tags=["content"])
-    print("✅ Content router loaded - CONTENT CREATION TOOLS")
-except Exception as e:
-    print(f"⚠️ Content router failed: {e}")
-
-try:
-    from routers.calendar import router as calendar_router
-    app.include_router(calendar_router, prefix="/calendar", tags=["calendar"])
-    print("✅ Calendar router loaded - CAMPAIGN PLANNING")
-except Exception as e:
-    print(f"⚠️ Calendar router failed: {e}")
-
-try:
-    from routers.summary import router as summary_router
-    app.include_router(summary_router, prefix="/summary", tags=["summary"])
-    print("✅ Summary router loaded - DATA OVERVIEW")
-except Exception as e:
-    print(f"⚠️ Summary router failed: {e}")
-
-# Ensure required directories exist
-def ensure_directories():
-    """Ensure all required directories exist for data storage"""
-    directories = [
-        "data/uploads",
-        "data/shopify", 
-        "data/competitive",
-        "data/config",
-        "data/calendar",
-        "data/agency",
-        "data/content"
-    ]
-    
-    for directory in directories:
-        Path(directory).mkdir(parents=True, exist_ok=True)
-        print(f"✅ Directory ensured: {directory}")
-
-# Create directories on startup
-ensure_directories()
-
-# Health check endpoint
+# Health check endpoints
 @app.get("/health")
 async def health_check():
-    """Health check for Next.js frontend monitoring"""
+    return {"status": "healthy", "message": "Crooks & Castles Command Center V2 is running"}
+
+@app.get("/api/status")
+async def api_status():
     return {
-        "status": "healthy",
-        "service": "Crooks & Castles Command Center V2 - Backend API",
+        "status": "operational",
         "version": "2.2.0",
-        "timestamp": datetime.now().isoformat(),
-        "frontend_integration": "Next.js Ready",
-        "modules": {
-            "executive": "✅ Real data executive dashboard",
-            "intelligence": "✅ Sophisticated sentiment analysis & insights", 
-            "agency": "✅ Real project tracking with deliverables",
-            "ingest": "✅ Multi-format data upload (JSON, CSV, Excel)",
-            "content": "✅ Content creation and planning tools",
-            "calendar": "✅ Campaign calendar and cultural moments",
-            "summary": "✅ Data overview and metrics"
-        },
-        "key_endpoints": {
-            "executive_overview": "/executive/overview?days=30",
-            "intelligence_report": "/intelligence/report", 
-            "data_upload": "/ingest/upload",
-            "agency_dashboard": "/agency/dashboard",
-            "content_ideas": "/content/ideas/generate",
-            "calendar_planning": "/calendar/planning"
+        "endpoints": {
+            "executive": "/api/executive/overview",
+            "intelligence": "/api/intelligence/report",
+            "agency": "/api/agency/dashboard",
+            "calendar": "/api/calendar/overview",
+            "ingest": "/api/ingest/overview"
         }
     }
 
-# API status endpoint for frontend
-@app.get("/api/status")
-async def api_status():
-    """API status specifically for Next.js frontend integration"""
-    return {
-        "api_status": "online",
-        "backend_version": "2.2.0",
-        "frontend_compatibility": "Next.js 13+",
-        "cors_enabled": True,
-        "endpoints_ready": [
-            "GET /executive/overview - Executive dashboard with real data",
-            "POST /intelligence/report - Sophisticated analysis engine",
-            "POST /ingest/upload - Multi-format file upload",
-            "GET /agency/dashboard - Real project tracking",
-            "POST /content/ideas/generate - AI content creation",
-            "GET /calendar/planning - Campaign calendar",
-            "GET /summary/overview - Data metrics"
-        ],
-        "data_capabilities": {
-            "social_media": "Instagram, TikTok, Twitter (JSON/JSONL)",
-            "ecommerce": "Shopify reports (CSV/Excel)",
-            "competitive": "Apify scraping results (JSON)",
-            "agency": "Project tracking and deliverables",
-            "content": "Content planning and creation"
-        },
-        "real_features": [
-            "No mock data - all analysis uses your real uploaded data",
-            "Sophisticated sentiment analysis with cultural insights",
-            "Competitive intelligence across 12 streetwear brands",
-            "Strategic recommendations based on actual performance",
-            "Revenue correlation between social media and sales"
-        ],
-        "last_updated": datetime.now().isoformat()
-    }
+# Serve Next.js frontend static files
+frontend_path = "frontend/out"
+if os.path.exists(frontend_path):
+    # Mount static assets
+    app.mount("/_next/static", StaticFiles(directory=f"{frontend_path}/_next/static"), name="static")
+    app.mount("/_next", StaticFiles(directory=f"{frontend_path}/_next"), name="next")
+    
+    # Serve other static files
+    if os.path.exists(f"{frontend_path}/favicon.ico"):
+        @app.get("/favicon.ico")
+        async def favicon():
+            return FileResponse(f"{frontend_path}/favicon.ico")
+    
+    # Catch-all route for frontend (must be last)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Don't serve frontend for API routes or docs
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="Not found")
+        
+        # Try to serve the specific file
+        file_path = f"{frontend_path}/{full_path}"
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # Try with .html extension
+        html_path = f"{frontend_path}/{full_path}.html"
+        if os.path.exists(html_path):
+            return FileResponse(html_path)
+        
+        # Default to index.html for SPA routing
+        index_path = f"{frontend_path}/index.html"
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        
+        # If no frontend files exist, show API info
+        return {
+            "message": "Crooks & Castles Command Center V2 API",
+            "frontend_status": "not_built",
+            "api_docs": "/docs",
+            "health_check": "/health"
+        }
+
+else:
+    # Frontend not built - serve API info at root
+    @app.get("/")
+    async def root():
+        return {
+            "message": "Crooks & Castles Command Center V2 API",
+            "frontend_status": "not_built",
+            "api_docs": "/docs",
+            "health_check": "/health",
+            "build_instructions": "Run 'cd frontend && npm run build' to build frontend"
+        }
 
 if __name__ == "__main__":
-    print("🚀 Starting Crooks & Castles Command Center V2 - Backend API for Next.js...")
-    print("🎯 Optimized for Next.js frontend integration")
-    print("📊 Features:")
-    print("   • Real data executive dashboard")
-    print("   • Sophisticated intelligence analysis")
-    print("   • Multi-format data upload")
-    print("   • Real agency project tracking")
-    print("   • Content creation tools")
-    print("   • Campaign calendar planning")
-    print("🌐 CORS enabled for Next.js development server")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
