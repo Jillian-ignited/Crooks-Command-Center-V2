@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 // API configuration with fallback
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 // IntelligencePanel component
 export default function IntelligencePanel({ data }) {
