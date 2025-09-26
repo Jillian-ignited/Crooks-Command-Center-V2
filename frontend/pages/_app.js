@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
-
+import "../styles/globals.css";
 
 // Global Error Boundary Component
 function ErrorBoundary({ children }) {
@@ -36,20 +36,20 @@ function ErrorBoundary({ children }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg)',
+        background: '#0a0b0d',
         color: '#e9edf2',
         padding: 24
       }}>
         <div style={{
           maxWidth: 600,
           padding: 32,
-          background: 'var(--panel)',
+          background: '#0f1217',
           borderRadius: 16,
-          border: '1px solid var(--danger)',
+          border: '1px solid #ef4444',
           textAlign: 'center'
         }}>
           <h2 style={{ 
-            color: 'var(--danger)', 
+            color: '#ef4444', 
             marginBottom: 16, 
             fontSize: 24 
           }}>
@@ -58,37 +58,11 @@ function ErrorBoundary({ children }) {
           
           <div style={{ 
             marginBottom: 24, 
-            color: 'var(--muted)', 
+            color: '#a1a8b3', 
             lineHeight: 1.5 
           }}>
             Something went wrong. The application encountered an unexpected error.
           </div>
-          
-          <details style={{ 
-            marginBottom: 24, 
-            textAlign: 'left',
-            background: 'rgba(0,0,0,0.3)',
-            padding: 12,
-            borderRadius: 8,
-            fontSize: 13,
-            color: 'var(--muted)'
-          }}>
-            <summary style={{ 
-              cursor: 'pointer', 
-              marginBottom: 8,
-              color: 'var(--danger)'
-            }}>
-              Error Details
-            </summary>
-            <pre style={{ 
-              whiteSpace: 'pre-wrap', 
-              wordBreak: 'break-word',
-              margin: 0,
-              fontSize: 12
-            }}>
-              {error?.stack || error?.message || 'Unknown error'}
-            </pre>
-          </details>
           
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button 
@@ -97,7 +71,7 @@ function ErrorBoundary({ children }) {
                 setError(null);
               }}
               style={{
-                background: 'var(--brand)',
+                background: '#6aa6ff',
                 color: 'white',
                 border: 'none',
                 padding: '12px 20px',
@@ -112,7 +86,7 @@ function ErrorBoundary({ children }) {
             <button 
               onClick={() => window.location.reload()}
               style={{
-                background: 'var(--line)',
+                background: '#1c2230',
                 color: '#e9edf2',
                 border: 'none',
                 padding: '12px 20px',
@@ -149,7 +123,7 @@ export default function App({ Component, pageProps }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg)',
+        background: '#0a0b0d',
         color: '#e9edf2'
       }}>
         <div style={{
@@ -159,35 +133,11 @@ export default function App({ Component, pageProps }) {
           <div style={{ 
             fontSize: 24, 
             marginBottom: 16,
-            background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
+            color: '#6aa6ff'
           }}>
             Loading Command Center...
           </div>
-          <div style={{
-            width: 40,
-            height: 4,
-            background: 'var(--line)',
-            borderRadius: 2,
-            margin: '0 auto',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              width: '100%',
-              height: '100%',
-              background: 'var(--brand)',
-              animation: 'loading 1.5s infinite ease-in-out'
-            }} />
-          </div>
         </div>
-
-        <style jsx>{`
-          @keyframes loading {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-        `}</style>
       </div>
     );
   }
