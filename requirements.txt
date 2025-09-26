@@ -1,43 +1,37 @@
-# Core FastAPI and server
+# ===== CORE FASTAPI SERVER =====
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 gunicorn==21.2.0
 
-# CRITICAL: Intelligence Analysis & Sentiment Analysis
+# ===== INTELLIGENCE ANALYSIS & SENTIMENT =====
 textblob==0.17.1
 pandas==2.0.3
 numpy==1.24.3
 
-# CRITICAL: Shopify Data Processing (CSV/Excel reports)
+# ===== SHOPIFY DATA PROCESSING =====
 openpyxl==3.1.2
 xlrd==2.0.1
 
-# CRITICAL: Campaign & Calendar Planning
+# ===== CAMPAIGN & CALENDAR PLANNING =====
 python-dateutil==2.8.2
 pytz==2023.3
 
-# CRITICAL: Content Creation Tools
+# ===== CONTENT CREATION TOOLS =====
 jinja2==3.1.2
 markdown==3.4.4
 
-# CRITICAL: File Processing and Data Handling
+# ===== DATA PROCESSING & FILE HANDLING =====
 jsonlines==3.1.0
 pyyaml==6.0.1
-
-# CRITICAL: HTTP Requests for APIs and Data Fetching
 requests==2.31.0
 
-# CRITICAL: Data Validation and Processing
+# ===== AGENCY TRACKING & PROJECT MANAGEMENT =====
 pydantic==2.4.2
 
-# CRITICAL: Async Processing for Performance
+# ===== ASYNC PROCESSING =====
 aiofiles==23.1.0
 
-# Additional utilities for robust operation
-typing-extensions==4.7.1
+# ===== UTILITIES (FIXED VERSION CONFLICT) =====
+typing-extensions>=4.8.0
 python-dotenv==1.0.0
-
-# Image processing (without system dependencies)
-# Note: Basic image handling without advanced features
-# Pillow==10.0.0  # Commented out - may need system libs
