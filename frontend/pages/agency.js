@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import AgencyDeliverables from "../components/AgencyDeliverables";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function AgencyPage() {
   const [data, setData] = useState(null);
