@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import CalendarView from "../components/CalendarView";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "";
+const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function CalendarPage() {
   const [range, setRange] = useState(30);
