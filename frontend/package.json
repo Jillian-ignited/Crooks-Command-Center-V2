@@ -2,11 +2,13 @@
   "name": "crooks-command-center-frontend",
   "version": "2.0.3",
   "private": true,
+  {
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "export": "next build && next export -o ../backend/static"
-  },
+    "copy:static": "rm -rf ../backend/static && mkdir -p ../backend/static && cp -a ./out/. ../backend/static/"
+  }
+}
   "dependencies": {
     "next": "14.2.33",
     "react": "18.3.1",
