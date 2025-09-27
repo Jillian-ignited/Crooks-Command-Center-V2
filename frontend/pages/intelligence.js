@@ -16,6 +16,8 @@ export default function Intelligence() {
   const [metrics, setMetrics] = useState(null);  // { [brand]: { metric: value } }
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [report, setReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   // Load full set on mount
   useEffect(() => {
@@ -65,12 +67,125 @@ export default function Intelligence() {
   const selectAll = () => setSelected(brandsAll);
   const clearAll = () => setSelected([]);
 
+  const generateReport = async () => {
+    try {
+      setReportLoading(true);
+      setErr("");
+      // Use POST request for report generation
+      const response = await fetch('/intelligence/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (!response.ok && !response.url.includes('/api/')) {
+        const apiResponse = await fetch('/api/intelligence/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (!apiResponse.ok) throw new Error(`${apiResponse.status} ${apiResponse.statusText}`);
+        const data = await apiResponse.json();
+        setReport(data);
+      } else {
+        const data = await response.json();
+        setReport(data);
+      }
+    } catch (e) {
+      setErr(`Failed to generate report: ${e.message}`);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: 1100, margin: "36px auto", padding: "16px" }}>
-      <h1 style={{ marginBottom: 8 }}>Competitive Intelligence</h1>
+      <div style={{ marginBottom: 24 }}>
+        <a href="/" style={{ color: '#3B82F6', textDecoration: 'none' }}>← Back to Home</a>
+      </div>
+      
+      <h1 style={{ marginBottom: 8 }}>🧠 Revenue Intelligence</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>
         Comparing across <strong>{brandsAll.length}</strong> brand{brandsAll.length === 1 ? "" : "s"}.
       </p>
+
+      {/* Report Generation Section */}
+      <div style={{ marginBottom: 32, padding: 20, background: '#F9FAFB', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+        <h2 style={{ marginBottom: 16, color: '#1F2937' }}>📊 Generate Intelligence Report</h2>
+        <button 
+          onClick={generateReport}
+          disabled={reportLoading}
+          style={{
+            padding: '12px 24px',
+            background: reportLoading ? '#9CA3AF' : 'linear-gradient(to right, #F97316, #DC2626)',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 16,
+            fontWeight: 'bold',
+            cursor: reportLoading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {reportLoading ? 'Generating...' : 'Generate Unified Intelligence Report'}
+        </button>
+      </div>
+
+      {/* Report Display */}
+      {report && (
+        <div style={{ marginBottom: 32, padding: 24, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 12 }}>
+          <h2 style={{ color: '#166534', marginBottom: 20 }}>📈 Intelligence Report Generated</h2>
+          
+          {report.performance_metrics && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ color: '#374151', marginBottom: 12 }}>Performance Metrics</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                <div style={{ padding: 12, background: 'white', borderRadius: 6 }}>
+                  <strong>Engagement Rate:</strong> {report.performance_metrics.engagement_rate}
+                </div>
+                <div style={{ padding: 12, background: 'white', borderRadius: 6 }}>
+                  <strong>Reach Growth:</strong> {report.performance_metrics.reach_growth}
+                </div>
+                <div style={{ padding: 12, background: 'white', borderRadius: 6 }}>
+                  <strong>Brand Mentions:</strong> {report.performance_metrics.brand_mentions}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {report.strategic_recommendations && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ color: '#374151', marginBottom: 12 }}>🎯 Strategic Recommendations</h3>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {report.strategic_recommendations.map((rec, index) => (
+                  <div key={index} style={{ padding: 16, background: 'white', borderRadius: 8 }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#1F2937' }}>{rec.title}</h4>
+                    <p style={{ margin: 0, color: '#6B7280' }}>{rec.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {report.trending_topics && (
+            <div>
+              <h3 style={{ color: '#374151', marginBottom: 12 }}>🔥 Trending Topics</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {report.trending_topics.map((topic, index) => (
+                  <span key={index} style={{ 
+                    padding: '6px 12px', 
+                    background: 'white',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 16,
+                    fontSize: 14
+                  }}>
+                    {topic.topic} ({topic.score})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Controls */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", margin: "12px 0 16px" }}>

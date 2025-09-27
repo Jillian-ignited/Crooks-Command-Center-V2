@@ -44,3 +44,40 @@ async def upload(
 def status(job_id: str) -> Dict[str, Any]:
     # Stub: return fake progressing status
     return {"job_id": job_id, "state": "queued", "progress": 5}
+
+@router.get("/overview")
+async def get_overview() -> Dict[str, Any]:
+    """Get data ingestion overview"""
+    try:
+        from datetime import datetime
+        
+        # Mock data - replace with actual file analysis
+        return {
+            "success": True,
+            "overview": {
+                "total_files": 0,
+                "total_records": 0,
+                "processed_files": 0,
+                "data_by_type": {
+                    "instagram_data": 0,
+                    "tiktok_data": 0,
+                    "social_media_data": 0,
+                    "shopify_data": 0,
+                    "ecommerce_data": 0,
+                    "agency_data": 0
+                },
+                "storage_used": 0,
+                "last_upload": 0,
+                "supported_formats": ["JSON", "JSONL", "CSV", "Excel (.xlsx, .xls)"],
+                "data_sources": [
+                    "Social Media (Instagram, TikTok, Twitter)",
+                    "E-commerce (Shopify, WooCommerce)",
+                    "Agency Reports (Projects, Deliverables)",
+                    "Analytics (Google Analytics, Facebook Insights)"
+                ],
+                "last_updated": datetime.now().isoformat()
+            }
+        }
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to get overview: {e}")
