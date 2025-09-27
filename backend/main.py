@@ -1,46 +1,23 @@
 import os
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="Crooks Command Center API", version="1.0.0")
+app = FastAPI(title="Crooks Command Center", version="1.0.0")
 
-# ----- CORS -----
-_origins_env = os.getenv("ALLOWED_ORIGINS", "https://crooks-command-center-v2.onrender.com")
-ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+# --- API Routers under /api ---
+try:
+    from .routers import upload_sidecar
+    app.include_router(upload_sidecar.router, prefix="/api/intelligence", tags=["intelligence"])
+except Exception:
+    pass
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ----- Healthcheck -----
-@app.get("/health")
+@app.get("/api/health")
 def health():
     return {"ok": True}
 
-# ----- Include your existing routers if available -----
-# These are optional and safe: adjust names to your project structure.
-try:
-    from routers import intelligence  # type: ignore
-    app.include_router(intelligence.router, prefix="/intelligence", tags=["intelligence"])  # type: ignore
-except Exception:
-    pass
+# --- Serve static Next.js export at root ---
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
 
-try:
-    from routers import calendar  # type: ignore
-    app.include_router(calendar.router, prefix="/calendar", tags=["calendar"])  # type: ignore
-except Exception:
-    pass
-
-try:
-    from routers import agency  # type: ignore
-    app.include_router(agency.router, prefix="/agency", tags=["agency"])  # type: ignore
-except Exception:
-    pass
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=False)
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
