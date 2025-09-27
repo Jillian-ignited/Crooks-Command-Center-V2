@@ -14,7 +14,7 @@ function withTimeout(ms = DEFAULT_TIMEOUT_MS) {
 async function parseResponse(res) {
   const ct = res.headers.get("content-type") || "";
   if (ct.includes("application/json")) {
-    try { return await res.json(); } catch { /* fall through to text */ }
+    try { return await res.json(); } catch { /* fall back to text */ }
   }
   return await res.text();
 }
@@ -67,6 +67,7 @@ async function request(path, { method = "GET", body, headers = {}, timeoutMs } =
   throw err;
 }
 
+// Primary API
 export const api = {
   request,
   get: (path, opts) => request(path, { method: "GET", ...(opts || {}) }),
@@ -74,10 +75,16 @@ export const api = {
   put: (path, body, opts) => request(path, { method: "PUT", body, ...(opts || {}) }),
   del: (path, opts) => request(path, { method: "DELETE", ...(opts || {}) }),
 
-  // Health check helper with dual fallback
+  // Health with dual fallback
   health: async () => {
     try { return await request("/api/health"); } catch { return await request("/health"); }
   },
 };
+
+// ---- Compatibility named exports (so existing pages keep working) ----
+export const apiGet  = (path, opts) => api.get(path, opts);
+export const apiPost = (path, body, opts) => api.post(path, body, opts);
+export const apiPut  = (path, body, opts) => api.put(path, body, opts);
+export const apiDel  = (path, opts) => api.del(path, opts);
 
 export default api;
