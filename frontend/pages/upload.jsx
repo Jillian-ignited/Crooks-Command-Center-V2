@@ -26,19 +26,11 @@ export default function UploadPage() {
     <div style={{ maxWidth: 640, margin: "40px auto", padding: 16 }}>
       <h1>Upload Intelligence Data</h1>
       <form onSubmit={onSubmit}>
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          style={{ display: "block", margin: "12px 0" }}
-        />
+        <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <button type="submit">Upload</button>
       </form>
       <p>{status}</p>
-      {resp && (
-        <pre style={{ background: "#111", color: "#eee", padding: 12, borderRadius: 8 }}>
-          {JSON.stringify(resp, null, 2)}
-        </pre>
-      )}
+      {resp && <pre>{JSON.stringify(resp, null, 2)}</pre>}
     </div>
   );
 }
