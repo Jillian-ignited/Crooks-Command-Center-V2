@@ -1,16 +1,12 @@
-// Central API helper (JavaScript) for Next.js Pages Router
-const BASE = process.env.NEXT_PUBLIC_API_BASE;
-
+// Same-origin API helper: all calls go to /api/*
 function buildUrl(path) {
-  if (!BASE) throw new Error("Missing NEXT_PUBLIC_API_BASE");
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${BASE}${normalized}`;
+  return `/api${normalized}`;
 }
 
 export async function api(path, init) {
   const url = buildUrl(path);
   const isFormData = init && init.body instanceof FormData;
-
   const headers = {};
   if (!isFormData) headers["Content-Type"] = "application/json";
 
@@ -24,7 +20,6 @@ export async function api(path, init) {
 }
 
 export const apiGet = (path, init) => api(path, { method: "GET", ...(init || {}) });
-
 export const apiPost = (path, body, init) =>
   api(path, {
     method: "POST",
