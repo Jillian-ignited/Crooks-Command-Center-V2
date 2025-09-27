@@ -1,17 +1,23 @@
 # backend/main.py
-import os, importlib
-from typing import Dict, Any, List
+import os
+import importlib
+from typing import Any, Dict, List
+
 from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Crooks Command Center", version="1.0.0")
 
-# ---- Health + routes list (both prefixes) ----
-@app.get("/health"); @app.get("/api/health")
-def health(): return {"ok": True}
+# ---- Health endpoints ----
+@app.get("/health")
+@app.get("/api/health")
+def health() -> Dict[str, bool]:
+    return {"ok": True}
 
-@app.get("/routes"); @app.get("/api/routes")
-def routes():
+# ---- Routes listing (simple introspection) ----
+@app.get("/routes")
+@app.get("/api/routes")
+def list_routes() -> Dict[str, Any]:
     out = []
     for r in app.routes:
         methods = sorted(list((getattr(r, "methods", set()) or set()) - {"HEAD","OPTIONS"}))
@@ -19,26 +25,21 @@ def routes():
     return {"routes": out}
 
 # ---- Auto-mount every router file in backend/routers ----
-MODULE_PREFIXES = ["backend.routers", "routers"]  # works whether run as package or from repo root
+MODULE_PREFIXES = ["backend.routers", "routers"]
 ROUTERS_DIR = os.path.join(os.path.dirname(__file__), "routers")
 
-# Optional: per-file prefix overrides (left side = filename without .py)
+# Optional overrides for special filenames
 PREFIX_RULES: Dict[str, Dict[str, str]] = {
-    # filename: {"bare": "/<legacy>", "api": "/api/<new>"}
-    "content_creation": {"bare": "/content",      "api": "/api/content"},
+    "content_creation": {"bare": "/content", "api": "/api/content"},
     "ingest_ENHANCED_MULTI_FORMAT": {"bare": "/ingest", "api": "/api/ingest"},
-    # upload_sidecar contributes under intelligence
-    "upload_sidecar": {"bare": "/intelligence",   "api": "/api/intelligence"},
-    # add more special cases if needed
+    "upload_sidecar": {"bare": "/intelligence", "api": "/api/intelligence"},
 }
 
 def _infer_prefixes(module_name: str) -> Dict[str, str]:
     if module_name in PREFIX_RULES:
         return PREFIX_RULES[module_name]
-    # default: use file name as path, but normalize funky names a bit
     bare = "/" + module_name.replace("__", "/").replace("_", "-").lower()
-    api  = "/api" + bare
-    return {"bare": bare, "api": api}
+    return {"bare": bare, "api": "/api" + bare}
 
 def _import_router(module_name: str) -> APIRouter:
     last_err = None
@@ -47,37 +48,28 @@ def _import_router(module_name: str) -> APIRouter:
             mod = importlib.import_module(f"{base}.{module_name}")
             router = getattr(mod, "router")
             if not isinstance(router, APIRouter):
-                raise TypeError(f"`router` in {base}.{module_name} is not fastapi.APIRouter")
+                raise TypeError(f"`router` in {base}.{module_name} is not an APIRouter")
             return router
         except Exception as e:
             last_err = e
-            continue
     raise RuntimeError(f"Unable to import router '{module_name}': {last_err}")
 
-def auto_mount_all() -> List[Dict[str, Any]]:
-    results = []
-    files = [f for f in os.listdir(ROUTERS_DIR) if f.endswith(".py") and f != "__init__.py" and not f.startswith("_")]
+def auto_mount_all():
+    files = [f for f in os.listdir(ROUTERS_DIR) if f.endswith(".py") and f != "__init__.py"]
     for file in sorted(files):
-        module_name = file[:-3]
+        modname = file[:-3]
         try:
-            router = _import_router(module_name)
-            prefixes = _infer_prefixes(module_name)
-            app.include_router(router, prefix=prefixes["bare"], tags=[module_name])
-            app.include_router(router, prefix=prefixes["api"],  tags=[module_name])
-            results.append({"module": module_name, "mounted": True, "prefixes": [prefixes["bare"], prefixes["api"]], "routes": len(router.routes)})
-            print(f"[main] Mounted '{module_name}' at {prefixes['bare']} AND {prefixes['api']} (routes: {len(router.routes)})")
+            router = _import_router(modname)
+            prefixes = _infer_prefixes(modname)
+            app.include_router(router, prefix=prefixes["bare"], tags=[modname])
+            app.include_router(router, prefix=prefixes["api"], tags=[modname])
+            print(f"[main] Mounted '{modname}' at {prefixes['bare']} and {prefixes['api']}")
         except Exception as e:
-            results.append({"module": module_name, "mounted": False, "error": str(e)})
-            print(f"[main] Skipped '{module_name}': {e}")
-    return results
+            print(f"[main] Skipped '{modname}': {e}")
 
-MOUNT_REPORT = auto_mount_all()
+auto_mount_all()
 
-# Optional: expose the mount report for quick debugging
-@app.get("/mount-report"); @app.get("/api/mount-report")
-def mount_report(): return {"mounts": MOUNT_REPORT}
-
-# ---- Serve static Next.js export at root ----
+# ---- Serve static Next.js export ----
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
