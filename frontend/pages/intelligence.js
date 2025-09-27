@@ -1,384 +1,183 @@
-import { useState, useEffect, useCallback } from "react";
-import IntelligencePanel from "../components/IntelligencePanel";
+import { useEffect, useMemo, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
+// Simple fetch helper with legacy→/api fallback.
+// Uses ?brands=all to force full competitive set by default.
+async function getJSON(path) {
+  const norm = path.startsWith("/") ? path : `/${path}`;
+  let r = await fetch(norm);
+  if (!r.ok && !norm.startsWith("/api/")) r = await fetch(`/api${norm}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText} @ ${norm} -> ${await r.text()}`);
+  return r.json();
+}
 
-export default function IntelligencePage() {
-  const [brands, setBrands] = useState("Crooks & Castles, Stussy, Supreme");
-  const [days, setDays] = useState(7);
-  const [data, setData] = useState(null);
-  const [files, setFiles] = useState([]);
-  const [dragOver, setDragOver] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+export default function Intelligence() {
+  const [brandsAll, setBrandsAll] = useState([]);
+  const [selected, setSelected] = useState([]);  // UI-selected subset (optional)
+  const [metrics, setMetrics] = useState(null);  // { [brand]: { metric: value } }
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
-  // Enhanced file refresh with error handling
-  const refreshFiles = useCallback(async () => {
-    try {
-      setError(null);
-      const res = await fetch(`${API}/intelligence/uploads`);
-      
-      if (!res.ok) {
-        throw new Error(`Failed to load files: HTTP ${res.status}`);
+  // Load full set on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getJSON("/intelligence/summary?brands=all");
+        // Expected shape:
+        // { brands_used: string[], metrics: { [brand]: { ...dynamicMetrics } } }
+        const used = Array.isArray(data?.brands_used) ? data.brands_used : [];
+        setBrandsAll(used);
+        setSelected(used); // default to all selected
+        setMetrics(data?.metrics || null);
+        setErr("");
+      } catch (e) {
+        setErr(e?.message || String(e));
+      } finally {
+        setLoading(false);
       }
-      
-      const json = await res.json();
-      setFiles(json.files || []);
-    } catch (err) {
-      console.error('Failed to refresh files:', err);
-      setError(`Unable to load uploaded files: ${err.message}`);
-      setFiles([]);
-    }
+    })();
   }, []);
 
-  // Enhanced report generation with comprehensive error handling
-  const generateReport = useCallback(async () => {
-    if (!brands.trim()) {
-      setError("Please enter at least one brand name");
-      return;
-    }
+  // Infer dynamic metric columns from the first brand present
+  const columns = useMemo(() => {
+    if (!metrics || !selected.length) return [];
+    const firstBrand = selected.find((b) => metrics[b]);
+    if (!firstBrand) return [];
+    return Object.keys(metrics[firstBrand] || {});
+  }, [metrics, selected]);
 
-    setBusy(true);
-    setError(null);
-    setSuccess(null);
-    
-    try {
-      const brandList = brands.split(",").map(s => s.trim()).filter(Boolean);
-      
-      if (brandList.length === 0) {
-        throw new Error("Please enter valid brand names");
-      }
+  // Re-fetch when user changes selection (optional UX: only refetch if you want backend aggregation to change)
+  // Here we just filter client-side since backend already returned "all".
+  const tableRows = useMemo(() => {
+    if (!metrics || !columns.length) return [];
+    return selected
+      .filter((b) => metrics[b])
+      .map((b) => ({
+        brand: b,
+        cells: columns.map((c) => metrics[b]?.[c]),
+      }));
+  }, [metrics, columns, selected]);
 
-      const body = { 
-        brands: brandList, 
-        lookback_days: Number(days) 
-      };
-      
-      const res = await fetch(`${API}/intelligence/report`, { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify(body) 
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Report generation failed: HTTP ${res.status} - ${errorText}`);
-      }
-      
-      const result = await res.json();
-      setData(result);
-      setSuccess("Intelligence report generated successfully!");
-      
-      // Auto-clear success message
-      setTimeout(() => setSuccess(null), 5000);
-      
-    } catch (err) {
-      console.error('Report generation failed:', err);
-      setError(`Failed to generate report: ${err.message}`);
-      setData(null);
-    } finally {
-      setBusy(false);
-    }
-  }, [brands, days]);
-
-  // Enhanced file upload with validation
-  const uploadFiles = useCallback(async (selectedFiles) => {
-    if (!selectedFiles || selectedFiles.length === 0) return;
-    
-    // Validate file types
-    const allowedTypes = ['.csv', '.json', '.jsonl'];
-    const invalidFiles = Array.from(selectedFiles).filter(file => 
-      !allowedTypes.some(type => file.name.toLowerCase().endsWith(type))
-    );
-    
-    if (invalidFiles.length > 0) {
-      setError(`Invalid file types: ${invalidFiles.map(f => f.name).join(', ')}. Only CSV, JSON, and JSONL files are allowed.`);
-      return;
-    }
-    
-    setBusy(true);
-    setError(null);
-    setSuccess(null);
-    
-    try {
-      const form = new FormData();
-      Array.from(selectedFiles).forEach(file => form.append("files", file));
-      
-      const res = await fetch(`${API}/intelligence/upload`, { 
-        method: "POST", 
-        body: form 
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Upload failed: HTTP ${res.status} - ${errorText}`);
-      }
-      
-      const result = await res.json();
-      await refreshFiles();
-      
-      setSuccess(`Successfully uploaded ${selectedFiles.length} file(s)`);
-      setTimeout(() => setSuccess(null), 5000);
-      
-    } catch (err) {
-      console.error('Upload failed:', err);
-      setError(`Upload failed: ${err.message}`);
-    } finally {
-      setBusy(false);
-    }
-  }, [refreshFiles]);
-
-  // Enhanced file removal with confirmation
-  const removeFile = useCallback(async (filename) => {
-    if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
-      return;
-    }
-    
-    setBusy(true);
-    setError(null);
-    
-    try {
-      const res = await fetch(`${API}/intelligence/upload/${encodeURIComponent(filename)}`, { 
-        method: "DELETE" 
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Delete failed: HTTP ${res.status} - ${errorText}`);
-      }
-      
-      await refreshFiles();
-      setSuccess(`Deleted "${filename}" successfully`);
-      setTimeout(() => setSuccess(null), 3000);
-      
-    } catch (err) {
-      console.error('Delete failed:', err);
-      setError(`Failed to delete file: ${err.message}`);
-    } finally {
-      setBusy(false);
-    }
-  }, [refreshFiles]);
-
-  // Drag & Drop handlers
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    setDragOver(false);
-    
-    try {
-      if (e.dataTransfer?.files?.length) {
-        uploadFiles(e.dataTransfer.files);
-      }
-    } catch (err) {
-      setError(`Drop failed: ${err.message}`);
-    }
-  }, [uploadFiles]);
-
-  const handleDragOver = useCallback((e) => { 
-    e.preventDefault(); 
-    setDragOver(true); 
-  }, []);
-
-  const handleDragLeave = useCallback(() => setDragOver(false), []);
-
-  // Load files on component mount
-  useEffect(() => { 
-    refreshFiles(); 
-  }, [refreshFiles]);
-
-  // Clear messages when user starts new actions
-  const clearMessages = () => {
-    setError(null);
-    setSuccess(null);
+  const toggleBrand = (b) => {
+    setSelected((prev) => (prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]));
   };
 
+  const selectAll = () => setSelected(brandsAll);
+  const clearAll = () => setSelected([]);
+
   return (
-    <div className="grid">
-      {/* Status Messages */}
-      {error && (
-        <div className="card" style={{ border: '1px solid var(--danger)', background: 'rgba(239, 68, 68, 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h3 className="title" style={{ color: 'var(--danger)', margin: '0 0 8px 0' }}>Error</h3>
-              <div style={{ color: 'var(--danger)' }}>{error}</div>
-            </div>
-            <button 
-              className="button" 
-              onClick={() => setError(null)}
-              style={{ background: 'var(--danger)', minWidth: 'auto', padding: '6px 12px' }}
+    <div style={{ maxWidth: 1100, margin: "36px auto", padding: "16px" }}>
+      <h1 style={{ marginBottom: 8 }}>Competitive Intelligence</h1>
+      <p style={{ marginTop: 0, opacity: 0.8 }}>
+        Comparing across <strong>{brandsAll.length}</strong> brand{brandsAll.length === 1 ? "" : "s"}.
+      </p>
+
+      {/* Controls */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", margin: "12px 0 16px" }}>
+        <button onClick={selectAll}>Select All</button>
+        <button onClick={clearAll}>Clear</button>
+        <span style={{ opacity: 0.8 }}>Selected: {selected.length}</span>
+      </div>
+
+      {/* Brand pills */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+        {brandsAll.map((b) => {
+          const active = selected.includes(b);
+          return (
+            <button
+              key={b}
+              onClick={() => toggleBrand(b)}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 16,
+                border: "1px solid #ccc",
+                background: active ? "#111" : "#fff",
+                color: active ? "#fff" : "#111",
+                cursor: "pointer",
+              }}
+              title={active ? "Click to remove" : "Click to add"}
             >
-              ×
+              {b}
             </button>
-          </div>
-        </div>
+          );
+        })}
+      </div>
+
+      {/* Status */}
+      {loading && <p>Loading…</p>}
+      {err && (
+        <pre style={{ background: "#2a0000", color: "#ffb3b3", padding: 12, borderRadius: 8, whiteSpace: "pre-wrap" }}>
+          {err}
+        </pre>
       )}
 
-      {success && (
-        <div className="card" style={{ border: '1px solid var(--ok)', background: 'rgba(52, 211, 153, 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h3 className="title" style={{ color: 'var(--ok)', margin: '0 0 8px 0' }}>Success</h3>
-              <div style={{ color: 'var(--ok)' }}>{success}</div>
-            </div>
-            <button 
-              className="button" 
-              onClick={() => setSuccess(null)}
-              style={{ background: 'var(--ok)', minWidth: 'auto', padding: '6px 12px' }}
-            >
-              ×
-            </button>
-          </div>
+      {/* Dynamic table */}
+      {!loading && !err && metrics && columns.length > 0 ? (
+        <div style={{ overflowX: "auto", border: "1px solid #eee", borderRadius: 8 }}>
+          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Brand</th>
+                {columns.map((c) => (
+                  <th key={c} style={thStyle}>{c}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((row) => (
+                <tr key={row.brand}>
+                  <td style={tdStyleBold}>{row.brand}</td>
+                  {row.cells.map((v, i) => (
+                    <td key={i} style={tdStyle}>
+                      {formatCell(v)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      ) : null}
+
+      {/* Fallback raw JSON for debugging (collapsible) */}
+      {!loading && metrics && (
+        <details style={{ marginTop: 16 }}>
+          <summary>Raw response</summary>
+          <pre style={{ background: "#111", color: "#eee", padding: 12, borderRadius: 8 }}>
+            {JSON.stringify({ brands_used: brandsAll, metrics }, null, 2)}
+          </pre>
+        </details>
       )}
-
-      {/* File Upload Section */}
-      <div className="card">
-        <h3 className="title">Upload Data Files</h3>
-        
-        {/* Drag & Drop Zone */}
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`dropzone ${dragOver ? 'dragover' : ''}`}
-          style={{ marginBottom: 12 }}
-        >
-          {dragOver ? "Release to upload..." : "Drag & drop CSV, JSON, or JSONL files here"}
-        </div>
-
-        {/* File Input */}
-        <input 
-          type="file" 
-          multiple 
-          accept=".csv,.json,.jsonl"
-          onChange={(e) => {
-            clearMessages();
-            uploadFiles(e.target.files);
-          }}
-          disabled={busy}
-          style={{ marginBottom: 8 }}
-        />
-
-        <div className="muted">
-          <strong>Supported formats:</strong> CSV, JSON, JSONL<br/>
-          <strong>Expected columns:</strong> brand, platform, date, likes, comments, shares, text, url
-        </div>
-      </div>
-
-      {/* Uploaded Files Section */}
-      <div className="card">
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 className="title" style={{ margin: 0 }}>Uploaded Files ({files.length})</h3>
-          <button 
-            className="button" 
-            onClick={() => {
-              clearMessages();
-              refreshFiles();
-            }}
-            disabled={busy}
-            style={{ minWidth: 'auto' }}
-          >
-            {busy ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-        
-        {files.length === 0 ? (
-          <div className="muted">No files uploaded yet. Upload some data files to get started.</div>
-        ) : (
-          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-            {files.map((filename) => (
-              <div key={filename} className="row" style={{ 
-                justifyContent: "space-between", 
-                marginBottom: 8,
-                padding: 8,
-                background: 'rgba(255,255,255,0.02)',
-                borderRadius: 6,
-                border: '1px solid var(--line)'
-              }}>
-                <span style={{ wordBreak: 'break-all' }}>{filename}</span>
-                <button 
-                  className="button" 
-                  onClick={() => removeFile(filename)} 
-                  disabled={busy}
-                  style={{ 
-                    background: 'var(--danger)', 
-                    minWidth: 'auto',
-                    padding: '4px 8px',
-                    fontSize: 12
-                  }}
-                >
-                  {busy ? '...' : 'Delete'}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Report Generation Section */}
-      <div className="card">
-        <h3 className="title">Generate Intelligence Report</h3>
-        <div className="row" style={{ marginBottom: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1', minWidth: 200 }}>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: 14, color: 'var(--muted)' }}>
-              Brand Names (comma-separated)
-            </label>
-            <input 
-              type="text"
-              value={brands} 
-              onChange={(e) => {
-                setBrands(e.target.value);
-                clearMessages();
-              }}
-              placeholder="e.g., Crooks & Castles, Stussy, Supreme"
-              disabled={busy}
-              style={{ width: '100%' }}
-            />
-          </div>
-          
-          <div style={{ minWidth: 120 }}>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: 14, color: 'var(--muted)' }}>
-              Days to Analyze
-            </label>
-            <input 
-              type="number" 
-              min="1" 
-              max="365" 
-              value={days} 
-              onChange={(e) => {
-                setDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)));
-                clearMessages();
-              }}
-              disabled={busy}
-              style={{ width: '100%' }}
-            />
-          </div>
-          
-          <div style={{ alignSelf: 'flex-end' }}>
-            <button 
-              className="button" 
-              onClick={() => {
-                clearMessages();
-                generateReport();
-              }}
-              disabled={busy || !brands.trim()}
-              style={{ padding: '10px 16px' }}
-            >
-              {busy ? 'Generating...' : 'Generate Report'}
-            </button>
-          </div>
-        </div>
-        
-        <div className="muted">
-          {brands.trim() ? 
-            `Will analyze last ${days} days for: ${brands}` : 
-            'Enter brand names to generate a report'
-          }
-        </div>
-      </div>
-
-      {/* Intelligence Analysis Results */}
-      <IntelligencePanel data={data} />
     </div>
   );
+}
+
+const thStyle = {
+  textAlign: "left",
+  padding: "10px 12px",
+  borderBottom: "1px solid #eee",
+  position: "sticky",
+  top: 0,
+  background: "#fafafa",
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+};
+
+const tdStyle = {
+  padding: "10px 12px",
+  borderBottom: "1px solid #f2f2f2",
+  whiteSpace: "nowrap",
+};
+
+const tdStyleBold = { ...tdStyle, fontWeight: 600 };
+
+function formatCell(v) {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "number") {
+    // Heuristic: treat 0–1 as rate, larger numbers as counts
+    if (v > 0 && v <= 1) return `${(v * 100).toFixed(1)}%`;
+    if (Number.isInteger(v)) return v.toLocaleString();
+    return v.toFixed(2);
+  }
+  return String(v);
 }
