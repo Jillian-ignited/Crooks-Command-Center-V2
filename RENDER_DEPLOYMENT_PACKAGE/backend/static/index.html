@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crooks & Castles Command Center V2 - Production</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-border {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            padding: 2px;
+            border-radius: 12px;
+        }
+        .gradient-border > div {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 1.5rem;
+        }
+        .gradient-text {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 1rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .notification.success { background: #10B981; }
+        .notification.error { background: #EF4444; }
+        .notification.info { background: #3B82F6; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Notification Container -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Header -->
+    <header class="bg-black border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold gradient-text">Crooks & Castles Command Center V2</h1>
+                    <span class="bg-green-500 text-black px-2 py-1 rounded text-xs font-semibold">PRODUCTION</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="status-indicator" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm">Checking...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-gray-800 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8 overflow-x-auto py-4">
+                <button onclick="showSection('dashboard')" class="nav-btn whitespace-nowrap px-4 py-2 rounded-lg bg-orange-600 text-white font-medium">Dashboard</button>
+                <button onclick="showSection('intelligence')" class="nav-btn whitespace-nowrap px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white">Intelligence</button>
+                <button onclick="showSection('content')" class="nav-btn whitespace-nowrap px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white">Content</button>
+                <button onclick="showSection('agency')" class="nav-btn whitespace-nowrap px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white">Agency</button>
+                <button onclick="showSection('ingest')" class="nav-btn whitespace-nowrap px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white">Data Ingest</button>
+                <button onclick="showSection('executive')" class="nav-btn whitespace-nowrap px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white">Executive</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="section">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="gradient-border">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">System Status</h3>
+                        <div id="system-status" class="text-sm text-gray-300">Loading...</div>
+                    </div>
+                </div>
+                <div class="gradient-border">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Active Modules</h3>
+                        <div id="active-modules" class="text-sm text-gray-300">Loading...</div>
+                    </div>
+                </div>
+                <div class="gradient-border">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">API Health</h3>
+                        <div id="api-health" class="text-sm text-gray-300">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intelligence Section -->
+        <div id="intelligence-section" class="section hidden">
+            <div class="gradient-border mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Intelligence Dashboard</h2>
+                    <button onclick="generateIntelligenceReport()" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg font-medium">Generate Report</button>
+                    <div id="intelligence-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Section -->
+        <div id="content-section" class="section hidden">
+            <div class="gradient-border mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Content Management</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <button onclick="loadContentDashboard()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium">Load Dashboard</button>
+                        <button onclick="generateContentIdeas()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium">Generate Ideas</button>
+                    </div>
+                    <div id="content-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agency Section -->
+        <div id="agency-section" class="section hidden">
+            <div class="gradient-border mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Agency Dashboard</h2>
+                    <button onclick="loadAgencyDashboard()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-medium">Load Dashboard</button>
+                    <div id="agency-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Ingest Section -->
+        <div id="ingest-section" class="section hidden">
+            <div class="gradient-border mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Data Ingestion</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Upload File</label>
+                            <input type="file" id="file-input" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Source</label>
+                            <select id="source-select" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg">
+                                <option value="exec">Executive</option>
+                                <option value="catalog">Catalog</option>
+                                <option value="social">Social Media</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex space-x-4 mb-4">
+                        <button onclick="uploadFile()" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg font-medium">Upload</button>
+                        <button onclick="loadIngestOverview()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium">Load Overview</button>
+                    </div>
+                    <div id="ingest-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Section -->
+        <div id="executive-section" class="section hidden">
+            <div class="gradient-border mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Executive Dashboard</h2>
+                    <button onclick="loadExecutiveDashboard()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium">Load Dashboard</button>
+                    <div id="executive-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Centralized API client
+        class APIClient {
+            constructor(baseURL = '') {
+                this.baseURL = baseURL;
+            }
+
+            async request(endpoint, options = {}) {
+                const url = `${this.baseURL}/api${endpoint}`;
+                const config = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                };
+
+                try {
+                    const response = await fetch(url, config);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`API Error for ${url}:`, error);
+                    throw error;
+                }
+            }
+
+            async get(endpoint) {
+                return this.request(endpoint, { method: 'GET' });
+            }
+
+            async post(endpoint, data) {
+                return this.request(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+            }
+
+            async upload(endpoint, formData) {
+                const url = `${this.baseURL}/api${endpoint}`;
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Upload Error for ${url}:`, error);
+                    throw error;
+                }
+            }
+        }
+
+        const api = new APIClient();
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(`${sectionName}-section`).classList.remove('hidden');
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-orange-600');
+                btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+            });
+            event.target.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+            event.target.classList.add('bg-orange-600');
+        }
+
+        // System status check
+        async function checkSystemStatus() {
+            try {
+                const status = await api.get('/status');
+                document.getElementById('status-indicator').innerHTML = `
+                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span class="text-sm">Online</span>
+                `;
+                
+                document.getElementById('system-status').innerHTML = `
+                    <div class="text-green-400">✓ Status: ${status.status}</div>
+                    <div class="text-gray-300">Version: ${status.version}</div>
+                `;
+                
+                document.getElementById('active-modules').innerHTML = 
+                    status.modules.map(m => `<div class="text-green-400">✓ ${m}</div>`).join('');
+                
+                document.getElementById('api-health').innerHTML = `
+                    <div class="text-green-400">✓ All endpoints operational</div>
+                    <div class="text-gray-300">Last check: ${new Date().toLocaleTimeString()}</div>
+                `;
+            } catch (error) {
+                document.getElementById('status-indicator').innerHTML = `
+                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span class="text-sm">Error</span>
+                `;
+                showNotification('System status check failed', 'error');
+            }
+        }
+
+        // Intelligence functions
+        async function generateIntelligenceReport() {
+            try {
+                showNotification('Generating intelligence report...', 'info');
+                const result = await api.post('/intelligence/report', {});
+                document.getElementById('intelligence-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Intelligence Report Generated</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('Intelligence report generated successfully', 'success');
+            } catch (error) {
+                showNotification('Failed to generate intelligence report', 'error');
+                document.getElementById('intelligence-results').innerHTML = `
+                    <div class="bg-red-900 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Error</h3>
+                        <p class="text-sm">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Content functions
+        async function loadContentDashboard() {
+            try {
+                showNotification('Loading content dashboard...', 'info');
+                const result = await api.get('/content/dashboard');
+                document.getElementById('content-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Content Dashboard</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('Content dashboard loaded', 'success');
+            } catch (error) {
+                showNotification('Failed to load content dashboard', 'error');
+            }
+        }
+
+        async function generateContentIdeas() {
+            try {
+                showNotification('Generating content ideas...', 'info');
+                const result = await api.get('/content/ideas/generate');
+                document.getElementById('content-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Content Ideas</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('Content ideas generated', 'success');
+            } catch (error) {
+                showNotification('Failed to generate content ideas', 'error');
+            }
+        }
+
+        // Agency functions
+        async function loadAgencyDashboard() {
+            try {
+                showNotification('Loading agency dashboard...', 'info');
+                const result = await api.get('/agency/dashboard');
+                document.getElementById('agency-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Agency Dashboard</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('Agency dashboard loaded', 'success');
+            } catch (error) {
+                showNotification('Failed to load agency dashboard', 'error');
+            }
+        }
+
+        // Ingest functions
+        async function uploadFile() {
+            const fileInput = document.getElementById('file-input');
+            const sourceSelect = document.getElementById('source-select');
+            
+            if (!fileInput.files[0]) {
+                showNotification('Please select a file', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Uploading file...', 'info');
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('source', sourceSelect.value);
+                
+                const result = await api.upload('/ingest/upload', formData);
+                document.getElementById('ingest-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Upload Result</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('File uploaded successfully', 'success');
+            } catch (error) {
+                showNotification('Failed to upload file', 'error');
+            }
+        }
+
+        async function loadIngestOverview() {
+            try {
+                showNotification('Loading ingest overview...', 'info');
+                const result = await api.get('/ingest/overview');
+                document.getElementById('ingest-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Ingest Overview</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('Ingest overview loaded', 'success');
+            } catch (error) {
+                showNotification('Failed to load ingest overview', 'error');
+            }
+        }
+
+        // Executive functions
+        async function loadExecutiveDashboard() {
+            try {
+                showNotification('Loading executive dashboard...', 'info');
+                const result = await api.get('/executive/dashboard');
+                document.getElementById('executive-results').innerHTML = `
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">Executive Dashboard</h3>
+                        <pre class="text-sm text-gray-300">${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                showNotification('Executive dashboard loaded', 'success');
+            } catch (error) {
+                showNotification('Failed to load executive dashboard', 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSystemStatus();
+            setInterval(checkSystemStatus, 30000); // Check every 30 seconds
+        });
+    </script>
+</body>
+</html>
