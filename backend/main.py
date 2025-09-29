@@ -8,7 +8,9 @@ import importlib, os
 from types import ModuleType
 from typing import Optional, List, Tuple
 
-APP_VERSION = "frontend-static-v4"
+APP_VERSION = "frontend-static-v5"
+
+# Where the exported Next site is copied to during build
 STATIC_ROOT = "backend/static/site"
 NEXT_DIR    = os.path.join(STATIC_ROOT, "_next")
 NEXT_STATIC = os.path.join(NEXT_DIR, "static")
@@ -22,7 +24,7 @@ app.add_middleware(
     allow_methods=["*"], allow_headers=["*"],
 )
 
-# --- Health ---
+# --- Health / identity ---
 @app.get("/health")
 @app.get("/api/health")
 def health():
@@ -53,7 +55,7 @@ def _mount(name: str, prefix: str, candidates: List[str]):
     app.include_router(mod.router, prefix=f"/api{prefix}", tags=[name])
     print(f"[main] Mounted '{name}' (from {used}) at /api{prefix}")
 
-# Routers
+# --- Routers ---
 _mount("agency",           "/agency",           ["backend.routers.agency"])
 _mount("calendar",         "/calendar",         ["backend.routers.calendar"])
 _mount("content",          "/content",          ["backend.routers.content_creation","backend.routers.content"])
@@ -65,25 +67,21 @@ _mount("shopify",          "/shopify",          ["backend.routers.shopify"])
 _mount("summary",          "/summary",          ["backend.routers.summary"])
 _mount("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar","backend.routers.sidecar"])
 
-# --- Explicit Next.js mounts (avoid 404s for hashed assets) ---
-if os.path.isdir(NEXT_DIR):
-    app.mount("/_next", StaticFiles(directory=NEXT_DIR, html=False), name="next")
-    print(f"[main] Mounted '/_next' from {os.path.abspath(NEXT_DIR)}")
-else:
-    print(f"[main] WARN: Missing Next dir: {os.path.abspath(NEXT_DIR)}")
+# --- Debug probes under /api (cannot be shadowed by static mount) ---
+@app.get("/api/__routes")
+def list_routes():
+    rows = []
+    for r in app.routes:
+        if isinstance(r, APIRoute):
+            rows.append({
+                "path": r.path,
+                "methods": sorted(list(r.methods)),
+                "name": r.name
+            })
+    return rows
 
-if os.path.isdir(NEXT_STATIC):
-    app.mount("/_next/static", StaticFiles(directory=NEXT_STATIC, html=False), name="next-static")
-    print(f"[main] Mounted '/_next/static' from {os.path.abspath(NEXT_STATIC)}")
-else:
-    print(f"[main] WARN: Missing Next static dir: {os.path.abspath(NEXT_STATIC)}")
-
-# --- Serve SPA at root LAST (so it doesn’t shadow /api/*) ---
-app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="site")
-
-# --- Static diagnostics under /api so they cannot be shadowed ---
 @app.get("/api/__static_ping", response_class=PlainTextResponse)
-def __static_ping():
+def static_ping():
     parts = [
         f"ROOT exists={os.path.isdir(STATIC_ROOT)} path={os.path.abspath(STATIC_ROOT)}",
         f"_next exists={os.path.isdir(NEXT_DIR)} path={os.path.abspath(NEXT_DIR)}",
@@ -92,7 +90,7 @@ def __static_ping():
     return "\n".join(parts)
 
 @app.get("/api/__static_debug")
-def __static_debug():
+def static_debug():
     info = {
         "root":   {"path": os.path.abspath(STATIC_ROOT), "exists": os.path.isdir(STATIC_ROOT)},
         "next":   {"path": os.path.abspath(NEXT_DIR),    "exists": os.path.isdir(NEXT_DIR)},
@@ -110,12 +108,27 @@ def __static_debug():
     info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
     return JSONResponse(info)
 
-# --- Startup: list routes ---
+# --- Explicit Next.js mounts (avoid 404s for hashed assets) ---
+if os.path.isdir(NEXT_DIR):
+    app.mount("/_next", StaticFiles(directory=NEXT_DIR, html=False), name="next")
+    print(f"[main] Mounted '/_next' from {os.path.abspath(NEXT_DIR)}")
+else:
+    print(f"[main] WARN: Missing Next dir: {os.path.abspath(NEXT_DIR)}")
+
+if os.path.isdir(NEXT_STATIC):
+    app.mount("/_next/static", StaticFiles(directory=NEXT_STATIC, html=False), name="next-static")
+    print(f"[main] Mounted '/_next/static' from {os.path.abspath(NEXT_STATIC)}")
+else:
+    print(f"[main] WARN: Missing Next static dir: {os.path.abspath(NEXT_STATIC)}")
+
+# --- Serve SPA at root LAST ---
+app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="site")
+
+# --- Startup: print the route table clearly ---
 @app.on_event("startup")
 async def _log_routes():
     print("=== ROUTES MOUNTED ===")
     for r in app.routes:
         if isinstance(r, APIRoute):
-            methods = ",".join(sorted(r.methods))
-            print(f"{methods:15} {r.path}")
-    print("======================")
+            print(f"{','.join(sorted(r.methods)):15} {r.path}")
+    print("=== DEBUG PROBES READY === /api/__whoami /api/__routes /api/__static_ping /api/__static_debug ===")
