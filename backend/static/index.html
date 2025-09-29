@@ -3,833 +3,1077 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crooks & Castles Command Center V2 - Enhanced</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/static/js/INTELLIGENCE_INTEGRATION_LAYER.js"></script>
-    <script src="/static/js/CROSS_MODULE_RECOMMENDATION_ENGINE.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Crooks Command Center</title>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .gradient-border {
-            background: linear-gradient(45deg, #FF6B35, #F7931E);
-            padding: 2px;
-            border-radius: 12px;
+        /* Base styles */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0a0a0a;
+            color: #f0f0f0;
         }
-        .gradient-border > div {
-            background: #1a1a1a;
-            border-radius: 10px;
-            padding: 1.5rem;
+        
+        /* Header styles */
+        .header {
+            background-color: rgba(20, 20, 20, 0.8);
+            border-bottom: 1px solid #333;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
         }
-        .gradient-text {
-            background: linear-gradient(45deg, #FF6B35, #F7931E);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        
+        .logo {
+            color: #f0f0f0;
+            font-size: 18px;
+            font-weight: 600;
+            text-decoration: none;
         }
-        .shimmer {
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: shimmer 2s infinite;
+        
+        .nav {
+            display: flex;
+            gap: 10px;
         }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        
+        .nav a {
+            color: #f0f0f0;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
         }
-        .particle {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: #FF6B35;
-            border-radius: 50%;
-            animation: float 6s infinite ease-in-out;
+        
+        .nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
         }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
-            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
+        
+        .version {
+            font-size: 12px;
+            color: #888;
         }
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            padding: 1rem 1.5rem;
+        
+        /* Main content styles */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        /* Module grid styles */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .module-card {
+            background: linear-gradient(to bottom right, rgba(30, 30, 30, 0.8), rgba(20, 20, 20, 0.8));
+            border: 1px solid;
             border-radius: 8px;
-            color: white;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .module-card a {
+            color: #f0f0f0;
+            text-decoration: none;
+            display: block;
+            font-size: 18px;
             font-weight: 500;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
         }
-        .notification.show {
-            transform: translateX(0);
+        
+        .module-card::after {
+            content: attr(data-number);
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
         }
-        .notification.success {
-            background: linear-gradient(45deg, #10B981, #059669);
+        
+        /* Module specific colors */
+        .module-executive {
+            border-color: #9c27b0;
         }
-        .notification.error {
-            background: linear-gradient(45deg, #EF4444, #DC2626);
+        
+        .module-intelligence {
+            border-color: #ff5722;
         }
-        .tab-content {
+        
+        .module-content {
+            border-color: #4caf50;
+        }
+        
+        .module-asset {
+            border-color: #e91e63;
+        }
+        
+        .module-upload {
+            border-color: #2196f3;
+        }
+        
+        .module-calendar {
+            border-color: #ff9800;
+        }
+        
+        .module-summary {
+            border-color: #8bc34a;
+        }
+        
+        .module-agency {
+            border-color: #3f51b5;
+        }
+        
+        .module-shopify {
+            border-color: #ffc107;
+        }
+        
+        /* Dashboard styles */
+        .dashboard {
             display: none;
+            margin-top: 30px;
         }
-        .tab-content.active {
+        
+        .dashboard.active {
             display: block;
         }
-        .upload-area {
-            border: 2px dashed #FF6B35;
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
         }
-        .upload-area:hover {
-            border-color: #F7931E;
-            background: rgba(255, 107, 53, 0.05);
+        
+        .dashboard-card {
+            background: linear-gradient(to bottom right, rgba(30, 30, 30, 0.8), rgba(20, 20, 20, 0.8));
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
         }
-        .upload-area.dragover {
-            border-color: #F7931E;
-            background: rgba(255, 107, 53, 0.1);
+        
+        .dashboard-card h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        /* Intelligence recommendations styles */
+        .intelligence-recommendations {
+            margin-top: 30px;
+            background: linear-gradient(to right, rgba(30, 30, 30, 0.8), rgba(20, 20, 20, 0.8));
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .recommendation-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .recommendation-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .recommendation-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .recommendation-title::before {
+            content: "→";
+            margin-right: 8px;
+            color: #ff5722;
+        }
+        
+        .recommendation-description {
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        .recommendation-source {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .recommendation-priority-high {
+            border-left: 3px solid #f44336;
+            padding-left: 10px;
+        }
+        
+        .recommendation-priority-medium {
+            border-left: 3px solid #ff9800;
+            padding-left: 10px;
+        }
+        
+        .recommendation-priority-low {
+            border-left: 3px solid #4caf50;
+            padding-left: 10px;
+        }
+        
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* JSON formatting */
+        pre {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+        
+        .json-key {
+            color: #f8c555;
+        }
+        
+        .json-value {
+            color: #7ec699;
+        }
+        
+        .json-string {
+            color: #f08d49;
+        }
+        
+        .json-number {
+            color: #cc99cd;
+        }
+        
+        .json-boolean {
+            color: #56b6c2;
+        }
+        
+        .json-null {
+            color: #c678dd;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-    <!-- Background particles -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
-        <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
-        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
-        <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
-        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
-        <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
-        <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
-        <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
-        <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
-    </div>
-
-    <!-- Notification container -->
-    <div id="notification" class="notification"></div>
-
+<body>
     <!-- Header -->
-    <header class="bg-black/50 backdrop-blur-md border-b border-gray-800">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">C&C</span>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold gradient-text">Command Center V2</h1>
-                        <p class="text-gray-400 text-sm">Enhanced Edition - Multi-Format Intelligence</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-sm text-gray-300">System Online</span>
-                    </div>
-                    <div id="dataStatus" class="text-sm text-gray-400">Loading...</div>
-                </div>
-            </div>
+    <div class="header">
+        <a href="#" class="logo">Crooks Command Center</a>
+        <div class="nav">
+            <a href="#" data-page="dashboard">Dashboard</a>
+            <a href="#" data-page="executive">Executive Overview</a>
+            <a href="#" data-page="intelligence">Intelligence</a>
+            <a href="#" data-page="executive-summary">Executive Summary</a>
+            <a href="#" data-page="calendar">Calendar</a>
+            <a href="#" data-page="agency">Agency</a>
         </div>
-    </header>
-
-    <!-- Navigation -->
-    <nav class="bg-gray-800/50 backdrop-blur-md border-b border-gray-700">
-        <div class="container mx-auto px-6">
-            <div class="flex space-x-8">
-                <button onclick="showTab('ingest')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors active">
-                    📊 Enhanced Data Ingest
-                </button>
-                <button onclick="showTab('intelligence')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
-                    🧠 Revenue Intelligence
-                </button>
-                <button onclick="showTab('agency')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
-                    🎯 Real Agency Tracking
-                </button>
-                <button onclick="showTab('content')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
-                    ✨ Content Creation
-                </button>
-                <button onclick="showTab('calendar')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
-                    📅 Campaign Calendar
-                </button>
-                <button onclick="showTab('assets')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
-                    🎨 Asset Library
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="container mx-auto px-6 py-8">
+        <div class="version">v2.1</div>
+    </div>
+    
+    <!-- Main content -->
+    <div class="container">
+        <h1>Crooks Command Center</h1>
         
-        <!-- Enhanced Data Ingest Tab -->
-        <div id="ingest" class="tab-content active">
-            <div class="gradient-border mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold gradient-text mb-4">Enhanced Multi-Format Data Ingest</h2>
-                    <p class="text-gray-300 mb-6">Upload social media data, Shopify reports, and agency files. Supports JSON, JSONL, CSV, and Excel formats.</p>
-                    
-                    <!-- Upload Area -->
-                    <div class="upload-area mb-6" onclick="document.getElementById('fileInput').click()">
-                        <div class="text-4xl mb-4">📁</div>
-                        <h3 class="text-lg font-semibold mb-2">Drop files here or click to upload</h3>
-                        <p class="text-gray-400 mb-4">Supports: JSON, JSONL, CSV, Excel (.xlsx, .xls)</p>
-                        <div class="text-sm text-gray-500">
-                            • Social Media Data (Instagram, TikTok, Twitter)<br>
-                            • Shopify Reports (Sales, Orders, Products)<br>
-                            • Agency Reports (Projects, Deliverables)
-                        </div>
-                    </div>
-                    
-                    <input type="file" id="fileInput" multiple accept=".json,.jsonl,.csv,.xlsx,.xls" style="display: none;">
-                    
-                    <!-- Upload Progress -->
-                    <div id="uploadProgress" class="hidden mb-6">
-                        <div class="bg-gray-700 rounded-full h-2 mb-2">
-                            <div id="progressBar" class="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        <div id="progressText" class="text-sm text-gray-400">Uploading...</div>
-                    </div>
-                    
-                    <!-- Data Overview -->
-                    <div id="dataOverview" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-gray-800/50 rounded-lg p-4">
-                            <h4 class="font-semibold mb-2">📱 Social Media Data</h4>
-                            <div id="socialMediaCount" class="text-2xl font-bold gradient-text">0</div>
-                            <div class="text-sm text-gray-400">Posts & Videos</div>
-                        </div>
-                        <div class="bg-gray-800/50 rounded-lg p-4">
-                            <h4 class="font-semibold mb-2">🛒 E-commerce Data</h4>
-                            <div id="ecommerceCount" class="text-2xl font-bold gradient-text">0</div>
-                            <div class="text-sm text-gray-400">Orders & Products</div>
-                        </div>
-                        <div class="bg-gray-800/50 rounded-lg p-4">
-                            <h4 class="font-semibold mb-2">📋 Agency Data</h4>
-                            <div id="agencyCount" class="text-2xl font-bold gradient-text">0</div>
-                            <div class="text-sm text-gray-400">Projects & Tasks</div>
-                        </div>
-                    </div>
+        <h2>Choose a module:</h2>
+        
+        <div class="module-grid">
+            <div class="module-card module-executive" data-number="7">
+                <a href="#" data-module="executive">Executive Overview →</a>
+            </div>
+            
+            <div class="module-card module-intelligence" data-number="8">
+                <a href="#" data-module="intelligence">Intelligence →</a>
+            </div>
+            
+            <div class="module-card module-content" data-number="9">
+                <a href="#" data-module="content">Content Creation →</a>
+            </div>
+            
+            <div class="module-card module-asset" data-number="10">
+                <a href="#" data-module="asset">Asset Library →</a>
+            </div>
+            
+            <div class="module-card module-upload" data-number="11">
+                <a href="#" data-module="upload">Upload (Data & Media) →</a>
+            </div>
+            
+            <div class="module-card module-calendar" data-number="12">
+                <a href="#" data-module="calendar">Calendar →</a>
+            </div>
+            
+            <div class="module-card module-summary" data-number="13">
+                <a href="#" data-module="summary">Summary →</a>
+            </div>
+            
+            <div class="module-card module-agency" data-number="14">
+                <a href="#" data-module="agency">Agency →</a>
+            </div>
+            
+            <div class="module-card module-shopify" data-number="15">
+                <a href="#" data-module="shopify">Shopify →</a>
+            </div>
+        </div>
+        
+        <!-- Intelligence Recommendations Section (hidden by default) -->
+        <div class="intelligence-recommendations" id="intelligence-recommendations" style="display: none;">
+            <h2>Intelligence-Driven Recommendations</h2>
+            <div id="recommendations-container">
+                <div class="loading-container">
+                    Loading recommendations <span class="loading"></span>
                 </div>
             </div>
         </div>
-
-        <!-- Revenue Intelligence Tab -->
-        <div id="intelligence" class="tab-content">
-            <div class="gradient-border mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold gradient-text mb-4">Unified Revenue Intelligence</h2>
-                    <p class="text-gray-300 mb-6">Advanced analytics combining social media insights with e-commerce data for comprehensive strategic recommendations.</p>
-                    
-                    <button onclick="generateIntelligenceReport()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 mb-6">
-                        Generate Unified Intelligence Report
-                    </button>
-                    
-                    <div id="intelligenceReport" class="space-y-6">
-                        <!-- Intelligence report will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Real Agency Tracking Tab -->
-        <div id="agency" class="tab-content">
-            <div class="gradient-border mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold gradient-text mb-4">Real Agency Project Tracking</h2>
-                    <p class="text-gray-300 mb-6">Comprehensive project management with real deliverables, timelines, and team performance tracking.</p>
-                    
-                    <div class="flex space-x-4 mb-6">
-                        <button onclick="loadAgencyDashboard()" class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Load Dashboard
-                        </button>
-                        <button onclick="showCreateProject()" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Create Project
-                        </button>
-                        <button onclick="loadTimeTracking()" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Time Tracking
-                        </button>
-                    </div>
-                    
-                    <div id="agencyDashboard" class="space-y-6">
-                        <!-- Agency dashboard will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Content Creation Tab -->
-        <div id="content" class="tab-content">
-            <div class="gradient-border mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold gradient-text mb-4">Content Creation & Planning</h2>
-                    <p class="text-gray-300 mb-6">Strategic content planning with AI-powered idea generation and performance optimization.</p>
-                    
-                    <div class="flex space-x-4 mb-6">
-                        <button onclick="loadContentDashboard()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Content Dashboard
-                        </button>
-                        <button onclick="generateContentIdeas()" class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Generate Ideas
-                        </button>
-                        <button onclick="showContentTemplates()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Templates
-                        </button>
-                        <button onclick="analyzeContentPerformance()" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Performance Analysis
-                        </button>
-                    </div>
-                    
-                    <div id="contentDashboard" class="space-y-6">
-                        <!-- Content dashboard will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Campaign Calendar Tab -->
-        <div id="calendar" class="tab-content">
-            <div class="gradient-border mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold gradient-text mb-4">Strategic Campaign Calendar</h2>
-                    <p class="text-gray-300 mb-6">Multi-view content planning with cultural moments and strategic campaign coordination.</p>
-                    
-                    <div class="flex space-x-4 mb-6">
-                        <button onclick="loadCalendarView('week')" class="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Weekly View
-                        </button>
-                        <button onclick="loadCalendarView('month')" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Monthly View
-                        </button>
-                        <button onclick="loadCalendarView('quarter')" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Quarterly View
-                        </button>
-                    </div>
-                    
-                    <div id="calendarView" class="space-y-6">
-                        <!-- Calendar view will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Asset Library Tab -->
-        <div id="assets" class="tab-content">
-            <div class="gradient-border mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold gradient-text mb-4">Digital Asset Library</h2>
-                    <p class="text-gray-300 mb-6">Centralized asset management with performance tracking and usage analytics.</p>
-                    
-                    <div class="flex space-x-4 mb-6">
-                        <button onclick="showAssetCategory('images')" class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Images
-                        </button>
-                        <button onclick="showAssetCategory('videos')" class="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Videos
-                        </button>
-                        <button onclick="showAssetCategory('audio')" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
-                            Audio
-                        </button>
-                    </div>
-                    
-                    <div id="assetLibrary" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <!-- Asset library will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
+        
+        <!-- Module dashboards will be loaded here -->
+        <div id="module-dashboards"></div>
+    </div>
+    
+    <!-- Main application script -->
     <script>
-        // Global variables
-        let activeTab = 'ingest';
-        
-        // Show notification
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.classList.add('show');
+        // API client for making requests to the backend
+        const APIClient = {
+            baseUrl: '',
             
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 5000);
-        }
-        
-        // Show tab
-        function showTab(tabId) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
+            // Helper method to construct API URLs
+            getUrl(endpoint) {
+                // Ensure endpoint starts with /api/
+                if (!endpoint.startsWith('/api/')) {
+                    endpoint = '/api/' + endpoint.replace(/^\/+/, '');
+                }
+                return this.baseUrl + endpoint;
+            },
             
-            // Show selected tab
-            document.getElementById(tabId).classList.add('active');
+            // GET request
+            async get(endpoint) {
+                try {
+                    const response = await fetch(this.getUrl(endpoint));
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Error fetching ${endpoint}:`, error);
+                    return { success: false, error: error.message };
+                }
+            },
             
-            // Update active state in navigation
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-                btn.classList.remove('border-orange-500');
-                btn.classList.add('border-transparent');
-            });
-            
-            // Find the button that was clicked and mark it as active
-            document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
-            document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('border-orange-500');
-            
-            // Update active tab
-            activeTab = tabId;
-            
-            // Load data for the tab
-            if (tabId === 'ingest') {
-                loadDataOverview();
-            } else if (tabId === 'intelligence') {
-                // Don't auto-load intelligence report as it's expensive
-            } else if (tabId === 'agency') {
-                loadAgencyDashboard();
-            } else if (tabId === 'content') {
-                loadContentDashboard();
-            } else if (tabId === 'calendar') {
-                loadCalendarView('month');
-            } else if (tabId === 'assets') {
-                showAssetCategory('images');
+            // POST request
+            async post(endpoint, data) {
+                try {
+                    const response = await fetch(this.getUrl(endpoint), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Error posting to ${endpoint}:`, error);
+                    return { success: false, error: error.message };
+                }
             }
+        };
+        
+        // Helper function to format JSON for display
+        function formatJSON(obj) {
+            if (!obj) return '';
+            
+            // Convert the object to a JSON string with indentation
+            const jsonString = JSON.stringify(obj, null, 2);
+            
+            // Apply syntax highlighting
+            const highlighted = jsonString
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                })
+                .replace(/\n/g, '<br>')
+                .replace(/\s{2}/g, '&nbsp;&nbsp;');
+            
+            return highlighted;
         }
         
-        // Load data overview
-        async function loadDataOverview() {
-            try {
-                const response = await fetch('/api/ingest/overview');
-                const data = await response.json();
+        // Module loader
+        const ModuleLoader = {
+            async loadModule(moduleName) {
+                const dashboardsContainer = document.getElementById('module-dashboards');
                 
-                if (data.success) {
-                    // Update data counts
-                    document.getElementById('socialMediaCount').textContent = 
-                        (data.data_sources?.social_media?.instagram || 0) + 
-                        (data.data_sources?.social_media?.tiktok || 0) + 
-                        (data.data_sources?.social_media?.twitter || 0);
+                // Clear existing content
+                dashboardsContainer.innerHTML = '';
+                
+                // Create dashboard container
+                const dashboard = document.createElement('div');
+                dashboard.className = 'dashboard active';
+                dashboard.id = `${moduleName}-dashboard`;
+                
+                // Show loading state
+                dashboard.innerHTML = `<h2>${this.getModuleTitle(moduleName)}</h2><div class="loading-container">Loading ${moduleName} data <span class="loading"></span></div>`;
+                dashboardsContainer.appendChild(dashboard);
+                
+                try {
+                    // Load module data
+                    const data = await this.fetchModuleData(moduleName);
                     
-                    document.getElementById('ecommerceCount').textContent = 
-                        (data.data_sources?.ecommerce?.shopify_orders || 0) + 
-                        (data.data_sources?.ecommerce?.shopify_products || 0);
-                    
-                    document.getElementById('agencyCount').textContent = 
-                        (data.data_sources?.agency?.projects || 0) + 
-                        (data.data_sources?.agency?.deliverables || 0);
-                    
-                    // Update data status
-                    document.getElementById('dataStatus').textContent = 
-                        `Last Update: ${new Date(data.last_ingestion).toLocaleTimeString()}`;
-                    
-                    showNotification('Data overview loaded successfully', 'success');
-                } else {
-                    showNotification('Failed to load data overview', 'error');
+                    // Render module content
+                    this.renderModuleContent(moduleName, data, dashboard);
+                } catch (error) {
+                    dashboard.innerHTML = `<h2>${this.getModuleTitle(moduleName)}</h2><div class="error">Error loading module: ${error.message}</div>`;
                 }
-            } catch (error) {
-                console.error('Failed to load data overview:', error);
-            }
-        }
-
-        // Generate intelligence report
-        async function generateIntelligenceReport() {
-            const reportDiv = document.getElementById('intelligenceReport');
-            reportDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Generating unified intelligence report...</p></div>';
-
-            try {
-                const response = await fetch('/api/intelligence/report', { method: 'POST' });
-                const data = await response.json();
-
-                if (data.success) {
-                    displayIntelligenceReport(data.report);
-                    showNotification('Intelligence report generated successfully', 'success');
-                } else {
-                    reportDiv.innerHTML = `<div class="text-red-400">Failed to generate report: ${data.error}</div>`;
-                }
-            } catch (error) {
-                reportDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
-            }
-        }
-
-        // Display intelligence report
-        function displayIntelligenceReport(report) {
-            const reportDiv = document.getElementById('intelligenceReport');
+            },
             
-            reportDiv.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">📊 Data Analysis</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${report.data_summary?.total_records || 0}</div>
-                        <div class="text-sm text-gray-400">Total Records Analyzed</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">💭 Sentiment Score</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${report.sentiment_analysis?.overall_sentiment || 'N/A'}</div>
-                        <div class="text-sm text-gray-400">Overall Brand Sentiment</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">📈 Trend Score</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${report.trend_analysis?.momentum_score || 'N/A'}</div>
-                        <div class="text-sm text-gray-400">Brand Momentum</div>
-                    </div>
-                </div>
-
-                <div class="bg-gray-800/50 rounded-lg p-6 mb-6">
-                    <h3 class="text-xl font-semibold mb-4">🎯 Strategic Recommendations</h3>
-                    <div class="space-y-3">
-                        ${(report.strategic_recommendations || []).map(rec => `
-                            <div class="flex items-start space-x-3 p-3 bg-gray-700/50 rounded-lg">
-                                <div class="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                                <div>
-                                    <div class="font-medium">${rec.title || rec}</div>
-                                    <div class="text-sm text-gray-400">${rec.description || ''}</div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-4">🔥 Trending Topics</h3>
-                        <div class="space-y-2">
-                            ${(report.trending_topics || []).map(topic => `
-                                <div class="flex justify-between items-center p-2 bg-gray-700/50 rounded">
-                                    <span>${topic.topic || topic}</span>
-                                    <span class="text-orange-500 font-medium">${topic.score || 'High'}</span>
-                                </div>
-                            `).join('')}
+            getModuleTitle(moduleName) {
+                const titles = {
+                    'executive': 'Executive Overview',
+                    'intelligence': 'Intelligence',
+                    'content': 'Content Creation',
+                    'asset': 'Asset Library',
+                    'upload': 'Upload (Data & Media)',
+                    'calendar': 'Calendar',
+                    'summary': 'Summary',
+                    'agency': 'Agency',
+                    'shopify': 'Shopify'
+                };
+                
+                return titles[moduleName] || moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+            },
+            
+            async fetchModuleData(moduleName) {
+                // Map module names to API endpoints
+                const endpoints = {
+                    'executive': 'executive/overview',
+                    'intelligence': 'intelligence/dashboard',
+                    'content': 'content/dashboard',
+                    'asset': 'media/library',
+                    'upload': 'ingest/overview',
+                    'calendar': 'calendar/upcoming',
+                    'summary': 'summary/dashboard',
+                    'agency': 'agency/dashboard',
+                    'shopify': 'shopify'
+                };
+                
+                const endpoint = endpoints[moduleName];
+                if (!endpoint) {
+                    throw new Error(`Unknown module: ${moduleName}`);
+                }
+                
+                return await APIClient.get(endpoint);
+            },
+            
+            renderModuleContent(moduleName, data, container) {
+                // Clear loading state
+                container.innerHTML = `<h2>${this.getModuleTitle(moduleName)}</h2>`;
+                
+                // Create content based on module type
+                switch (moduleName) {
+                    case 'executive':
+                        this.renderExecutiveModule(data, container);
+                        break;
+                    case 'intelligence':
+                        this.renderIntelligenceModule(data, container);
+                        break;
+                    case 'agency':
+                        this.renderAgencyModule(data, container);
+                        break;
+                    case 'shopify':
+                        this.renderShopifyModule(data, container);
+                        break;
+                    default:
+                        // Generic rendering for other modules
+                        this.renderGenericModule(data, container);
+                }
+            },
+            
+            renderExecutiveModule(data, container) {
+                const dashboardGrid = document.createElement('div');
+                dashboardGrid.className = 'dashboard-grid';
+                
+                // KPI Card
+                const kpiCard = document.createElement('div');
+                kpiCard.className = 'dashboard-card';
+                kpiCard.innerHTML = `
+                    <h3>Key Performance Indicators</h3>
+                    <div class="kpi-grid">
+                        <div class="kpi-item">
+                            <div class="kpi-label">Revenue</div>
+                            <div class="kpi-value">$${data.revenue ? data.revenue.toLocaleString() : '—'}</div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Engagement</div>
+                            <div class="kpi-value">${data.engagement ? data.engagement.toLocaleString() : '—'}</div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Conversion Rate</div>
+                            <div class="kpi-value">${data.conversion_rate ? data.conversion_rate.toFixed(2) + '%' : '—'}</div>
                         </div>
                     </div>
-                    
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-4">🏆 Performance Metrics</h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span>Engagement Rate</span>
-                                <span class="text-green-400">${report.performance_metrics?.engagement_rate || '4.2%'}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>Reach Growth</span>
-                                <span class="text-green-400">${report.performance_metrics?.reach_growth || '+15%'}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>Brand Mentions</span>
-                                <span class="text-blue-400">${report.performance_metrics?.brand_mentions || '1,247'}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Load agency dashboard
-        async function loadAgencyDashboard() {
-            const dashboardDiv = document.getElementById('agencyDashboard');
-            dashboardDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading agency dashboard...</p></div>';
-
-            try {
-                const response = await fetch('/api/agency/dashboard');
-                const data = await response.json();
-
-                if (data.success) {
-                    displayAgencyDashboard(data);
-                    showNotification('Agency dashboard loaded successfully', 'success');
-                } else {
-                    dashboardDiv.innerHTML = `<div class="text-red-400">Failed to load dashboard: ${data.error}</div>`;
-                }
-            } catch (error) {
-                dashboardDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
-            }
-        }
-
-        // Display agency dashboard
-        function displayAgencyDashboard(data) {
-            const dashboardDiv = document.getElementById('agencyDashboard');
-            const metrics = data.metrics || {};
-            
-            dashboardDiv.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">📋 Active Projects</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.active_projects || 0}</div>
-                        <div class="text-sm text-gray-400">Currently Running</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">✅ Completion Rate</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.completion_rate || 0}%</div>
-                        <div class="text-sm text-gray-400">Deliverables On Time</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">⚠️ Overdue Items</h3>
-                        <div class="text-3xl font-bold text-red-400 mb-2">${metrics.overdue_deliverables || 0}</div>
-                        <div class="text-sm text-gray-400">Need Attention</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">⭐ Client Satisfaction</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.client_satisfaction || 0}/5</div>
-                        <div class="text-sm text-gray-400">Average Rating</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-4">🚀 Current Projects</h3>
-                        <div class="space-y-3">
-                            ${(data.current_projects || []).map(project => `
-                                <div class="p-3 bg-gray-700/50 rounded-lg">
-                                    <div class="font-medium">${project.name}</div>
-                                    <div class="text-sm text-gray-400">${project.client} • ${project.status}</div>
-                                    <div class="text-xs text-gray-500 mt-1">Due: ${new Date(project.end_date).toLocaleDateString()}</div>
+                `;
+                
+                // Projects Card
+                const projectsCard = document.createElement('div');
+                projectsCard.className = 'dashboard-card';
+                projectsCard.innerHTML = `
+                    <h3>Active Projects</h3>
+                    <div class="projects-list">
+                        ${data.projects && data.projects.length > 0 ? 
+                            data.projects.map(project => `
+                                <div class="project-item">
+                                    <div class="project-name">${project.name}</div>
+                                    <div class="project-status">${project.status}</div>
+                                    <div class="project-progress">
+                                        <div class="progress-bar" style="width: ${project.progress}%"></div>
+                                    </div>
                                 </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-4">📅 Upcoming Deadlines</h3>
-                        <div class="space-y-3">
-                            ${(data.upcoming_deadlines || []).map(deadline => `
-                                <div class="p-3 bg-gray-700/50 rounded-lg">
-                                    <div class="font-medium">${deadline.title}</div>
-                                    <div class="text-sm text-gray-400">${deadline.project_name}</div>
-                                    <div class="text-xs text-orange-400 mt-1">Due: ${new Date(deadline.due_date).toLocaleDateString()}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Load content dashboard
-        async function loadContentDashboard() {
-            const dashboardDiv = document.getElementById('contentDashboard');
-            dashboardDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading content dashboard...</p></div>';
-
-            try {
-                const response = await fetch('/api/content/dashboard');
-                const data = await response.json();
-
-                if (data.success) {
-                    displayContentDashboard(data);
-                    showNotification('Content dashboard loaded successfully', 'success');
-                } else {
-                    dashboardDiv.innerHTML = `<div class="text-red-400">Failed to load dashboard: ${data.error}</div>`;
-                }
-            } catch (error) {
-                dashboardDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
-            }
-        }
-
-        // Display content dashboard
-        function displayContentDashboard(data) {
-            const dashboardDiv = document.getElementById('contentDashboard');
-            const metrics = data.content_metrics || {};
-            
-            dashboardDiv.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">📝 Content Pieces</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${data.content_performance?.total_content || 0}</div>
-                        <div class="text-sm text-gray-400">Total Created</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">📊 Avg Engagement</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.avg_engagement_rate || 0}%</div>
-                        <div class="text-sm text-gray-400">Engagement Rate</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">🚀 Content Velocity</h3>
-                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.content_velocity || 0}</div>
-                        <div class="text-sm text-gray-400">Posts per Day</div>
-                    </div>
-                    <div class="bg-gray-800/50 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold mb-2">🎯 Top Pillar</h3>
-                        <div class="text-lg font-bold gradient-text mb-2">${metrics.top_performing_pillar || 'N/A'}</div>
-                        <div class="text-sm text-gray-400">Best Performing</div>
-                    </div>
-                </div>
-
-                <div class="bg-gray-800/50 rounded-lg p-6">
-                    <h3 class="text-lg font-semibold mb-4">💡 Content Ideas</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        ${(data.content_ideas || []).map(idea => `
-                            <div class="p-4 bg-gray-700/50 rounded-lg">
-                                <div class="font-medium mb-2">${idea.title}</div>
-                                <div class="text-sm text-gray-400 mb-2">${idea.description}</div>
-                                <div class="flex justify-between text-xs">
-                                    <span class="text-${idea.trending_factor > 8 ? 'green' : 'yellow'}-400">Trend: ${idea.trending_factor}/10</span>
-                                    <span class="text-blue-400">${idea.platform}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        // Generate content ideas
-        async function generateContentIdeas() {
-            try {
-                const response = await fetch('/api/content/ideas/generate');
-                const data = await response.json();
-
-                if (data.success) {
-                    showNotification(`Generated ${data.ideas.length} new content ideas`, 'success');
-                    loadContentDashboard(); // Refresh dashboard
-                } else {
-                    showNotification(`Failed to generate ideas: ${data.error}`, 'error');
-                }
-            } catch (error) {
-                showNotification(`Error: ${error.message}`, 'error');
-            }
-        }
-
-        // Show asset category
-        function showAssetCategory(category) {
-            const assetLibrary = document.getElementById('assetLibrary');
-            
-            // Show loading state
-            assetLibrary.innerHTML = '<div class="col-span-full text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading assets...</p></div>';
-            
-            // Load assets from API
-            fetch(`/api/media/library?type=${category}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const assets = data.assets || [];
-                        
-                        if (assets.length === 0) {
-                            assetLibrary.innerHTML = '<div class="col-span-full text-center py-8">No assets found in this category</div>';
-                            return;
+                            `).join('') : 
+                            '<div class="no-data">No active projects</div>'
                         }
-                        
-                        assetLibrary.innerHTML = assets.map(asset => `
-                            <div class="bg-gray-800/50 rounded-lg p-4 hover:bg-gray-700/50 transition-colors">
-                                <div class="text-4xl mb-2 text-center">
-                                    ${asset.type === 'image' ? '🖼️' : asset.type === 'video' ? '🎥' : '🎵'}
+                    </div>
+                `;
+                
+                // Alerts Card
+                const alertsCard = document.createElement('div');
+                alertsCard.className = 'dashboard-card';
+                alertsCard.innerHTML = `
+                    <h3>Alerts & Notifications</h3>
+                    <div class="alerts-list">
+                        ${data.alerts && data.alerts.length > 0 ? 
+                            data.alerts.map(alert => `
+                                <div class="alert-item alert-${alert.priority}">
+                                    <div class="alert-title">${alert.title}</div>
+                                    <div class="alert-message">${alert.message}</div>
                                 </div>
-                                <div class="text-sm font-medium mb-1">${asset.name}</div>
-                                <div class="text-xs text-gray-400 mb-3">${asset.size}</div>
-                                <button onclick="downloadAsset('${asset.id}')" class="w-full bg-gray-700 hover:bg-gray-600 text-xs py-1 rounded transition-colors">
-                                    Download
-                                </button>
+                            `).join('') : 
+                            '<div class="no-data">No alerts</div>'
+                        }
+                    </div>
+                `;
+                
+                dashboardGrid.appendChild(kpiCard);
+                dashboardGrid.appendChild(projectsCard);
+                dashboardGrid.appendChild(alertsCard);
+                container.appendChild(dashboardGrid);
+            },
+            
+            renderIntelligenceModule(data, container) {
+                const dashboardGrid = document.createElement('div');
+                dashboardGrid.className = 'dashboard-grid';
+                
+                // Competitive Analysis Card
+                const competitiveCard = document.createElement('div');
+                competitiveCard.className = 'dashboard-card';
+                competitiveCard.innerHTML = `
+                    <h3>Competitive Analysis</h3>
+                    <div class="competitive-summary">
+                        <div class="metric">
+                            <div class="metric-label">Tracked Competitors</div>
+                            <div class="metric-value">${data.competitors_count || '—'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Active Campaigns</div>
+                            <div class="metric-value">${data.campaigns_count || '—'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Market Share Trend</div>
+                            <div class="metric-value">${data.market_share_trend ? (data.market_share_trend > 0 ? '+' : '') + data.market_share_trend.toFixed(1) + '%' : '—'}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Trend Analysis Card
+                const trendCard = document.createElement('div');
+                trendCard.className = 'dashboard-card';
+                trendCard.innerHTML = `
+                    <h3>Trend Analysis</h3>
+                    <div class="trends-list">
+                        ${data.trends && data.trends.length > 0 ? 
+                            data.trends.map(trend => `
+                                <div class="trend-item">
+                                    <div class="trend-name">${trend.name}</div>
+                                    <div class="trend-impact">Impact: ${trend.impact}</div>
+                                    <div class="trend-opportunity">Opportunity Score: ${trend.opportunity_score}</div>
+                                </div>
+                            `).join('') : 
+                            '<div class="no-data">No trend data available</div>'
+                        }
+                    </div>
+                `;
+                
+                // Recommendations Card
+                const recommendationsCard = document.createElement('div');
+                recommendationsCard.className = 'dashboard-card';
+                recommendationsCard.innerHTML = `
+                    <h3>Strategic Recommendations</h3>
+                    <div class="recommendations-list">
+                        ${data.recommendations && data.recommendations.length > 0 ? 
+                            data.recommendations.map(rec => `
+                                <div class="recommendation-item recommendation-priority-${rec.priority}">
+                                    <div class="recommendation-title">${rec.title}</div>
+                                    <div class="recommendation-description">${rec.description}</div>
+                                </div>
+                            `).join('') : 
+                            '<div class="no-data">No recommendations available</div>'
+                        }
+                    </div>
+                `;
+                
+                dashboardGrid.appendChild(competitiveCard);
+                dashboardGrid.appendChild(trendCard);
+                dashboardGrid.appendChild(recommendationsCard);
+                container.appendChild(dashboardGrid);
+            },
+            
+            renderAgencyModule(data, container) {
+                const dashboardGrid = document.createElement('div');
+                dashboardGrid.className = 'dashboard-grid';
+                
+                // Projects Card
+                const projectsCard = document.createElement('div');
+                projectsCard.className = 'dashboard-card';
+                projectsCard.innerHTML = `
+                    <h3>Agency Projects</h3>
+                    <div class="projects-list">
+                        ${data.projects && data.projects.length > 0 ? 
+                            data.projects.map(project => `
+                                <div class="project-item">
+                                    <div class="project-name">${project.name}</div>
+                                    <div class="project-client">${project.client}</div>
+                                    <div class="project-status">${project.status}</div>
+                                    <div class="project-progress">
+                                        <div class="progress-bar" style="width: ${project.progress}%"></div>
+                                    </div>
+                                </div>
+                            `).join('') : 
+                            '<div class="no-data">No projects available</div>'
+                        }
+                    </div>
+                `;
+                
+                // Deliverables Card
+                const deliverablesCard = document.createElement('div');
+                deliverablesCard.className = 'dashboard-card';
+                deliverablesCard.innerHTML = `
+                    <h3>Upcoming Deliverables</h3>
+                    <div class="deliverables-list">
+                        ${data.deliverables && data.deliverables.length > 0 ? 
+                            data.deliverables.map(deliverable => `
+                                <div class="deliverable-item">
+                                    <div class="deliverable-name">${deliverable.name}</div>
+                                    <div class="deliverable-project">${deliverable.project}</div>
+                                    <div class="deliverable-due-date">Due: ${new Date(deliverable.due_date).toLocaleDateString()}</div>
+                                </div>
+                            `).join('') : 
+                            '<div class="no-data">No upcoming deliverables</div>'
+                        }
+                    </div>
+                `;
+                
+                // Metrics Card
+                const metricsCard = document.createElement('div');
+                metricsCard.className = 'dashboard-card';
+                metricsCard.innerHTML = `
+                    <h3>Agency Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-label">Utilization Rate</div>
+                            <div class="metric-value">${data.metrics && data.metrics.utilization_rate ? data.metrics.utilization_rate.toFixed(1) + '%' : '—'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Project Completion Rate</div>
+                            <div class="metric-value">${data.metrics && data.metrics.completion_rate ? data.metrics.completion_rate.toFixed(1) + '%' : '—'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Client Satisfaction</div>
+                            <div class="metric-value">${data.metrics && data.metrics.client_satisfaction ? data.metrics.client_satisfaction.toFixed(1) + '/10' : '—'}</div>
+                        </div>
+                    </div>
+                `;
+                
+                dashboardGrid.appendChild(projectsCard);
+                dashboardGrid.appendChild(deliverablesCard);
+                dashboardGrid.appendChild(metricsCard);
+                container.appendChild(dashboardGrid);
+            },
+            
+            renderShopifyModule(data, container) {
+                const dashboardGrid = document.createElement('div');
+                dashboardGrid.className = 'dashboard-grid';
+                
+                // Store Overview Card
+                const overviewCard = document.createElement('div');
+                overviewCard.className = 'dashboard-card';
+                overviewCard.innerHTML = `
+                    <h3>Store Overview</h3>
+                    <div class="store-overview">
+                        <div class="store-name">${data.store_name || 'Crooks & Castles'}</div>
+                        <div class="metrics-grid">
+                            <div class="metric">
+                                <div class="metric-label">Total Products</div>
+                                <div class="metric-value">${data.total_products || '—'}</div>
                             </div>
-                        `).join('');
-                    } else {
-                        assetLibrary.innerHTML = `<div class="col-span-full text-center py-8 text-red-400">Error: ${data.error || 'Failed to load assets'}</div>`;
+                            <div class="metric">
+                                <div class="metric-label">Total Orders</div>
+                                <div class="metric-value">${data.total_orders || '—'}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Total Customers</div>
+                                <div class="metric-value">${data.total_customers || '—'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Revenue Card
+                const revenueCard = document.createElement('div');
+                revenueCard.className = 'dashboard-card';
+                revenueCard.innerHTML = `
+                    <h3>Revenue</h3>
+                    <div class="revenue-summary">
+                        <div class="metric">
+                            <div class="metric-label">Total Revenue</div>
+                            <div class="metric-value">$${data.revenue && data.revenue.total ? data.revenue.total.toLocaleString() : '—'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Average Order Value</div>
+                            <div class="metric-value">$${data.revenue && data.revenue.average_order_value ? data.revenue.average_order_value.toLocaleString() : '—'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Growth</div>
+                            <div class="metric-value">${data.revenue && data.revenue.growth ? (data.revenue.growth > 0 ? '+' : '') + data.revenue.growth.toFixed(1) + '%' : '—'}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Top Products Card
+                const productsCard = document.createElement('div');
+                productsCard.className = 'dashboard-card';
+                productsCard.innerHTML = `
+                    <h3>Top Products</h3>
+                    <div class="products-list">
+                        ${data.top_products && data.top_products.length > 0 ? 
+                            data.top_products.map(product => `
+                                <div class="product-item">
+                                    <div class="product-title">${product.title}</div>
+                                    <div class="product-price">$${product.price}</div>
+                                    <div class="product-inventory">Inventory: ${product.inventory_quantity}</div>
+                                </div>
+                            `).join('') : 
+                            '<div class="no-data">No product data available</div>'
+                        }
+                    </div>
+                `;
+                
+                dashboardGrid.appendChild(overviewCard);
+                dashboardGrid.appendChild(revenueCard);
+                dashboardGrid.appendChild(productsCard);
+                container.appendChild(dashboardGrid);
+            },
+            
+            renderGenericModule(data, container) {
+                // For modules without specific rendering, display formatted JSON
+                const jsonContainer = document.createElement('div');
+                jsonContainer.className = 'json-container';
+                jsonContainer.innerHTML = `<pre>${formatJSON(data)}</pre>`;
+                container.appendChild(jsonContainer);
+            }
+        };
+        
+        // Intelligence Integration Layer
+        const IntelligenceLayer = (function() {
+            // Private data store
+            let _moduleData = {};
+            let _recommendations = [];
+            let _initialized = false;
+            
+            /**
+             * Initialize the intelligence layer
+             * @returns {Promise} Promise that resolves when initialization is complete
+             */
+            async function initialize() {
+                if (_initialized) return Promise.resolve();
+                
+                try {
+                    // Fetch data from all modules
+                    const modules = ['intelligence', 'executive', 'content', 'agency', 'shopify'];
+                    const promises = modules.map(module => fetchModuleData(module));
+                    
+                    // Wait for all data to be fetched
+                    await Promise.all(promises);
+                    
+                    // Generate cross-module recommendations
+                    generateRecommendations();
+                    
+                    // Show recommendations section
+                    document.getElementById('intelligence-recommendations').style.display = 'block';
+                    
+                    // Render recommendations
+                    renderRecommendations();
+                    
+                    _initialized = true;
+                    return Promise.resolve();
+                } catch (error) {
+                    console.error('Error initializing intelligence layer:', error);
+                    return Promise.reject(error);
+                }
+            }
+            
+            /**
+             * Fetch data for a specific module
+             * @param {string} module - Module name
+             * @returns {Promise} Promise that resolves when data is fetched
+             */
+            async function fetchModuleData(module) {
+                try {
+                    // Map module names to API endpoints
+                    const endpoints = {
+                        'executive': 'executive/overview',
+                        'intelligence': 'intelligence/dashboard',
+                        'content': 'content/dashboard',
+                        'agency': 'agency/dashboard',
+                        'shopify': 'shopify'
+                    };
+                    
+                    const endpoint = endpoints[module];
+                    if (!endpoint) return;
+                    
+                    const data = await APIClient.get(endpoint);
+                    _moduleData[module] = data;
+                } catch (error) {
+                    console.error(`Error fetching ${module} data:`, error);
+                }
+            }
+            
+            /**
+             * Generate cross-module recommendations
+             */
+            function generateRecommendations() {
+                // Initialize the recommendation engine with all module data
+                if (window.RecommendationEngine) {
+                    _recommendations = window.RecommendationEngine.initialize(_moduleData);
+                } else {
+                    // Fallback if recommendation engine is not loaded
+                    _recommendations = generateFallbackRecommendations();
+                }
+            }
+            
+            /**
+             * Generate fallback recommendations if the recommendation engine is not available
+             * @returns {Array} Generated recommendations
+             */
+            function generateFallbackRecommendations() {
+                const recommendations = [];
+                
+                // Add intelligence-based recommendations
+                if (_moduleData.intelligence) {
+                    if (_moduleData.intelligence.trends && _moduleData.intelligence.trends.length > 0) {
+                        const trend = _moduleData.intelligence.trends[0];
+                        recommendations.push({
+                            title: `Leverage Trend: ${trend.name}`,
+                            description: `Develop strategy to capitalize on identified trend with opportunity score of ${trend.opportunity_score}.`,
+                            priority: 'high',
+                            source: 'intelligence',
+                            modules: ['intelligence', 'executive']
+                        });
                     }
-                })
-                .catch(error => {
-                    assetLibrary.innerHTML = `<div class="col-span-full text-center py-8 text-red-400">Error: ${error.message}</div>`;
-                });
-        }
-
-        // Download asset
-        function downloadAsset(assetId) {
-            showNotification('Starting download...', 'success');
-            // In a real app, this would trigger a download
-        }
-
-        // Load calendar view
-        function loadCalendarView(viewType) {
-            const calendarView = document.getElementById('calendarView');
-            calendarView.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading calendar...</p></div>';
-            
-            // Load calendar data from API
-            fetch(`/api/calendar/upcoming?view=${viewType}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const events = data.events || [];
-                        
-                        if (events.length === 0) {
-                            calendarView.innerHTML = '<div class="text-center py-8">No events scheduled</div>';
-                            return;
-                        }
-                        
-                        calendarView.innerHTML = `
-                            <div class="bg-gray-800/50 rounded-lg p-6">
-                                <h3 class="text-lg font-semibold mb-4">📅 ${viewType.charAt(0).toUpperCase() + viewType.slice(1)} View</h3>
-                                <div class="space-y-3">
-                                    ${events.map(event => `
-                                        <div class="p-3 bg-gray-700/50 rounded-lg">
-                                            <div class="flex justify-between">
-                                                <div class="font-medium">${event.title}</div>
-                                                <div class="text-sm text-orange-400">${new Date(event.date).toLocaleDateString()}</div>
-                                            </div>
-                                            <div class="text-sm text-gray-400 mt-1">${event.type}</div>
-                                            <div class="text-xs text-gray-500 mt-2">${event.description || ''}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        calendarView.innerHTML = `<div class="text-center py-8 text-red-400">Error: ${data.error || 'Failed to load calendar'}</div>`;
-                    }
-                })
-                .catch(error => {
-                    calendarView.innerHTML = `<div class="text-center py-8 text-red-400">Error: ${error.message}</div>`;
-                });
-        }
-
-        // Show create project form
-        function showCreateProject() {
-            // In a real app, this would show a form to create a new project
-            showNotification('Project creation form would appear here', 'success');
-        }
-
-        // Load time tracking
-        function loadTimeTracking() {
-            // In a real app, this would load time tracking data
-            showNotification('Time tracking data would load here', 'success');
-        }
-
-        // Show content templates
-        function showContentTemplates() {
-            // In a real app, this would show content templates
-            showNotification('Content templates would appear here', 'success');
-        }
-
-        // Analyze content performance
-        function analyzeContentPerformance() {
-            // In a real app, this would analyze content performance
-            showNotification('Content performance analysis would load here', 'success');
-        }
-
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', () => {
-            // Load initial data
-            loadDataOverview();
-            
-            // Set up file input change handler
-            document.getElementById('fileInput').addEventListener('change', (event) => {
-                const files = event.target.files;
-                if (files.length > 0) {
-                    // Show upload progress
-                    document.getElementById('uploadProgress').classList.remove('hidden');
                     
-                    // Simulate upload progress
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        progress += 10;
-                        document.getElementById('progressBar').style.width = `${progress}%`;
-                        document.getElementById('progressText').textContent = `Uploading... ${progress}%`;
-                        
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                            document.getElementById('progressText').textContent = 'Processing files...';
-                            
-                            // Simulate processing delay
-                            setTimeout(() => {
-                                document.getElementById('uploadProgress').classList.add('hidden');
-                                showNotification(`Successfully uploaded ${files.length} files`, 'success');
-                                loadDataOverview(); // Refresh data overview
-                            }, 1500);
-                        }
-                    }, 300);
+                    if (_moduleData.intelligence.competitors_count) {
+                        recommendations.push({
+                            title: 'Competitive Analysis',
+                            description: `Review competitive landscape with ${_moduleData.intelligence.competitors_count} tracked competitors.`,
+                            priority: 'medium',
+                            source: 'intelligence',
+                            modules: ['intelligence', 'executive']
+                        });
+                    }
                 }
+                
+                // Add shopify-based recommendations
+                if (_moduleData.shopify && _moduleData.shopify.revenue) {
+                    const growth = _moduleData.shopify.revenue.growth;
+                    if (growth !== undefined) {
+                        if (growth < 0) {
+                            recommendations.push({
+                                title: 'Address Revenue Decline',
+                                description: `Develop strategy to address ${Math.abs(growth).toFixed(1)}% revenue decline.`,
+                                priority: 'high',
+                                source: 'shopify',
+                                modules: ['shopify', 'executive', 'content']
+                            });
+                        } else if (growth > 10) {
+                            recommendations.push({
+                                title: 'Capitalize on Growth',
+                                description: `Leverage ${growth.toFixed(1)}% revenue growth with expanded inventory and marketing.`,
+                                priority: 'medium',
+                                source: 'shopify',
+                                modules: ['shopify', 'executive']
+                            });
+                        }
+                    }
+                }
+                
+                // Add agency-based recommendations
+                if (_moduleData.agency && _moduleData.agency.projects) {
+                    const projects = _moduleData.agency.projects;
+                    const behindSchedule = projects.filter(p => p.progress < 50 && new Date(p.end_date) < new Date(new Date().getTime() + 14 * 24 * 60 * 60 * 1000));
+                    
+                    if (behindSchedule.length > 0) {
+                        recommendations.push({
+                            title: 'Project Timeline Alert',
+                            description: `${behindSchedule.length} projects are behind schedule and approaching deadlines.`,
+                            priority: 'high',
+                            source: 'agency',
+                            modules: ['agency', 'executive']
+                        });
+                    }
+                }
+                
+                return recommendations;
+            }
+            
+            /**
+             * Render recommendations in the UI
+             */
+            function renderRecommendations() {
+                const container = document.getElementById('recommendations-container');
+                if (!container) return;
+                
+                // Clear loading state
+                container.innerHTML = '';
+                
+                if (_recommendations.length === 0) {
+                    container.innerHTML = '<div class="no-data">No recommendations available</div>';
+                    return;
+                }
+                
+                // Render each recommendation
+                _recommendations.forEach(rec => {
+                    const item = document.createElement('div');
+                    item.className = `recommendation-item recommendation-priority-${rec.priority}`;
+                    
+                    item.innerHTML = `
+                        <div class="recommendation-title">${rec.title}</div>
+                        <div class="recommendation-description">${rec.description}</div>
+                        <div class="recommendation-source">Source: ${rec.source} | Priority: ${rec.priority}</div>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+            }
+            
+            /**
+             * Get data for a specific module
+             * @param {string} module - Module name
+             * @returns {Object} Module data
+             */
+            function getModuleData(module) {
+                return _moduleData[module];
+            }
+            
+            /**
+             * Get all recommendations
+             * @returns {Array} All recommendations
+             */
+            function getRecommendations() {
+                return _recommendations;
+            }
+            
+            /**
+             * Get recommendations for a specific module
+             * @param {string} module - Module name
+             * @returns {Array} Module-specific recommendations
+             */
+            function getRecommendationsForModule(module) {
+                return _recommendations.filter(rec => 
+                    !rec.modules || rec.modules.includes(module)
+                );
+            }
+            
+            // Public API
+            return {
+                initialize,
+                getModuleData,
+                getRecommendations,
+                getRecommendationsForModule
+            };
+        })();
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Module navigation
+            const moduleLinks = document.querySelectorAll('[data-module]');
+            moduleLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const module = this.getAttribute('data-module');
+                    ModuleLoader.loadModule(module);
+                });
+            });
+            
+            // Initialize the intelligence layer
+            IntelligenceLayer.initialize().then(() => {
+                console.log('Intelligence integration complete');
+            }).catch(error => {
+                console.error('Intelligence initialization error:', error);
             });
         });
     </script>
+    
+    <!-- Intelligence Integration Layer -->
+    <script src="/static/js/INTELLIGENCE_INTEGRATION_LAYER.js"></script>
+    <script src="/static/js/CROSS_MODULE_RECOMMENDATION_ENGINE.js"></script>
 </body>
 </html>
