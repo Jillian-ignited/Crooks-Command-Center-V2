@@ -30,7 +30,8 @@ export default function AgencyPage() {
     if (!deliverableId) { setErr("Deliverable ID required"); return; }
     try {
       const res = await apiPut(`/agency/deliverables/${deliverableId}/status`, {
-        body: { status: deliverableStatus, quality_score: quality ? Number(quality) : null }
+        status: deliverableStatus,
+        quality_score: quality ? Number(quality) : null
       });
       setMsg(`Deliverable ${res.deliverable_id} → ${res.new_status}`);
       await load();
@@ -42,7 +43,8 @@ export default function AgencyPage() {
     if (!projectId) { setErr("Project ID required"); return; }
     try {
       const res = await apiPut(`/agency/projects/${projectId}/progress`, {
-        body: { completion_percentage: Number(completion), status: projectStatus }
+        completion_percentage: Number(completion),
+        status: projectStatus
       });
       setMsg(`Project ${res.project_id} → ${res.status} (${res.completion_percentage}%)`);
       await load();
