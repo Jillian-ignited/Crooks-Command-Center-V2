@@ -1,12 +1,13 @@
 {
   "name": "crooks-command-center-frontend",
-  "version": "2.0.9",
+  "version": "2.0.5",
   "private": true,
+  "description": "Next.js frontend for Crooks Command Center (static-exported and served by FastAPI).",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:static": "next build",
-    "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && test -d out || (echo 'NO out/ dir — check next.config.js output:\"export\"' && exit 1); echo OK > out/health.txt; cp -a out/. ../backend/static/site/",
+    "build": "next build && next export -o out",
+    "export": "next export -o out",
+    "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
     "start": "next start"
   },
   "dependencies": {
