@@ -11,7 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Line 9: Create FastAPI app
 app = FastAPI(title="Crooks Command Center", version="2.0.0")
-
+@app. get ("/test")
+def test_endpoint ():
+return
+{"message": "API is
+working", "status": "success"}
 # Line 10-16: Add CORS middleware FIRST
 app.add_middleware(
     CORSMiddleware,
