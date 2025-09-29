@@ -140,7 +140,7 @@ async def root():
     }
 
 # IMPORTANT: Mount static files AFTER API routes
-static_dir = "static"
+static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     # Mount at /static for assets
     app.mount("/static", StaticFiles(directory=static_dir), name="static_assets")
