@@ -106,15 +106,50 @@ async def add_api_prefix(request: Request, call_next):
     response = await call_next(request)
     return response
 
-# Mount static files AFTER API routes
+# Define static directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    # Try alternate locations
+    if os.path.exists("static"):
+        static_dir = "static"
+    elif os.path.exists("backend/static"):
+        static_dir = "backend/static"
+    else:
+        print("⚠️ Static directory not found")
+
+# Mount static files AFTER API routes
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static_assets")
+    print(f"✅ Static files mounted from {static_dir}")
+
+# Handle HEAD requests explicitly
+@app.head("/")
+async def head_root():
+    """Handle HEAD requests to root"""
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.isfile(index_path):
+        return Response(status_code=200)
+    return Response(status_code=404)
 
 # Serve index.html for SPA routing
 @app.get("/")
+async def serve_root():
+    """Serve index.html at root path"""
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
+    
+    return {
+        "message": "Crooks Command Center V2 API",
+        "status": "running",
+        "version": "2.0.4",
+        "api_docs": "/docs",
+        "health_check": "/api/health"
+    }
+
+# Handle all other paths for SPA routing
 @app.get("/{full_path:path}")
-async def serve_spa(full_path: str = ""):
+async def serve_spa(full_path: str):
     """Serve SPA for client-side routing"""
     # Skip API paths
     if full_path.startswith("api/"):
