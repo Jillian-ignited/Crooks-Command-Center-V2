@@ -1,249 +1,129 @@
-from fastapi import APIRouter
+# backend/routers/content_creation.py
+from fastapi import APIRouter, HTTPException
+from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 router = APIRouter()
 
-@router.get("/")
-async def content_root():
-    """Content root endpoint"""
+def _as_list(x):
+    if x is None: return []
+    if isinstance(x, list): return x
+    return [x]
+
+@router.post("/brief")
+def brief(payload: Dict[str, Any]):
+    """
+    Expected JSON:
+    {
+      "brand": "Crooks & Castles",
+      "objective": "Drive sell-through on F/W drop",
+      "audience": ["Gen Z", "streetwear"],
+      "tone": ["armor", "grit"],
+      "channels": ["IG Reels","TikTok","Email"],
+      "campaign_window_days": 30,
+      "constraints": ["keep logo primary", "UGC first"]
+    }
+    """
+    brand = (payload.get("brand") or "").strip() or "Brand"
+    objective = (payload.get("objective") or "Grow revenue").strip()
+    audience = _as_list(payload.get("audience")) or ["streetwear consumer"]
+    tone = _as_list(payload.get("tone")) or ["credible", "direct"]
+    channels = _as_list(payload.get("channels")) or ["IG Reels", "TikTok"]
+    window = int(payload.get("campaign_window_days") or 30)
+    constraints = _as_list(payload.get("constraints")) or []
+
+    pillars = [
+        {"name": "Cred & Culture", "why": "Signals authenticity", "proofs": ["heritage drops", "artist co-signs"]},
+        {"name": "Product Power", "why": "Moves units", "proofs": ["fabric callouts", "fit video", "close-up B-roll"]},
+        {"name": "Community", "why": "Creates pull", "proofs": ["UGC stitch", "duet with fans", "store staff picks"]},
+    ]
+    kpis = {"revenue": "↑", "ROAS": "≥ 3.0", "ER": "≥ 6%", "AOV": "≥ $95"}
+    deliverables = [
+        {"type": "Reels", "count": 8, "notes": "hook-first; 6–9s"},
+        {"type": "TikTok", "count": 8, "notes": "trend + stitch"},
+        {"type": "Stills", "count": 12, "notes": "detail + fit"},
+        {"type": "Email", "count": 4, "notes": "editorial + CTA"},
+    ]
+
     return {
-        "success": True,
-        "message": "Content API operational",
-        "endpoints": ["/dashboard", "/ideas/generate", "/calendar", "/analytics"]
+        "ok": True,
+        "generated_at": datetime.utcnow().isoformat(),
+        "brand": brand,
+        "objective": objective,
+        "audience": audience,
+        "tone": tone,
+        "channels": channels,
+        "window_days": window,
+        "constraints": constraints,
+        "pillars": pillars,
+        "kpis": kpis,
+        "deliverables": deliverables,
+        "run_of_show": [
+            {"week": 1, "focus": "cred + announce"},
+            {"week": 2, "focus": "product proof"},
+            {"week": 3, "focus": "ugc + social proof"},
+            {"week": 4, "focus": "offer + urgency"},
+        ],
     }
 
-@router.get("/dashboard")
-async def content_dashboard():
-    """Get content dashboard data"""
-    return {
-        "success": True,
-        "content_performance": {
-            "total_content": 87,
-            "published": 72,
-            "scheduled": 15,
-            "top_performing": {
-                "title": "Behind the Scenes: Fall Collection",
-                "platform": "Instagram",
-                "engagement_rate": "8.7%",
-                "reach": 45000
-            }
+@router.post("/ideas")
+def ideas(payload: Dict[str, Any]):
+    """
+    Expected JSON:
+    {
+      "brand": "Crooks & Castles",
+      "theme": "Armor + Cred",
+      "count": 5,
+      "channel": "IG Reels"
+    }
+    """
+    brand = (payload.get("brand") or "Brand").strip()
+    theme = (payload.get("theme") or "Cred").strip()
+    count = max(1, min(20, int(payload.get("count") or 5)))
+    channel = (payload.get("channel") or "IG Reels").strip()
+
+    templates = [
+        {
+            "hook": "If you know, you know — {brand} {theme} drop.",
+            "concept": "Quick cut: logo hit → detail close-up → fit.",
+            "asset_types": ["Reel", "Still", "Story"],
+            "caption_template": "Armor up. {brand} {theme}. Link in bio.",
+            "kpi_target": {"ER": "≥ 6%"},
         },
-        "content_metrics": {
-            "avg_engagement_rate": 4.8,
-            "content_velocity": 2.5,
-            "top_performing_pillar": "Product Showcases",
-            "platform_performance": {
-                "instagram": {
-                    "posts": 35,
-                    "avg_engagement": "5.2%",
-                    "best_time": "6-8 PM"
-                },
-                "tiktok": {
-                    "posts": 22,
-                    "avg_engagement": "7.8%",
-                    "best_time": "7-9 PM"
-                },
-                "twitter": {
-                    "posts": 15,
-                    "avg_engagement": "3.1%",
-                    "best_time": "12-2 PM"
-                }
-            }
+        {
+            "hook": "POV: you just upgraded to real {theme}.",
+            "concept": "POV mirror fit + sound beat drop.",
+            "asset_types": ["TikTok", "Reel"],
+            "caption_template": "POV unlocked. #{brand} #{theme}",
+            "kpi_target": {"View-Through": "≥ 35%"},
         },
-        "content_ideas": [
-            {
-                "title": "Streetwear Styling Tips",
-                "description": "Quick video series showing how to style key pieces from the new collection",
-                "platform": "TikTok",
-                "trending_factor": 9.2
-            },
-            {
-                "title": "Designer Interview",
-                "description": "Behind-the-scenes interview with head designer about inspiration",
-                "platform": "Instagram",
-                "trending_factor": 8.5
-            },
-            {
-                "title": "Limited Edition Unboxing",
-                "description": "Influencer unboxing of limited edition collaboration pieces",
-                "platform": "YouTube",
-                "trending_factor": 8.8
-            },
-            {
-                "title": "Streetwear History",
-                "description": "Educational carousel post about the evolution of streetwear",
-                "platform": "Instagram",
-                "trending_factor": 7.5
-            },
-            {
-                "title": "Customer Style Showcase",
-                "description": "Featuring real customers styling Crooks & Castles pieces",
-                "platform": "Instagram",
-                "trending_factor": 8.2
-            },
-            {
-                "title": "Design Process Timelapse",
-                "description": "Showing the creation process from sketch to final product",
-                "platform": "TikTok",
-                "trending_factor": 7.8
-            }
-        ]
-    }
+        {
+            "hook": "Don’t buy streetwear without checking THIS.",
+            "concept": "Education: fabric, stitch, print method.",
+            "asset_types": ["Reel", "Carousel"],
+            "caption_template": "{brand} makes it right. {theme} standards.",
+            "kpi_target": {"Saves": "↑"},
+        },
+        {
+            "hook": "Street test: would you wear this?",
+            "concept": "Man-on-street reactions to piece.",
+            "asset_types": ["TikTok", "Reel"],
+            "caption_template": "Say less. {brand} {theme}.",
+            "kpi_target": {"Comments": "↑"},
+        },
+    ]
 
-@router.post("/ideas/generate")
-async def generate_content_ideas():
-    """Generate new content ideas"""
-    return {
-        "success": True,
-        "ideas": [
-            {
-                "title": "Day in the Life: Streetwear Designer",
-                "description": "Follow our lead designer through their creative process for a day",
-                "platform": "Instagram Stories",
-                "trending_factor": 8.7
-            },
-            {
-                "title": "Streetwear Essentials Challenge",
-                "description": "Community challenge to style 3 essential pieces 3 different ways",
-                "platform": "TikTok",
-                "trending_factor": 9.1
-            },
-            {
-                "title": "Material Spotlight Series",
-                "description": "Educational series highlighting quality and sustainability of materials",
-                "platform": "Instagram",
-                "trending_factor": 7.9
-            },
-            {
-                "title": "Collaboration Announcement Teaser",
-                "description": "Mysterious teaser for upcoming artist collaboration",
-                "platform": "All Platforms",
-                "trending_factor": 9.5
-            }
-        ]
-    }
+    out: List[Dict[str, Any]] = []
+    for i in range(count):
+        t = templates[i % len(templates)]
+        out.append({
+            "idx": i + 1,
+            "channel": channel,
+            "hook": t["hook"].format(brand=brand, theme=theme),
+            "concept": t["concept"],
+            "asset_types": t["asset_types"],
+            "caption": t["caption_template"].format(brand=brand, theme=theme),
+            "kpi_target": t["kpi_target"],
+        })
 
-@router.get("/calendar")
-async def content_calendar():
-    """Get content calendar"""
-    return {
-        "success": True,
-        "calendar": {
-            "upcoming": [
-                {
-                    "date": "2023-09-30",
-                    "platform": "Instagram",
-                    "content_type": "Carousel Post",
-                    "title": "Fall Collection Highlights",
-                    "status": "Scheduled"
-                },
-                {
-                    "date": "2023-10-02",
-                    "platform": "TikTok",
-                    "content_type": "Video",
-                    "title": "Styling Challenge",
-                    "status": "In Production"
-                },
-                {
-                    "date": "2023-10-05",
-                    "platform": "Instagram",
-                    "content_type": "Reel",
-                    "title": "Behind the Scenes",
-                    "status": "Planned"
-                }
-            ],
-            "published": [
-                {
-                    "date": "2023-09-25",
-                    "platform": "Instagram",
-                    "content_type": "Post",
-                    "title": "New Arrival Announcement",
-                    "performance": {
-                        "engagement_rate": "5.2%",
-                        "reach": 32500,
-                        "saves": 450
-                    }
-                },
-                {
-                    "date": "2023-09-22",
-                    "platform": "TikTok",
-                    "content_type": "Video",
-                    "title": "Outfit Transition",
-                    "performance": {
-                        "engagement_rate": "7.8%",
-                        "views": 45000,
-                        "shares": 320
-                    }
-                }
-            ]
-        }
-    }
-
-@router.get("/analytics")
-async def content_analytics():
-    """Get content analytics"""
-    return {
-        "success": True,
-        "analytics": {
-            "performance_by_platform": {
-                "instagram": {
-                    "followers": 125000,
-                    "growth_rate": "+2.5%",
-                    "engagement_rate": "5.2%",
-                    "top_post": "Behind the Scenes: Fall Collection"
-                },
-                "tiktok": {
-                    "followers": 85000,
-                    "growth_rate": "+4.8%",
-                    "engagement_rate": "7.8%",
-                    "top_post": "Outfit Transition Challenge"
-                },
-                "twitter": {
-                    "followers": 45000,
-                    "growth_rate": "+1.2%",
-                    "engagement_rate": "3.1%",
-                    "top_post": "Limited Edition Drop Announcement"
-                }
-            },
-            "content_type_performance": {
-                "video": {
-                    "engagement_rate": "6.8%",
-                    "avg_watch_time": "15.5 seconds",
-                    "completion_rate": "62%"
-                },
-                "carousel": {
-                    "engagement_rate": "5.2%",
-                    "avg_swipe_through": "3.2 slides",
-                    "save_rate": "3.5%"
-                },
-                "static_image": {
-                    "engagement_rate": "4.1%",
-                    "save_rate": "2.8%",
-                    "share_rate": "1.2%"
-                }
-            },
-            "audience_insights": {
-                "age_distribution": {
-                    "18-24": "35%",
-                    "25-34": "42%",
-                    "35-44": "18%",
-                    "45+": "5%"
-                },
-                "gender_distribution": {
-                    "male": "65%",
-                    "female": "32%",
-                    "non_binary": "3%"
-                },
-                "top_locations": [
-                    "Los Angeles",
-                    "New York",
-                    "Chicago",
-                    "Atlanta",
-                    "Toronto"
-                ],
-                "active_hours": {
-                    "peak": "6-9 PM EST",
-                    "secondary": "12-2 PM EST"
-                }
-            }
-        }
-    }
+    return {"ok": True, "brand": brand, "theme": theme, "count": count, "ideas": out}
