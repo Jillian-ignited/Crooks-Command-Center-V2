@@ -1,9 +1,14 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import logging
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("crooks-command-center")
 
 # Create FastAPI app
 app = FastAPI(
@@ -39,7 +44,7 @@ print("✅ Upload directories created successfully")
 async def test_endpoint():
     return {"message": "API is working", "status": "success"}
 
-# Import and include all routers - FIXED IMPORTS
+# Import and include all routers
 try:
     from backend.routers.intelligence import router as intelligence_router
     app.include_router(intelligence_router, prefix="/api/intelligence", tags=["intelligence"])
@@ -110,6 +115,42 @@ try:
 except ImportError as e:
     print(f"⚠️ File ingestion router error: {e}")
 
+# Add middleware to fix double-slash API paths
+@app.middleware("http")
+async def fix_path_middleware(request: Request, call_next):
+    path = request.url.path
+    
+    # Fix double slashes in API paths
+    if "//" in path:
+        path = path.replace("//", "/")
+        response = JSONResponse(
+            status_code=307,
+            content={"detail": "Redirecting to correct path"},
+        )
+        response.headers["Location"] = str(request.url.replace(path=path))
+        return response
+    
+    # Forward bare paths to API paths
+    if path.startswith("/intelligence/") or \
+       path.startswith("/content/") or \
+       path.startswith("/agency/") or \
+       path.startswith("/executive/") or \
+       path.startswith("/calendar/") or \
+       path.startswith("/media/") or \
+       path.startswith("/shopify/") or \
+       path.startswith("/summary/") or \
+       path.startswith("/upload/") or \
+       path.startswith("/ingest/"):
+        api_path = f"/api{path}"
+        response = JSONResponse(
+            status_code=307,
+            content={"detail": "Redirecting to API path"},
+        )
+        response.headers["Location"] = str(request.url.replace(path=api_path))
+        return response
+    
+    return await call_next(request)
+
 # Health check endpoint
 @app.get("/api/health")
 @app.get("/api/status")
@@ -123,62 +164,150 @@ async def health_check():
         ]
     }
 
-# Root endpoint
+# Debug endpoint to check static file paths
+@app.get("/api/debug/static")
+async def debug_static():
+    # Try multiple possible static directories
+    possible_dirs = [
+        "static",
+        "backend/static",
+        "./static",
+        "../static",
+        os.path.join(os.path.dirname(__file__), "static"),
+        os.path.abspath("static"),
+        os.path.abspath("backend/static")
+    ]
+    
+    results = {}
+    for dir_path in possible_dirs:
+        results[dir_path] = {
+            "exists": os.path.exists(dir_path),
+            "is_dir": os.path.isdir(dir_path) if os.path.exists(dir_path) else False,
+            "abs_path": os.path.abspath(dir_path),
+            "contents": os.listdir(dir_path) if os.path.exists(dir_path) and os.path.isdir(dir_path) else []
+        }
+        
+        # Check for index.html
+        index_path = os.path.join(dir_path, "index.html")
+        results[dir_path]["index_exists"] = os.path.exists(index_path)
+        results[dir_path]["index_size"] = os.path.getsize(index_path) if os.path.exists(index_path) else 0
+    
+    # Get current working directory
+    results["cwd"] = os.getcwd()
+    
+    return results
+
+# IMPORTANT: Define static directory with multiple fallbacks
+static_dir = None
+possible_static_dirs = [
+    "static",
+    "backend/static",
+    "./static",
+    "../static",
+    os.path.join(os.path.dirname(__file__), "static")
+]
+
+for dir_path in possible_static_dirs:
+    if os.path.exists(dir_path) and os.path.isdir(dir_path):
+        static_dir = dir_path
+        logger.info(f"Found static directory at: {os.path.abspath(dir_path)}")
+        break
+
+if static_dir is None:
+    logger.warning("No static directory found! Creating one...")
+    os.makedirs("static", exist_ok=True)
+    static_dir = "static"
+
+# Create a simple HTML file if none exists
+index_path = os.path.join(static_dir, "index.html")
+if not os.path.exists(index_path):
+    logger.warning(f"No index.html found at {index_path}! Creating a simple one...")
+    with open(index_path, "w") as f:
+        f.write("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Crooks Command Center V2</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                h1 { color: #FF6B35; }
+            </style>
+        </head>
+        <body>
+            <h1>Crooks Command Center V2</h1>
+            <p>The API is running successfully, but no frontend was found.</p>
+            <p>API endpoints are available at <a href="/api/status">/api/status</a></p>
+        </body>
+        </html>
+        """)
+
+# Root endpoint - Serve the frontend
 @app.get("/")
 async def root():
-    static_dir = "static"
-    index_path = os.path.join(static_dir, "index.html")
+    logger.info(f"Serving root path, looking for index.html at {index_path}")
+    
     if os.path.exists(index_path):
+        logger.info(f"Found index.html at {index_path}, serving file")
         return FileResponse(index_path)
     
-    return {
-        "message": "Crooks Command Center V2 API",
-        "status": "running",
-        "version": "2.0.4",
-        "api_docs": "/docs",
-        "health_check": "/api/health"
-    }
+    logger.warning(f"index.html not found at {index_path}, returning API info")
+    return HTMLResponse(content="""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Crooks Command Center V2</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+            h1 { color: #FF6B35; }
+            pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>Crooks Command Center V2</h1>
+        <p>The API is running successfully, but no frontend was found.</p>
+        <p>API endpoints are available at <a href="/api/status">/api/status</a></p>
+        <h2>Debug Information:</h2>
+        <pre>
+Static directory: """ + static_dir + """
+Index path: """ + index_path + """
+Index exists: """ + str(os.path.exists(index_path)) + """
+Current directory: """ + os.getcwd() + """
+        </pre>
+    </body>
+    </html>
+    """, status_code=200)
 
 # IMPORTANT: Mount static files AFTER API routes
-static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     # Mount at /static for assets
+    logger.info(f"Mounting static files from {os.path.abspath(static_dir)}")
     app.mount("/static", StaticFiles(directory=static_dir), name="static_assets")
     
     # SPA fallback for client-side routing
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         """Serve frontend files or fallback to index.html"""
+        logger.info(f"Requested path: /{full_path}")
+        
         # Skip API paths
         if full_path.startswith("api/"):
+            logger.info(f"API path requested: /{full_path}, skipping frontend serving")
             raise HTTPException(status_code=404, detail="API endpoint not found")
         
         # Try to serve the requested file
         file_path = os.path.join(static_dir, full_path)
+        logger.info(f"Looking for file at: {file_path}")
         if os.path.isfile(file_path):
+            logger.info(f"File found, serving: {file_path}")
             return FileResponse(file_path)
         
         # Serve index.html for client-side routing
-        index_path = os.path.join(static_dir, "index.html")
+        logger.info(f"File not found, serving index.html as fallback")
         if os.path.isfile(index_path):
             return FileResponse(index_path)
         
+        logger.warning(f"index.html not found at {index_path}, returning 404")
         raise HTTPException(status_code=404, detail="File not found")
-# Add explicit root path handler
-@app.get("/")
-async def root():
-    """Serve index.html at the root path"""
-    index_path = os.path.join(static_dir, "index.html")
-    if os.path.isfile(index_path):
-        return FileResponse(index_path)
-    
-    return {
-        "message": "Crooks Command Center V2 API",
-        "status": "running",
-        "version": "2.0.4",
-        "api_docs": "/docs",
-        "health_check": "/api/health"
-    }
 
 print("✅ All routers loaded successfully")
 print("🚀 Crooks Command Center V2 ready for deployment")
