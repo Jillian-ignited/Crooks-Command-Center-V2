@@ -1,129 +1,156 @@
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form, Request
-from typing import Dict, Any, List, Optional
-from datetime import datetime
-import hashlib
-import random
+// frontend/pages/intelligence.js
+import { useEffect, useMemo, useState } from "react";
+import { apiGet } from "../lib/api";
 
-router = APIRouter(tags=["intelligence"])
+const DEFAULT_DAYS = 30;
 
-ALL_BRANDS: List[str] = [
-    # Required 11
-    "LRG","Hellstar","Godspeed","Smoke Rise","Reason Clothing","Supreme","Stüssy",
-    "Ed Hardy","Von Dutch","Diamond Supply Co.","Essentials by Fear of God",
-    # Rest
-    "Crooks & Castles","Memory Lane","Purple Brand","Amiri","Aimé Leon Dore","Kith","Fear of God",
-    "Off-White","BAPE","Palace","Ecko Unlimited","Sean John","Rocawear",
-    "Nike Sportswear","Jordan","Adidas Originals","Puma","New Balance Lifestyle",
-    "H&M","Zara","BoohooMAN","Shein","PacSun Private Label","Zumiez Private Label",
-]
+export default function IntelligencePage() {
+  const [brands, setBrands] = useState([]);        // all available brands from API
+  const [selected, setSelected] = useState("all"); // CSV or "all"
+  const [days, setDays] = useState(DEFAULT_DAYS);
+  const [data, setData] = useState(null);          // summary payload
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-ALIASES: Dict[str, str] = {
-    "reason clothing":"Reason Clothing",
-    "stussy":"Stüssy","stüssy":"Stüssy",
-    "diamond supply":"Diamond Supply Co.","diamond supply co":"Diamond Supply Co.",
-    "essentials":"Essentials by Fear of God","fear of god essentials":"Essentials by Fear of God","essentials by fog":"Essentials by Fear of God",
-    "crooks & castles":"Crooks & Castles","memory lane":"Memory Lane","purple brand":"Purple Brand",
-    "aimé leon dore":"Aimé Leon Dore","aime leon dore":"Aimé Leon Dore","ald":"Aimé Leon Dore",
-    "off white":"Off-White","bape":"BAPE","ecko":"Ecko Unlimited","nike":"Nike Sportswear","adidas":"Adidas Originals",
-    "new balance":"New Balance Lifestyle","boohooman":"BoohooMAN","pacsun":"PacSun Private Label","zumiez":"Zumiez Private Label",
+  async function loadBrands() {
+    try {
+      const res = await apiGet("/intelligence/brands");
+      setBrands(res.brands || []);
+    } catch (e) {
+      setErr(`Brands: ${e.message}`);
+    }
+  }
+
+  async function loadSummary({ brandsCSV = selected, windowDays = days } = {}) {
+    setLoading(true); setErr("");
+    try {
+      const res = await apiGet("/intelligence/summary", {
+        query: { brands: (brandsCSV || "all"), days: windowDays }
+      });
+      setData(res);
+    } catch (e) {
+      setErr(`Summary: ${e.message}`);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadBrands(); }, []);
+  useEffect(() => { loadSummary({}); }, []); // initial
+
+  const tableRows = useMemo(() => {
+    if (!data?.metrics) return [];
+    const keys = Object.keys(data.metrics);
+    return keys.map((b) => ({ brand: b, ...data.metrics[b] }));
+  }, [data]);
+
+  function onApply(e) {
+    e.preventDefault();
+    loadSummary({});
+  }
+
+  return (
+    <main style={{ maxWidth: 1100, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <h1 style={{ margin: 0 }}>Competitive Intelligence</h1>
+        <button onClick={() => loadSummary({})} disabled={loading} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff" }}>
+          {loading ? "Loading…" : "Refresh"}
+        </button>
+      </header>
+
+      {err && <p style={{ color: "crimson", marginTop: 12 }}>{err}</p>}
+
+      {/* Controls */}
+      <section style={{ marginTop: 16, padding: 16, border: "1px solid #eee", borderRadius: 10 }}>
+        <form onSubmit={onApply} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px", gap: 12 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Brands (CSV or “all”)</label>
+            <input
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              placeholder='e.g., Crooks & Castles, Hellstar, LRG or "all"'
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd" }}
+            />
+            {!!brands.length && (
+              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
+                Available: {brands.slice(0, 8).join(", ")}{brands.length > 8 ? "…" : ""}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Days</label>
+            <input
+              type="number" min="1" max="365" value={days}
+              onChange={(e) => setDays(Number(e.target.value || DEFAULT_DAYS))}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd" }}
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "end" }}>
+            <button type="submit" disabled={loading} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff" }}>
+              Apply
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Headline */}
+      <section style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 13, opacity: 0.75 }}>
+          Window: {data?.window_days ?? days}d · Updated: {data?.last_updated ? new Date(data.last_updated).toLocaleString() : "—"}
+        </div>
+      </section>
+
+      {/* Ranking */}
+      <section style={{ marginTop: 16, padding: 16, border: "1px solid #eee", borderRadius: 10 }}>
+        <h2 style={{ marginTop: 0 }}>Top 10 by Engagement</h2>
+        {!data?.ranking?.length && <p style={{ opacity: 0.7 }}>No data yet.</p>}
+        {!!data?.ranking?.length && (
+          <ol style={{ margin: 0, paddingLeft: 18 }}>
+            {data.ranking.map((r, i) => (
+              <li key={i} style={{ margin: "6px 0" }}>
+                <strong>{r.brand}</strong> — {r.total_engagement.toLocaleString()} total engagement
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      {/* Table */}
+      <section style={{ marginTop: 16, padding: 16, border: "1px solid #eee", borderRadius: 10 }}>
+        <h2 style={{ marginTop: 0 }}>Brand Metrics</h2>
+        {!tableRows.length && <p style={{ opacity: 0.7 }}>No metrics to display.</p>}
+        {!!tableRows.length && (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+              <thead>
+                <tr style={{ background: "#fafafa" }}>
+                  {["Brand","Posts","Avg Likes","Avg Comments","Avg Engagement","Total Engagement","Follower Growth"].map(h => (
+                    <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #eee", padding: "8px 6px", fontWeight: 600 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((row) => (
+                  <tr key={row.brand}>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px", fontWeight: 600 }}>{row.brand}</td>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.posts}</td>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.avg_likes}</td>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.avg_comments}</td>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.avg_engagement}</td>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.total_engagement?.toLocaleString?.() ?? row.total_engagement}</td>
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>
+                      {(row.follower_growth_rate * 100).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
+  );
 }
-
-def canonize(name: str) -> str:
-    k = (name or "").strip().lower()
-    if not k: return ""
-    if k in ALIASES: return ALIASES[k]
-    for b in ALL_BRANDS:
-        if b.lower() == k:
-            return b
-    return " ".join(w.capitalize() for w in k.split())
-
-def pick_brands(param: Optional[str]) -> List[str]:
-    if not param or param.strip().lower() == "all":
-        return ALL_BRANDS[:]
-    out, seen = [], set()
-    for raw in param.split(","):
-        c = canonize(raw)
-        if c and c not in seen:
-            out.append(c); seen.add(c)
-    return out or ALL_BRANDS[:]
-
-def seeded_metrics(brand: str, days: int) -> Dict[str, Any]:
-    # deterministic seed per brand + window so values are stable
-    seed = int(hashlib.sha256(f"{brand}|{days}".encode()).hexdigest()[:8], 16)
-    rng = random.Random(seed)
-    posts = rng.randint(max(2, days//10), max(10, days//3))
-    avg_like = rng.randint(80, 400)
-    avg_cmt  = rng.randint(3, 40)
-    avg_eng  = avg_like + avg_cmt*5
-    total_eng = posts * avg_eng
-    growth = round(rng.uniform(-0.05, 0.15), 3)  # -5%..+15%
-    return {
-        "posts": posts,
-        "avg_likes": avg_like,
-        "avg_comments": avg_cmt,
-        "avg_engagement": avg_eng,
-        "total_engagement": total_eng,
-        "follower_growth_rate": growth,
-    }
-
-def summary_payload(brands_q: Optional[str], days: int) -> Dict[str, Any]:
-    brands = pick_brands(brands_q)
-    metrics = { b: seeded_metrics(b, days) for b in brands }
-    # simple ranking by total_engagement
-    ranking = sorted(
-        [{"brand": b, "total_engagement": m["total_engagement"]} for b,m in metrics.items()],
-        key=lambda x: x["total_engagement"], reverse=True
-    )
-    return {
-        "ok": True,
-        "window_days": days,
-        "brands_used": brands,
-        "metrics": metrics,
-        "ranking": ranking[:10],
-        "last_updated": datetime.utcnow().isoformat(),
-    }
-
-@router.api_route("", methods=["GET","POST"])
-@router.api_route("/", methods=["GET","POST"])
-def root(brands: Optional[str] = Query(None), days: int = Query(30, ge=1, le=365)):
-    return summary_payload(brands, days)
-
-@router.api_route("/summary", methods=["GET","POST"])
-@router.api_route("/summary/", methods=["GET","POST"])
-def summary(brands: Optional[str] = Query(None), days: int = Query(30, ge=1, le=365)):
-    return summary_payload(brands, days)
-
-@router.get("/brands")
-def brands():
-    return {"ok": True, "brands": ALL_BRANDS}
-
-@router.api_route("/report", methods=["GET","POST"])
-@router.api_route("/report/", methods=["GET","POST"])
-async def report(request: Request):
-    c = (request.headers.get("content-type") or "").lower()
-    if "application/json" in c:
-        body = await request.json()
-        return {"ok": True, "type": "report",
-                "summary": summary_payload(body.get("brands"), int(body.get("days",30)))}
-    if "multipart/form-data" in c:
-        return {"ok": True, "type": "report", "received": "multipart"}
-    q = dict(request.query_params)
-    return {"ok": True, "type": "report",
-            "summary": summary_payload(q.get("brands"), int(q.get("days",30)))}
-
-@router.post("/upload")
-async def upload(request: Request, file: UploadFile | None = File(None), kind: str | None = Form(None)):
-    c = (request.headers.get("content-type") or "").lower()
-    if "multipart/form-data" in c:
-        if not file or not file.filename: raise HTTPException(status_code=400, detail="Missing file")
-        data = await file.read()
-        if not data: raise HTTPException(status_code=400, detail="Empty file")
-        return {"ok": True, "mode": "multipart", "filename": file.filename, "size": len(data),
-                "mime": file.content_type or "application/octet-stream", "kind": kind or "unknown"}
-    if "application/json" in c:
-        body = await request.json()
-        content = body.get("content")
-        if not isinstance(content, str) or not content: raise HTTPException(status_code=400, detail="Missing/invalid 'content'")
-        return {"ok": True, "mode": "json", "filename": body.get("filename","payload.txt"),
-                "size": len(content.encode()), "mime": "text/plain", "kind": body.get("kind") or "unknown"}
-    raise HTTPException(status_code=415, detail=f"Unsupported Content-Type: {c}")
