@@ -1,15 +1,17 @@
 {
   "name": "crooks-command-center-frontend",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "copy:static": "rm -rf ../backend/static && mkdir -p ../backend/static && cp -a ./out/. ../backend/static/"
+    "build:static": "next build && next export -o out",
+    "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
+    "start": "next start"
   },
   "dependencies": {
     "next": "14.2.33",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }
