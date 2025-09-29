@@ -1,5 +1,14 @@
+// frontend/next.config.js
 /** @type {import('next').NextConfig} */
-module.exports = {
-  output: "export",          // makes `next build` write to /out
-  images: { unoptimized: true }
+const nextConfig = {
+  // Static HTML export
+  output: 'export',
+
+  // Needed so Next/Image doesn’t rely on the Image Optimization server
+  images: { unoptimized: true },
+
+  // Optional: if you deep-link a lot, keeps nice URLs for static export
+  trailingSlash: false,
 };
+
+module.exports = nextConfig;
