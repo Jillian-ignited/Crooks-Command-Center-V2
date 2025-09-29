@@ -1,12 +1,12 @@
 {
   "name": "crooks-command-center-frontend",
-  "version": "2.0.5",
+  "version": "2.0.8",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:static": "next build", 
-    "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
+    "build:static": "next build",
+    "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && test -d out || (echo 'NO out/ dir — check next.config.js output:\"export\"' && exit 1); echo OK > out/health.txt; cp -a out/. ../backend/static/site/",
     "start": "next start"
   },
   "dependencies": {
