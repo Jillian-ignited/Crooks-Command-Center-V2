@@ -3,67 +3,110 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
-import importlib
+from fastapi.responses import PlainTextResponse, JSONResponse
+import importlib, os
 from types import ModuleType
 from typing import Optional, List, Tuple
 
+STATIC_ROOT = "backend/static/site"
+NEXT_DIR    = os.path.join(STATIC_ROOT, "_next")
+NEXT_STATIC = os.path.join(NEXT_DIR, "static")
+
 app = FastAPI(title="Crooks Command Center", version="1.0.0")
 
-# --- CORS (relaxed while stabilizing) ---
+# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"], allow_credentials=True,
+    allow_methods=["*"], allow_headers=["*"],
 )
 
-# --- Health (@ /api/health and /health) ---
+# --- Health ---
 @app.get("/health")
 @app.get("/api/health")
 def health():
     return {"ok": True}
 
-# --- Dynamic, tolerant router loader (so missing modules don't crash the app) ---
-def try_import(path_candidates: List[str]) -> Tuple[Optional[ModuleType], Optional[str], Optional[Exception]]:
-    last_error: Optional[Exception] = None
-    for modpath in path_candidates:
+# --- Tolerant router loader ---
+def _try_import(paths: List[str]) -> Tuple[Optional[ModuleType], Optional[str], Optional[Exception]]:
+    last = None
+    for p in paths:
         try:
-            mod = importlib.import_module(modpath)
-            return mod, modpath, None
+            return importlib.import_module(p), p, None
         except Exception as e:
-            last_error = e
-    return None, None, last_error
+            last = e
+    return None, None, last
 
-def mount_router(name: str, prefix: str, candidates: List[str]):
-    mod, used, err = try_import(candidates)
-    if mod is None:
-        print(f"[main] SKIP mounting '{name}' at /api{prefix} — module not found. Tried: {candidates}. Last error: {err}")
+def _mount(name: str, prefix: str, candidates: List[str]):
+    mod, used, err = _try_import(candidates)
+    if not mod:
+        print(f"[main] SKIP '{name}' — not found. Tried {candidates}. Last error: {err}")
         return
     if not hasattr(mod, "router"):
-        print(f"[main] SKIP mounting '{name}' at /api{prefix} — module '{used}' has no 'router'.")
+        print(f"[main] SKIP '{name}' — module '{used}' has no 'router'.")
         return
     app.include_router(mod.router, prefix=f"/api{prefix}", tags=[name])
     print(f"[main] Mounted '{name}' (from {used}) at /api{prefix}")
 
-# === Mount routers (aliases included) ===
-mount_router("agency",           "/agency",           ["backend.routers.agency"])
-mount_router("calendar",         "/calendar",         ["backend.routers.calendar"])
-mount_router("content",          "/content",          ["backend.routers.content_creation", "backend.routers.content"])
-mount_router("executive",        "/executive",        ["backend.routers.executive"])
-mount_router("ingest",           "/ingest",           ["backend.routers.ingest", "backend.routers.ingest_ENHANCED_MULTI_FORMAT"])
-mount_router("intelligence",     "/intelligence",     ["backend.routers.intelligence"])
-mount_router("media",            "/media",            ["backend.routers.media"])
-mount_router("shopify",          "/shopify",          ["backend.routers.shopify"])
-mount_router("summary",          "/summary",          ["backend.routers.summary"])
-mount_router("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar", "backend.routers.sidecar"])
+# Routers
+_mount("agency",           "/agency",           ["backend.routers.agency"])
+_mount("calendar",         "/calendar",         ["backend.routers.calendar"])
+_mount("content",          "/content",          ["backend.routers.content_creation","backend.routers.content"])
+_mount("executive",        "/executive",        ["backend.routers.executive"])
+_mount("ingest",           "/ingest",           ["backend.routers.ingest","backend.routers.ingest_ENHANCED_MULTI_FORMAT"])
+_mount("intelligence",     "/intelligence",     ["backend.routers.intelligence"])
+_mount("media",            "/media",            ["backend.routers.media"])
+_mount("shopify",          "/shopify",          ["backend.routers.shopify"])
+_mount("summary",          "/summary",          ["backend.routers.summary"])
+_mount("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar","backend.routers.sidecar"])
 
-# --- Serve the built Next.js static site (exported to backend/static/site) ---
-# NOTE: Run the frontend build+export+copy step in your Render build command.
-# Mount *after* API so /api/* keeps priority. html=True enables SPA routing.
-app.mount("/", StaticFiles(directory="backend/static/site", html=True), name="site")
+# --- Explicit Next.js mounts (preempt 404s for hashed files) ---
+# Mount the entire _next tree explicitly:
+if os.path.isdir(NEXT_DIR):
+    app.mount("/_next", StaticFiles(directory=NEXT_DIR, html=False), name="next")
+    print(f"[main] Mounted '/_next' from {os.path.abspath(NEXT_DIR)}")
+else:
+    print(f"[main] WARN: Missing Next dir: {os.path.abspath(NEXT_DIR)}")
 
-# --- Startup route log ---
+# Mount the static subtree explicitly as well (paranoid):
+if os.path.isdir(NEXT_STATIC):
+    app.mount("/_next/static", StaticFiles(directory=NEXT_STATIC, html=False), name="next-static")
+    print(f"[main] Mounted '/_next/static' from {os.path.abspath(NEXT_STATIC)}")
+else:
+    print(f"[main] WARN: Missing Next static dir: {os.path.abspath(NEXT_STATIC)}")
+
+# Mount the site root (SPA) last so /, /agency, etc. serve index.html
+app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="site")
+
+# --- Static diagnostics ---
+@app.get("/__static_ping", response_class=PlainTextResponse)
+def __static_ping():
+    parts = [
+        f"ROOT exists={os.path.isdir(STATIC_ROOT)} path={os.path.abspath(STATIC_ROOT)}",
+        f"_next exists={os.path.isdir(NEXT_DIR)} path={os.path.abspath(NEXT_DIR)}",
+        f"_next/static exists={os.path.isdir(NEXT_STATIC)} path={os.path.abspath(NEXT_STATIC)}",
+    ]
+    return "\n".join(parts)
+
+@app.get("/__static_debug")
+def __static_debug():
+    info = {
+        "root": {"path": os.path.abspath(STATIC_ROOT), "exists": os.path.isdir(STATIC_ROOT)},
+        "next": {"path": os.path.abspath(NEXT_DIR),    "exists": os.path.isdir(NEXT_DIR)},
+        "static": {"path": os.path.abspath(NEXT_STATIC), "exists": os.path.isdir(NEXT_STATIC)},
+        "samples": {"index_html": False, "css": [], "chunks": []},
+    }
+    files = []
+    if info["root"]["exists"]:
+        for r, _, fs in os.walk(STATIC_ROOT):
+            for f in fs:
+                files.append(os.path.relpath(os.path.join(r, f), STATIC_ROOT))
+    info["samples"]["index_html"] = any(p == "index.html" for p in files)
+    info["samples"]["css"]    = [p for p in files if p.startswith("_next/static/css/")][:5]
+    info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
+    return JSONResponse(info)
+
+# --- Startup: log routes ---
 @app.on_event("startup")
 async def _log_routes():
     print("=== ROUTES MOUNTED ===")
