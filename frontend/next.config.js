@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: "export",              // generate static HTML in /out
-  images: { unoptimized: true }, // avoid Next Image optimizer
-  experimental: {}               // remove invalid experimental flags
+module.exports = {
+  output: "export",          // makes `next build` write to /out
+  images: { unoptimized: true }
 };
-module.exports = nextConfig;
