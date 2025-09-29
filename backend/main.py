@@ -8,7 +8,7 @@ import importlib, os
 from types import ModuleType
 from typing import Optional, List, Tuple
 
-APP_VERSION = "frontend-static-v3"
+APP_VERSION = "frontend-static-v4"
 STATIC_ROOT = "backend/static/site"
 NEXT_DIR    = os.path.join(STATIC_ROOT, "_next")
 NEXT_STATIC = os.path.join(NEXT_DIR, "static")
@@ -28,7 +28,7 @@ app.add_middleware(
 def health():
     return {"ok": True, "version": APP_VERSION}
 
-@app.get("/__whoami", response_class=PlainTextResponse)
+@app.get("/api/__whoami", response_class=PlainTextResponse)
 def whoami():
     return f"main.py={APP_VERSION}"
 
@@ -65,7 +65,7 @@ _mount("shopify",          "/shopify",          ["backend.routers.shopify"])
 _mount("summary",          "/summary",          ["backend.routers.summary"])
 _mount("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar","backend.routers.sidecar"])
 
-# --- Explicit Next.js mounts (avoid 404s on hashed files) ---
+# --- Explicit Next.js mounts (avoid 404s for hashed assets) ---
 if os.path.isdir(NEXT_DIR):
     app.mount("/_next", StaticFiles(directory=NEXT_DIR, html=False), name="next")
     print(f"[main] Mounted '/_next' from {os.path.abspath(NEXT_DIR)}")
@@ -78,11 +78,11 @@ if os.path.isdir(NEXT_STATIC):
 else:
     print(f"[main] WARN: Missing Next static dir: {os.path.abspath(NEXT_STATIC)}")
 
-# Mount the site root (SPA) last so / and /agency, /calendar, etc. serve index.html
+# --- Serve SPA at root LAST (so it doesn’t shadow /api/*) ---
 app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="site")
 
-# --- Static diagnostics ---
-@app.get("/__static_ping", response_class=PlainTextResponse)
+# --- Static diagnostics under /api so they cannot be shadowed ---
+@app.get("/api/__static_ping", response_class=PlainTextResponse)
 def __static_ping():
     parts = [
         f"ROOT exists={os.path.isdir(STATIC_ROOT)} path={os.path.abspath(STATIC_ROOT)}",
@@ -91,11 +91,11 @@ def __static_ping():
     ]
     return "\n".join(parts)
 
-@app.get("/__static_debug")
+@app.get("/api/__static_debug")
 def __static_debug():
     info = {
-        "root": {"path": os.path.abspath(STATIC_ROOT), "exists": os.path.isdir(STATIC_ROOT)},
-        "next": {"path": os.path.abspath(NEXT_DIR),    "exists": os.path.isdir(NEXT_DIR)},
+        "root":   {"path": os.path.abspath(STATIC_ROOT), "exists": os.path.isdir(STATIC_ROOT)},
+        "next":   {"path": os.path.abspath(NEXT_DIR),    "exists": os.path.isdir(NEXT_DIR)},
         "static": {"path": os.path.abspath(NEXT_STATIC), "exists": os.path.isdir(NEXT_STATIC)},
         "samples": {"index_html": False, "css": [], "chunks": [], "has_health": False},
     }
@@ -110,7 +110,7 @@ def __static_debug():
     info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
     return JSONResponse(info)
 
-# --- Startup: log routes ---
+# --- Startup: list routes ---
 @app.on_event("startup")
 async def _log_routes():
     print("=== ROUTES MOUNTED ===")
