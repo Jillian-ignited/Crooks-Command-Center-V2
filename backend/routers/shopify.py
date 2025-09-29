@@ -1,349 +1,111 @@
-from fastapi import APIRouter, Query
+# backend/routers/shopify.py
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
+import os
 
 router = APIRouter()
 
-@router.get("/")
-async def shopify_root():
-    """Shopify root endpoint"""
-    return {
-        "success": True,
-        "message": "Shopify API operational",
-        "endpoints": ["/analytics", "/products", "/orders", "/customers"]
-    }
+# ---- Config / feature flag ----
+SHOPIFY_STORE = os.getenv("SHOPIFY_STORE", "").strip()          # e.g. "mystore"
+SHOPIFY_ACCESS_TOKEN = os.getenv("SHOPIFY_ACCESS_TOKEN", "").strip()  # Admin API token
 
-@router.get("/analytics")
-async def shopify_analytics(days: int = Query(30, description="Days to include in analytics")):
-    """Get Shopify analytics data"""
-    return {
-        "success": True,
-        "time_period": f"Last {days} days",
-        "analytics": {
-            "sales_overview": {
-                "total_sales": 245750.50,
-                "orders": 2450,
-                "average_order_value": 100.31,
-                "conversion_rate": "3.2%",
-                "growth": "+12.5%"
-            },
-            "product_performance": {
-                "top_sellers": [
-                    {
-                        "id": "prod1",
-                        "name": "Signature Hoodie - Black",
-                        "sales": 42500.00,
-                        "units_sold": 425,
-                        "conversion_rate": "4.8%"
-                    },
-                    {
-                        "id": "prod2",
-                        "name": "Logo T-Shirt - White",
-                        "sales": 28750.00,
-                        "units_sold": 575,
-                        "conversion_rate": "5.2%"
-                    },
-                    {
-                        "id": "prod3",
-                        "name": "Cargo Pants - Olive",
-                        "sales": 24000.00,
-                        "units_sold": 240,
-                        "conversion_rate": "3.8%"
-                    },
-                    {
-                        "id": "prod4",
-                        "name": "Snapback Cap - Black",
-                        "sales": 15000.00,
-                        "units_sold": 300,
-                        "conversion_rate": "4.5%"
-                    },
-                    {
-                        "id": "prod5",
-                        "name": "Bomber Jacket - Navy",
-                        "sales": 22500.00,
-                        "units_sold": 150,
-                        "conversion_rate": "3.2%"
-                    }
-                ],
-                "inventory_status": {
-                    "in_stock": 75,
-                    "low_stock": 12,
-                    "out_of_stock": 5
-                }
-            },
-            "customer_insights": {
-                "new_customers": 875,
-                "returning_customers": 1575,
-                "average_lifetime_value": 320.75,
-                "demographics": {
-                    "age": {
-                        "18-24": "35%",
-                        "25-34": "42%",
-                        "35-44": "18%",
-                        "45+": "5%"
-                    },
-                    "gender": {
-                        "male": "65%",
-                        "female": "32%",
-                        "non_binary": "3%"
-                    },
-                    "top_locations": [
-                        "Los Angeles",
-                        "New York",
-                        "Chicago",
-                        "Atlanta",
-                        "Toronto"
-                    ]
-                }
-            },
-            "traffic_sources": {
-                "direct": "25%",
-                "organic_search": "18%",
-                "social_media": "32%",
-                "email": "15%",
-                "referral": "10%"
-            },
-            "checkout_analysis": {
-                "cart_abandonment_rate": "68%",
-                "checkout_completion_rate": "72%",
-                "average_checkout_time": "3.5 minutes",
-                "payment_methods": {
-                    "credit_card": "65%",
-                    "paypal": "20%",
-                    "apple_pay": "10%",
-                    "other": "5%"
-                }
-            }
-        }
-    }
+def _ready() -> bool:
+    return bool(SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN)
 
-@router.get("/products")
-async def shopify_products():
-    """Get Shopify products data"""
+# ---- Models (shape what the FE expects) ----
+class ShopifyMetric(BaseModel):
+    name: str
+    value: float
+    delta: float
+
+class Product(BaseModel):
+    id: str
+    title: str
+    price: float
+    status: str
+
+class Order(BaseModel):
+    id: str
+    total: float
+    currency: str
+    financial_status: str
+
+class Customer(BaseModel):
+    id: str
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    orders_count: int = 0
+
+
+# ---- Root (status / capabilities) ----
+@router.get("/", summary="Shopify root status")
+def root():
     return {
-        "success": True,
-        "products": [
-            {
-                "id": "prod1",
-                "name": "Signature Hoodie - Black",
-                "price": 100.00,
-                "compare_at_price": 120.00,
-                "status": "active",
-                "inventory": 125,
-                "category": "Hoodies",
-                "tags": ["bestseller", "fall", "essentials"],
-                "image": "/media/Product_Hoodie_Black_Front.jpg"
-            },
-            {
-                "id": "prod2",
-                "name": "Logo T-Shirt - White",
-                "price": 50.00,
-                "compare_at_price": 60.00,
-                "status": "active",
-                "inventory": 250,
-                "category": "T-Shirts",
-                "tags": ["bestseller", "essentials"],
-                "image": "/media/Product_Tshirt_White_Front.jpg"
-            },
-            {
-                "id": "prod3",
-                "name": "Cargo Pants - Olive",
-                "price": 100.00,
-                "compare_at_price": 120.00,
-                "status": "active",
-                "inventory": 85,
-                "category": "Pants",
-                "tags": ["bestseller", "fall"],
-                "image": "/media/Product_Cargo_Olive_Front.jpg"
-            },
-            {
-                "id": "prod4",
-                "name": "Snapback Cap - Black",
-                "price": 50.00,
-                "compare_at_price": 60.00,
-                "status": "active",
-                "inventory": 150,
-                "category": "Accessories",
-                "tags": ["bestseller", "essentials"],
-                "image": "/media/Product_Cap_Black_Front.jpg"
-            },
-            {
-                "id": "prod5",
-                "name": "Bomber Jacket - Navy",
-                "price": 150.00,
-                "compare_at_price": 180.00,
-                "status": "active",
-                "inventory": 75,
-                "category": "Jackets",
-                "tags": ["fall", "new"],
-                "image": "/media/Product_Bomber_Navy_Front.jpg"
-            }
+        "ok": True,
+        "configured": _ready(),
+        "store": SHOPIFY_STORE or None,
+        "endpoints": [
+            "/api/shopify/analytics",
+            "/api/shopify/products",
+            "/api/shopify/orders",
+            "/api/shopify/customers",
         ],
-        "total": 5,
-        "active": 5,
-        "draft": 0
     }
 
-@router.get("/orders")
-async def shopify_orders():
-    """Get Shopify orders data"""
-    return {
-        "success": True,
-        "orders": [
-            {
-                "id": "ord1",
-                "order_number": "#10045",
-                "date": "2023-09-28T14:30:00",
-                "customer": "John Smith",
-                "email": "john.smith@example.com",
-                "total": 250.00,
-                "status": "Fulfilled",
-                "payment_status": "Paid",
-                "items": [
-                    {
-                        "product_id": "prod1",
-                        "name": "Signature Hoodie - Black",
-                        "quantity": 1,
-                        "price": 100.00
-                    },
-                    {
-                        "product_id": "prod2",
-                        "name": "Logo T-Shirt - White",
-                        "quantity": 3,
-                        "price": 50.00
-                    }
-                ],
-                "shipping_address": {
-                    "address1": "123 Main St",
-                    "city": "Los Angeles",
-                    "state": "CA",
-                    "zip": "90001",
-                    "country": "United States"
-                }
-            },
-            {
-                "id": "ord2",
-                "order_number": "#10044",
-                "date": "2023-09-28T12:15:00",
-                "customer": "Jane Doe",
-                "email": "jane.doe@example.com",
-                "total": 200.00,
-                "status": "Processing",
-                "payment_status": "Paid",
-                "items": [
-                    {
-                        "product_id": "prod3",
-                        "name": "Cargo Pants - Olive",
-                        "quantity": 2,
-                        "price": 100.00
-                    }
-                ],
-                "shipping_address": {
-                    "address1": "456 Oak Ave",
-                    "city": "New York",
-                    "state": "NY",
-                    "zip": "10001",
-                    "country": "United States"
-                }
-            },
-            {
-                "id": "ord3",
-                "order_number": "#10043",
-                "date": "2023-09-28T10:45:00",
-                "customer": "Michael Johnson",
-                "email": "michael.johnson@example.com",
-                "total": 350.00,
-                "status": "Fulfilled",
-                "payment_status": "Paid",
-                "items": [
-                    {
-                        "product_id": "prod5",
-                        "name": "Bomber Jacket - Navy",
-                        "quantity": 1,
-                        "price": 150.00
-                    },
-                    {
-                        "product_id": "prod1",
-                        "name": "Signature Hoodie - Black",
-                        "quantity": 2,
-                        "price": 100.00
-                    }
-                ],
-                "shipping_address": {
-                    "address1": "789 Pine St",
-                    "city": "Chicago",
-                    "state": "IL",
-                    "zip": "60007",
-                    "country": "United States"
-                }
-            }
-        ],
-        "total": 3,
-        "fulfilled": 2,
-        "processing": 1
-    }
 
-@router.get("/customers")
-async def shopify_customers():
-    """Get Shopify customers data"""
-    return {
-        "success": True,
-        "customers": [
-            {
-                "id": "cust1",
-                "name": "John Smith",
-                "email": "john.smith@example.com",
-                "orders": 5,
-                "total_spent": 750.00,
-                "average_order_value": 150.00,
-                "first_order": "2023-05-15T10:30:00",
-                "last_order": "2023-09-28T14:30:00",
-                "location": "Los Angeles, CA"
-            },
-            {
-                "id": "cust2",
-                "name": "Jane Doe",
-                "email": "jane.doe@example.com",
-                "orders": 3,
-                "total_spent": 450.00,
-                "average_order_value": 150.00,
-                "first_order": "2023-06-20T15:45:00",
-                "last_order": "2023-09-28T12:15:00",
-                "location": "New York, NY"
-            },
-            {
-                "id": "cust3",
-                "name": "Michael Johnson",
-                "email": "michael.johnson@example.com",
-                "orders": 7,
-                "total_spent": 1250.00,
-                "average_order_value": 178.57,
-                "first_order": "2023-03-10T09:15:00",
-                "last_order": "2023-09-28T10:45:00",
-                "location": "Chicago, IL"
-            },
-            {
-                "id": "cust4",
-                "name": "Sarah Williams",
-                "email": "sarah.williams@example.com",
-                "orders": 2,
-                "total_spent": 300.00,
-                "average_order_value": 150.00,
-                "first_order": "2023-08-05T16:20:00",
-                "last_order": "2023-09-27T11:30:00",
-                "location": "Atlanta, GA"
-            },
-            {
-                "id": "cust5",
-                "name": "David Brown",
-                "email": "david.brown@example.com",
-                "orders": 4,
-                "total_spent": 650.00,
-                "average_order_value": 162.50,
-                "first_order": "2023-07-12T14:10:00",
-                "last_order": "2023-09-26T13:45:00",
-                "location": "Toronto, ON"
-            }
-        ],
-        "total": 5,
-        "new_last_30_days": 2,
-        "returning": 3
-    }
+# ---- Analytics (stubbed if not configured) ----
+@router.get("/analytics", response_model=List[ShopifyMetric], summary="Basic Shopify analytics")
+def analytics(days: int = Query(30, ge=1, le=365)):
+    if not _ready():
+        # Return 501 so you know creds are missing (not a 404)
+        raise HTTPException(status_code=501, detail="Shopify not configured: set SHOPIFY_STORE and SHOPIFY_ACCESS_TOKEN")
+
+    # TODO: replace with real Admin API calls (orders, revenue, etc.)
+    # Stubbed numbers so FE renders:
+    return [
+        ShopifyMetric(name="Revenue", value=125000.0, delta=+12.3),
+        ShopifyMetric(name="Orders", value=1830, delta=+5.6),
+        ShopifyMetric(name="AOV", value=68.31, delta=-1.2),
+        ShopifyMetric(name="Customers", value=1420, delta=+3.4),
+    ]
+
+
+# ---- Products ----
+@router.get("/products", response_model=List[Product], summary="List products (stub)")
+def products(limit: int = Query(20, ge=1, le=250), status: str = Query("active")):
+    if not _ready():
+        raise HTTPException(status_code=501, detail="Shopify not configured")
+    # TODO: call /admin/api/2024-07/products.json with params
+    return [
+        Product(id="p_1001", title="Core Tee", price=38.0, status=status),
+        Product(id="p_1002", title="Logo Hoodie", price=89.0, status=status),
+        Product(id="p_1003", title="Denim Jacket", price=129.0, status=status),
+    ][:limit]
+
+
+# ---- Orders ----
+@router.get("/orders", response_model=List[Order], summary="List orders (stub)")
+def orders(limit: int = Query(20, ge=1, le=250), financial_status: str = Query("paid")):
+    if not _ready():
+        raise HTTPException(status_code=501, detail="Shopify not configured")
+    # TODO: call /admin/api/2024-07/orders.json with params
+    return [
+        Order(id="o_5001", total=189.0, currency="USD", financial_status=financial_status),
+        Order(id="o_5002", total=58.0,  currency="USD", financial_status=financial_status),
+        Order(id="o_5003", total=420.0, currency="USD", financial_status=financial_status),
+    ][:limit]
+
+
+# ---- Customers ----
+@router.get("/customers", response_model=List[Customer], summary="List customers (stub)")
+def customers(limit: int = Query(20, ge=1, le=250)):
+    if not _ready():
+        raise HTTPException(status_code=501, detail="Shopify not configured")
+    # TODO: call /admin/api/2024-07/customers.json
+    return [
+        Customer(id="c_9001", email="gee@example.com", first_name="Gee", last_name="R.", orders_count=3),
+        Customer(id="c_9002", email="alice@example.com", first_name="Alice", last_name="M.", orders_count=1),
+        Customer(id="c_9003", email="bob@example.com", first_name="Bob", last_name="K.", orders_count=6),
+    ][:limit]
