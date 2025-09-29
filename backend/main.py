@@ -1,27 +1,36 @@
 # backend/main.py
-from fastapi import FastAPI
+from pathlib import Path
+import importlib
+from types import ModuleType
+from typing import Optional, List, Tuple
+
+from fastapi import FastAPI, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import PlainTextResponse, JSONResponse
-import importlib, os
-from types import ModuleType
-from typing import Optional, List, Tuple
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 APP_VERSION = "frontend-static-v5"
 
-# Where the exported Next site is copied to during build
-STATIC_ROOT = "backend/static/site"
-NEXT_DIR    = os.path.join(STATIC_ROOT, "_next")
-NEXT_STATIC = os.path.join(NEXT_DIR, "static")
+# --- Paths (robust to working directory) ---
+BASE_DIR     = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+STATIC_ROOT  = PROJECT_ROOT / "backend" / "static" / "site"   # where Next export is copied
+NEXT_DIR     = STATIC_ROOT / "_next"
+MEDIA_ROOT   = PROJECT_ROOT / "backend" / "media"
+
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Crooks Command Center", version=APP_VERSION)
 
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- Health / identity ---
@@ -55,19 +64,19 @@ def _mount(name: str, prefix: str, candidates: List[str]):
     app.include_router(mod.router, prefix=f"/api{prefix}", tags=[name])
     print(f"[main] Mounted '{name}' (from {used}) at /api{prefix}")
 
-# --- Routers ---
+# --- Routers (mounted under /api/*) ---
 _mount("agency",           "/agency",           ["backend.routers.agency"])
 _mount("calendar",         "/calendar",         ["backend.routers.calendar"])
-_mount("content",          "/content",          ["backend.routers.content_creation","backend.routers.content"])
+_mount("content",          "/content",          ["backend.routers.content_creation", "backend.routers.content"])
 _mount("executive",        "/executive",        ["backend.routers.executive"])
-_mount("ingest",           "/ingest",           ["backend.routers.ingest","backend.routers.ingest_ENHANCED_MULTI_FORMAT"])
+_mount("ingest",           "/ingest",           ["backend.routers.ingest", "backend.routers.ingest_ENHANCED_MULTI_FORMAT"])
 _mount("intelligence",     "/intelligence",     ["backend.routers.intelligence"])
 _mount("media",            "/media",            ["backend.routers.media"])
 _mount("shopify",          "/shopify",          ["backend.routers.shopify"])
 _mount("summary",          "/summary",          ["backend.routers.summary"])
-_mount("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar","backend.routers.sidecar"])
+_mount("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar", "backend.routers.sidecar"])
 
-# --- Debug probes under /api (cannot be shadowed by static mount) ---
+# --- Debug probes under /api (cannot be shadowed by static mounts) ---
 @app.get("/api/__routes")
 def list_routes():
     rows = []
@@ -83,48 +92,62 @@ def list_routes():
 @app.get("/api/__static_ping", response_class=PlainTextResponse)
 def static_ping():
     parts = [
-        f"ROOT exists={os.path.isdir(STATIC_ROOT)} path={os.path.abspath(STATIC_ROOT)}",
-        f"_next exists={os.path.isdir(NEXT_DIR)} path={os.path.abspath(NEXT_DIR)}",
-        f"_next/static exists={os.path.isdir(NEXT_STATIC)} path={os.path.abspath(NEXT_STATIC)}",
+        f"ROOT exists={STATIC_ROOT.is_dir()} path={STATIC_ROOT}",
+        f"_next exists={NEXT_DIR.is_dir()} path={NEXT_DIR}",
+        f"media exists={MEDIA_ROOT.is_dir()} path={MEDIA_ROOT}",
     ]
     return "\n".join(parts)
 
 @app.get("/api/__static_debug")
 def static_debug():
     info = {
-        "root":   {"path": os.path.abspath(STATIC_ROOT), "exists": os.path.isdir(STATIC_ROOT)},
-        "next":   {"path": os.path.abspath(NEXT_DIR),    "exists": os.path.isdir(NEXT_DIR)},
-        "static": {"path": os.path.abspath(NEXT_STATIC), "exists": os.path.isdir(NEXT_STATIC)},
+        "root":   {"path": str(STATIC_ROOT), "exists": STATIC_ROOT.is_dir()},
+        "next":   {"path": str(NEXT_DIR),    "exists": NEXT_DIR.is_dir()},
+        "static": {"path": str(NEXT_DIR / "static"), "exists": (NEXT_DIR / "static").is_dir()},
         "samples": {"index_html": False, "css": [], "chunks": [], "has_health": False},
     }
     files = []
-    if info["root"]["exists"]:
-        for r, _, fs in os.walk(STATIC_ROOT):
-            for f in fs:
-                files.append(os.path.relpath(os.path.join(r, f), STATIC_ROOT))
+    if STATIC_ROOT.is_dir():
+        for p in STATIC_ROOT.rglob("*"):
+            if p.is_file():
+                files.append(str(p.relative_to(STATIC_ROOT)).replace("\\", "/"))
     info["samples"]["index_html"] = any(p == "index.html" for p in files)
     info["samples"]["has_health"] = any(p == "health.txt" for p in files)
     info["samples"]["css"]    = [p for p in files if p.startswith("_next/static/css/")][:5]
     info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
     return JSONResponse(info)
 
-# --- Explicit Next.js mounts (avoid 404s for hashed assets) ---
-if os.path.isdir(NEXT_DIR):
-    app.mount("/_next", StaticFiles(directory=NEXT_DIR, html=False), name="next")
-    print(f"[main] Mounted '/_next' from {os.path.abspath(NEXT_DIR)}")
+# --- Explicit static mounts (Next assets & raw media) ---
+if NEXT_DIR.is_dir():
+    app.mount("/_next", StaticFiles(directory=str(NEXT_DIR), html=False), name="next")
+    print(f"[main] Mounted '/_next' from {NEXT_DIR}")
 else:
-    print(f"[main] WARN: Missing Next dir: {os.path.abspath(NEXT_DIR)}")
+    print(f"[main] WARN: Missing Next dir: {NEXT_DIR}")
 
-if os.path.isdir(NEXT_STATIC):
-    app.mount("/_next/static", StaticFiles(directory=NEXT_STATIC, html=False), name="next-static")
-    print(f"[main] Mounted '/_next/static' from {os.path.abspath(NEXT_STATIC)}")
-else:
-    print(f"[main] WARN: Missing Next static dir: {os.path.abspath(NEXT_STATIC)}")
+app.mount("/media", StaticFiles(directory=str(MEDIA_ROOT), html=False), name="media")
 
-# --- Serve SPA at root LAST ---
-app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="site")
+# --- API JSON-first error handling ---
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    # Force JSON for API paths so the app never sees HTML error pages for /api/*
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": exc.detail, "status": exc.status_code, "path": request.url.path}, status_code=exc.status_code)
+    # For non-API paths, keep default behavior (StaticFiles / index.html etc.)
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
-# --- Startup: print the route table clearly ---
+# --- API catch-all (ensures /api/* never falls into SPA) ---
+api_fallback = APIRouter()
+
+@api_fallback.api_route("/api/{full_path:path}", methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS","HEAD"], include_in_schema=False)
+async def _api_404(full_path: str, request: Request):
+    return JSONResponse({"detail": "Not Found", "path": f"/api/{full_path}"}, status_code=404)
+
+app.include_router(api_fallback)
+
+# --- Serve SPA at root LAST (deep links -> index.html) ---
+app.mount("/", StaticFiles(directory=str(STATIC_ROOT), html=True), name="site")
+
+# --- Startup: print the route table ---
 @app.on_event("startup")
 async def _log_routes():
     print("=== ROUTES MOUNTED ===")
