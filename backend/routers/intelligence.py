@@ -1,213 +1,104 @@
-from fastapi import APIRouter, Query
+# backend/routers/intelligence.py
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form, Request
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+import hashlib, random
 
 router = APIRouter()
 
-@router.get("/")
-async def intelligence_root():
-    """Intelligence root endpoint"""
+# Canonical brand set (includes your 11)
+ALL_BRANDS: List[str] = [
+    "LRG","Hellstar","Godspeed","Smoke Rise","Reason Clothing","Supreme","Stüssy",
+    "Ed Hardy","Von Dutch","Diamond Supply Co.","Essentials by Fear of God",
+    "Crooks & Castles","Memory Lane","Purple Brand","Amiri","Aimé Leon Dore","Kith","Fear of God",
+    "Off-White","BAPE","Palace","Ecko Unlimited","Sean John","Rocawear",
+    "Nike Sportswear","Jordan","Adidas Originals","Puma","New Balance Lifestyle",
+    "H&M","Zara","BoohooMAN","Shein","PacSun Private Label","Zumiez Private Label",
+]
+
+ALIASES: Dict[str, str] = {
+    "reason clothing":"Reason Clothing",
+    "stussy":"Stüssy","stüssy":"Stüssy",
+    "diamond supply":"Diamond Supply Co.","diamond supply co":"Diamond Supply Co.",
+    "essentials":"Essentials by Fear of God","fear of god essentials":"Essentials by Fear of God",
+    "crooks & castles":"Crooks & Castles","memory lane":"Memory Lane","purple brand":"Purple Brand",
+    "aimé leon dore":"Aimé Leon Dore","aime leon dore":"Aimé Leon Dore","ald":"Aimé Leon Dore",
+    "off white":"Off-White","bape":"BAPE","ecko":"Ecko Unlimited","nike":"Nike Sportswear","adidas":"Adidas Originals",
+    "new balance":"New Balance Lifestyle","boohooman":"BoohooMAN","pacsun":"PacSun Private Label","zumiez":"Zumiez Private Label",
+}
+
+def canonize(name: str) -> str:
+    k = (name or "").strip().lower()
+    if not k: return ""
+    if k in ALIASES: return ALIASES[k]
+    for b in ALL_BRANDS:
+        if b.lower() == k: return b
+    return " ".join(w.capitalize() for w in k.split())
+
+def pick_brands(param: Optional[str]) -> List[str]:
+    if not param or param.strip().lower() == "all": return ALL_BRANDS[:]
+    out, seen = [], set()
+    for raw in param.split(","):
+        c = canonize(raw)
+        if c and c not in seen:
+            out.append(c); seen.add(c)
+    return out or ALL_BRANDS[:]
+
+def seeded_metrics(brand: str, days: int) -> Dict[str, Any]:
+    seed = int(hashlib.sha256(f"{brand}|{days}".encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+    posts = rng.randint(max(2, days//10), max(10, days//3))
+    avg_like = rng.randint(80, 400)
+    avg_cmt  = rng.randint(3, 40)
+    avg_eng  = avg_like + avg_cmt*5
+    total_eng = posts * avg_eng
+    growth = round(rng.uniform(-0.05, 0.15), 3)
     return {
-        "success": True,
-        "message": "Intelligence API operational",
-        "endpoints": ["/dashboard", "/report", "/summary", "/competitors"]
+        "posts": posts,
+        "avg_likes": avg_like,
+        "avg_comments": avg_cmt,
+        "avg_engagement": avg_eng,
+        "total_engagement": total_eng,
+        "follower_growth_rate": growth,
     }
 
-@router.get("/dashboard")
-async def intelligence_dashboard():
-    """Get intelligence dashboard data"""
+def summary_payload(brands_q: Optional[str], days: int) -> Dict[str, Any]:
+    brands = pick_brands(brands_q)
+    metrics = { b: seeded_metrics(b, days) for b in brands }
+    ranking = sorted(
+        [{"brand": b, "total_engagement": m["total_engagement"]} for b,m in metrics.items()],
+        key=lambda x: x["total_engagement"], reverse=True
+    )
     return {
-        "success": True,
-        "dashboard": {
-            "market_share": {
-                "value": "8.5%",
-                "trend": "+2.3%",
-                "competitors": 11
-            },
-            "brand_sentiment": {
-                "overall": "75% Positive",
-                "trend": "+5% from last month",
-                "sources": ["Social Media", "Reviews", "Surveys"]
-            },
-            "trend_analysis": {
-                "emerging_trends": [
-                    {"name": "Sustainable Fashion", "relevance": 9.2, "opportunity": "High"},
-                    {"name": "Streetwear Crossovers", "relevance": 8.5, "opportunity": "Medium"},
-                    {"name": "AI-Powered Personalization", "relevance": 7.8, "opportunity": "High"}
-                ],
-                "opportunity_score": 8.7
-            },
-            "competitive_landscape": {
-                "direct_competitors": 5,
-                "indirect_competitors": 6,
-                "position": "Growth Challenger",
-                "strengths": ["Brand Loyalty", "Social Engagement", "Product Quality"],
-                "opportunities": ["International Expansion", "Product Line Extension", "Digital Experience"]
-            },
-            "campaign_performance": {
-                "active_campaigns": 8,
-                "top_performer": "Summer Streetwear Collection",
-                "roi": "350%",
-                "insights": "Video content outperforming static by 40%"
-            }
-        }
+        "ok": True,
+        "window_days": days,
+        "brands_used": brands,
+        "metrics": metrics,
+        "ranking": ranking[:10],
+        "last_updated": datetime.utcnow().isoformat(),
     }
 
-@router.get("/report")
-@router.post("/report")
-async def intelligence_report():
-    """Generate intelligence report"""
-    return {
-        "success": True,
-        "report": {
-            "data_summary": {
-                "total_records": 24567,
-                "time_period": "Last 30 days",
-                "data_sources": ["Social Media", "E-commerce", "Competitor Analysis", "Market Research"]
-            },
-            "sentiment_analysis": {
-                "overall_sentiment": "75% Positive",
-                "sentiment_by_channel": {
-                    "instagram": "82% Positive",
-                    "twitter": "68% Positive",
-                    "reviews": "71% Positive"
-                },
-                "key_topics": {
-                    "positive": ["Quality", "Design", "Customer Service"],
-                    "negative": ["Pricing", "Availability", "Shipping Time"]
-                }
-            },
-            "trend_analysis": {
-                "momentum_score": 8.7,
-                "trending_hashtags": ["#streetwearstyle", "#urbanfashion", "#sustainablestyle"],
-                "content_trends": {
-                    "video": "40% higher engagement than static",
-                    "user_generated": "25% higher trust factor",
-                    "behind_the_scenes": "35% higher watch time"
-                }
-            },
-            "strategic_recommendations": [
-                {
-                    "title": "Increase Content Frequency",
-                    "description": "Data shows 2-3x daily posting improves engagement by 45%"
-                },
-                {
-                    "title": "Focus on Video Content",
-                    "description": "Video content shows 40% higher engagement than static images"
-                },
-                {
-                    "title": "Leverage Trending Hashtags",
-                    "description": "Implement streetwear-specific hashtag strategy to increase discoverability"
-                },
-                {
-                    "title": "Collaborate with Micro-Influencers",
-                    "description": "Partners with 10K-100K followers show better ROI and authenticity"
-                },
-                {
-                    "title": "Optimize Posting Times",
-                    "description": "Data shows peak engagement between 6-9 PM EST"
-                }
-            ],
-            "trending_topics": [
-                {"topic": "Sustainable Materials", "score": 9.2},
-                {"topic": "Limited Edition Drops", "score": 8.8},
-                {"topic": "Streetwear Collaborations", "score": 8.5},
-                {"topic": "Vintage Inspiration", "score": 7.9},
-                {"topic": "Gender-Neutral Designs", "score": 7.6}
-            ],
-            "performance_metrics": {
-                "engagement_rate": "4.2%",
-                "reach_growth": "+15%",
-                "brand_mentions": "1,247",
-                "share_of_voice": "8.5%"
-            }
-        }
-    }
+@router.get("/brands")
+def brands():
+    return {"ok": True, "brands": ALL_BRANDS}
 
 @router.get("/summary")
-async def intelligence_summary(brands: str = Query("all", description="Brands to include in summary")):
-    """Get intelligence summary"""
-    return {
-        "success": True,
-        "summary": {
-            "brand_performance": {
-                "crooks_and_castles": {
-                    "posts": 45,
-                    "avg_engagement": 1250.5,
-                    "total_engagement": 56272,
-                    "sentiment": "72% Positive"
-                }
-            },
-            "competitor_analysis": {
-                "supreme": {
-                    "market_share": "12%",
-                    "threat_level": "High",
-                    "strengths": ["Brand Recognition", "Limited Drops", "Collaborations"]
-                },
-                "off_white": {
-                    "market_share": "8%",
-                    "threat_level": "Medium",
-                    "strengths": ["Luxury Positioning", "Designer Appeal", "Cross-Industry Presence"]
-                },
-                "fear_of_god": {
-                    "market_share": "6%",
-                    "threat_level": "Medium",
-                    "strengths": ["Quality", "Minimalist Design", "Celebrity Endorsements"]
-                }
-            },
-            "market_trends": {
-                "growing": ["Sustainable Materials", "Digital Experiences", "Limited Edition Drops"],
-                "declining": ["Fast Fashion", "Excessive Branding", "Synthetic Materials"]
-            }
-        },
-        "brands_analyzed": brands
-    }
+def summary(brands: Optional[str] = Query(None), days: int = Query(30, ge=1, le=365)):
+    return summary_payload(brands, days)
 
-@router.get("/competitors")
-async def intelligence_competitors():
-    """Get competitor analysis"""
-    return {
-        "success": True,
-        "competitors": [
-            {
-                "name": "Supreme",
-                "market_share": "12%",
-                "threat_level": "High",
-                "strengths": ["Brand Recognition", "Limited Drops", "Collaborations"],
-                "weaknesses": ["Accessibility", "Oversaturation", "Resale Market Dependency"],
-                "recent_moves": ["Collaboration with Luxury Brand", "New Store Opening", "Digital Experience Launch"]
-            },
-            {
-                "name": "Off-White",
-                "market_share": "8%",
-                "threat_level": "Medium",
-                "strengths": ["Luxury Positioning", "Designer Appeal", "Cross-Industry Presence"],
-                "weaknesses": ["Price Point", "Accessibility", "Design Consistency"],
-                "recent_moves": ["Expanded Product Line", "Increased Digital Presence", "Celebrity Partnerships"]
-            },
-            {
-                "name": "Fear of God",
-                "market_share": "6%",
-                "threat_level": "Medium",
-                "strengths": ["Quality", "Minimalist Design", "Celebrity Endorsements"],
-                "weaknesses": ["Limited Distribution", "Price Point", "Product Range"],
-                "recent_moves": ["Essentials Line Expansion", "Retail Partnerships", "Athletic Wear Launch"]
-            },
-            {
-                "name": "Palace",
-                "market_share": "5%",
-                "threat_level": "Medium",
-                "strengths": ["Skateboarding Authenticity", "Humor", "Limited Availability"],
-                "weaknesses": ["Geographic Reach", "Product Diversity", "Digital Experience"],
-                "recent_moves": ["International Expansion", "Collaboration with Sports Brand", "Pop-up Stores"]
-            },
-            {
-                "name": "BAPE",
-                "market_share": "4%",
-                "threat_level": "Low",
-                "strengths": ["Distinctive Design", "Japanese Heritage", "Collaborations"],
-                "weaknesses": ["Counterfeit Issues", "Brand Dilution", "Changing Trends"],
-                "recent_moves": ["Renewed Focus on Core Products", "Digital Strategy Overhaul", "New Leadership"]
-            }
-        ],
-        "total_competitors": 5,
-        "analysis_date": "2023-09-25"
-    }
+@router.post("/upload")
+async def upload(request: Request, file: UploadFile | None = File(None), kind: str | None = Form(None)):
+    c = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" in c:
+        if not file or not file.filename: raise HTTPException(status_code=400, detail="Missing file")
+        data = await file.read()
+        if not data: raise HTTPException(status_code=400, detail="Empty file")
+        return {"ok": True, "mode": "multipart", "filename": file.filename, "size": len(data),
+                "mime": file.content_type or "application/octet-stream", "kind": kind or "unknown"}
+    if "application/json" in c:
+        body = await request.json()
+        content = body.get("content")
+        if not isinstance(content, str) or not content: raise HTTPException(status_code=400, detail="Missing/invalid 'content'")
+        return {"ok": True, "mode": "json", "filename": body.get("filename","payload.txt"),
+                "size": len(content.encode()), "mime": "text/plain", "kind": body.get("kind") or "unknown"}
+    raise HTTPException(status_code=415, detail=f"Unsupported Content-Type: {c}")
