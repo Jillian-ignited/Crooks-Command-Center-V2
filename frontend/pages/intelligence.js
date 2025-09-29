@@ -1,156 +1,103 @@
-// frontend/pages/intelligence.js
-import { useEffect, useMemo, useState } from "react";
-import { apiGet } from "../lib/api";
-
-const DEFAULT_DAYS = 30;
+import { useEffect, useState } from "react";
+import { apiGet, apiPost } from "../lib/api";
 
 export default function IntelligencePage() {
-  const [brands, setBrands] = useState([]);        // all available brands from API
-  const [selected, setSelected] = useState("all"); // CSV or "all"
-  const [days, setDays] = useState(DEFAULT_DAYS);
-  const [data, setData] = useState(null);          // summary payload
+  const [brands, setBrands] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  async function loadBrands() {
+  async function load() {
+    setLoading(true);
+    setErr("");
     try {
-      const res = await apiGet("/intelligence/brands");
-      setBrands(res.brands || []);
+      const b = await apiGet("/intelligence/brands");   // GET /api/intelligence/brands
+      setBrands(Array.isArray(b) ? b : []);
     } catch (e) {
-      setErr(`Brands: ${e.message}`);
+      setErr((prev) => (prev ? prev + " | " : "") + `Brands: ${e.message}`);
     }
-  }
-
-  async function loadSummary({ brandsCSV = selected, windowDays = days } = {}) {
-    setLoading(true); setErr("");
     try {
-      const res = await apiGet("/intelligence/summary", {
-        query: { brands: (brandsCSV || "all"), days: windowDays }
-      });
-      setData(res);
+      const s = await apiGet("/intelligence/summary");  // GET /api/intelligence/summary
+      setSummary(s);
     } catch (e) {
-      setErr(`Summary: ${e.message}`);
-      setData(null);
-    } finally {
-      setLoading(false);
+      setErr((prev) => (prev ? prev + " | " : "") + `Summary: ${e.message}`);
     }
+    setLoading(false);
   }
 
-  useEffect(() => { loadBrands(); }, []);
-  useEffect(() => { loadSummary({}); }, []); // initial
-
-  const tableRows = useMemo(() => {
-    if (!data?.metrics) return [];
-    const keys = Object.keys(data.metrics);
-    return keys.map((b) => ({ brand: b, ...data.metrics[b] }));
-  }, [data]);
-
-  function onApply(e) {
-    e.preventDefault();
-    loadSummary({});
-  }
+  useEffect(() => { load(); }, []);
 
   return (
-    <main style={{ maxWidth: 1100, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <h1 style={{ margin: 0 }}>Competitive Intelligence</h1>
-        <button onClick={() => loadSummary({})} disabled={loading} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff" }}>
-          {loading ? "Loading…" : "Refresh"}
-        </button>
-      </header>
+    <main style={{maxWidth: 1000, margin: "40px auto", padding: 20}}>
+      <h1 style={{marginBottom: 12}}>Competitive Intelligence</h1>
 
-      {err && <p style={{ color: "crimson", marginTop: 12 }}>{err}</p>}
+      {err && <div style={{background:"#fee", border:"1px solid #f99", padding:10, borderRadius:8, marginBottom:16}}>{err}</div>}
 
-      {/* Controls */}
-      <section style={{ marginTop: 16, padding: 16, border: "1px solid #eee", borderRadius: 10 }}>
-        <form onSubmit={onApply} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px", gap: 12 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Brands (CSV or “all”)</label>
-            <input
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              placeholder='e.g., Crooks & Castles, Hellstar, LRG or "all"'
-              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd" }}
-            />
-            {!!brands.length && (
-              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>
-                Available: {brands.slice(0, 8).join(", ")}{brands.length > 8 ? "…" : ""}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>Days</label>
-            <input
-              type="number" min="1" max="365" value={days}
-              onChange={(e) => setDays(Number(e.target.value || DEFAULT_DAYS))}
-              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd" }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "end" }}>
-            <button type="submit" disabled={loading} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff" }}>
-              Apply
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Headline */}
-      <section style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 13, opacity: 0.75 }}>
-          Window: {data?.window_days ?? days}d · Updated: {data?.last_updated ? new Date(data.last_updated).toLocaleString() : "—"}
-        </div>
-      </section>
-
-      {/* Ranking */}
-      <section style={{ marginTop: 16, padding: 16, border: "1px solid #eee", borderRadius: 10 }}>
-        <h2 style={{ marginTop: 0 }}>Top 10 by Engagement</h2>
-        {!data?.ranking?.length && <p style={{ opacity: 0.7 }}>No data yet.</p>}
-        {!!data?.ranking?.length && (
-          <ol style={{ margin: 0, paddingLeft: 18 }}>
-            {data.ranking.map((r, i) => (
-              <li key={i} style={{ margin: "6px 0" }}>
-                <strong>{r.brand}</strong> — {r.total_engagement.toLocaleString()} total engagement
-              </li>
+      <section style={cardStyle}>
+        <h2 style={h2}>Tracked Brands</h2>
+        {loading ? <p>Loading…</p> : (
+          <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
+            {brands.map((b) => (
+              <span key={b} style={pill}>{b}</span>
             ))}
-          </ol>
+            {brands.length === 0 && <p>No brands configured.</p>}
+          </div>
         )}
       </section>
 
-      {/* Table */}
-      <section style={{ marginTop: 16, padding: 16, border: "1px solid #eee", borderRadius: 10 }}>
-        <h2 style={{ marginTop: 0 }}>Brand Metrics</h2>
-        {!tableRows.length && <p style={{ opacity: 0.7 }}>No metrics to display.</p>}
-        {!!tableRows.length && (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", width: "100%" }}>
+      <section style={cardStyle}>
+        <h2 style={h2}>Cross-Brand Snapshot</h2>
+        {loading ? <p>Loading…</p> : (
+          summary && summary.metrics?.length ? (
+            <table style={table}>
               <thead>
-                <tr style={{ background: "#fafafa" }}>
-                  {["Brand","Posts","Avg Likes","Avg Comments","Avg Engagement","Total Engagement","Follower Growth"].map(h => (
-                    <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #eee", padding: "8px 6px", fontWeight: 600 }}>{h}</th>
-                  ))}
+                <tr>
+                  <th style={th}>Brand</th>
+                  <th style={th}>Posts</th>
+                  <th style={th}>Engagement</th>
+                  <th style={th}>Growth (30d)</th>
                 </tr>
               </thead>
               <tbody>
-                {tableRows.map((row) => (
+                {summary.metrics.map(row => (
                   <tr key={row.brand}>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px", fontWeight: 600 }}>{row.brand}</td>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.posts}</td>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.avg_likes}</td>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.avg_comments}</td>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.avg_engagement}</td>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>{row.total_engagement?.toLocaleString?.() ?? row.total_engagement}</td>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: "8px 6px" }}>
-                      {(row.follower_growth_rate * 100).toFixed(1)}%
-                    </td>
+                    <td style={td}>{row.brand}</td>
+                    <td style={td}>{fmt0(row.posts)}</td>
+                    <td style={td}>{fmt0(row.engagement)}</td>
+                    <td style={td}>{fmtPct(row.growth_30d)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          ) : <p>No data yet. Try uploading a dataset on the Upload page and refresh.</p>
         )}
+      </section>
+
+      <section style={cardStyle}>
+        <h2 style={h2}>Generate Report</h2>
+        <button
+          onClick={async () => {
+            try {
+              const r = await apiPost("/intelligence/report", { range: "30d" }); // if implemented
+              alert("Report queued.");
+            } catch (e) {
+              alert(`Failed: ${e.message}`);
+            }
+          }}
+          style={btn}
+        >Run 30-day Report</button>
       </section>
     </main>
   );
 }
+
+const cardStyle = { background:"#fff", border:"1px solid #eee", borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 1px 2px rgba(0,0,0,0.03)" };
+const h2 = { margin:"0 0 8px 0" };
+const pill = { background:"#f5f5f5", border:"1px solid #ddd", padding:"6px 10px", borderRadius:999 };
+const table = { width:"100%", borderCollapse:"collapse" };
+const th = { textAlign:"left", padding:"10px 8px", borderBottom:"1px solid #eee", background:"#fafafa" };
+const td = { padding:"10px 8px", borderBottom:"1px solid #f3f3f3" };
+const btn = { border:"1px solid #111", background:"#111", color:"#fff", padding:"10px 14px", borderRadius:10, cursor:"pointer" };
+
+function fmt0(n){ return n==null ? "—" : Number(n).toLocaleString(); }
+function fmtPct(n){ return n==null ? "—" : `${(Number(n)).toFixed(1)}%`; }
