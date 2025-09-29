@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  output: 'export',
-  distDir: 'out'
+  output: "export",              // generate static HTML in /out
+  images: { unoptimized: true }, // avoid Next Image optimizer
+  experimental: {}               // remove invalid experimental flags
 };
-module.exports = { reactStrictMode: true, output: 'export', distDir: 'out' };
-
+module.exports = nextConfig;
