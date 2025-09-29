@@ -17,7 +17,7 @@ export default function ExecutivePage() {
     }
   }
 
-  useEffect(() => { load(days); /* on mount */ }, []);
+  useEffect(() => { load(days); }, []); // on mount
 
   return (
     <main style={{ maxWidth: 900, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui" }}>
