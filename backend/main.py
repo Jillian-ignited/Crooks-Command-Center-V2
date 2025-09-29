@@ -164,6 +164,21 @@ if os.path.exists(static_dir):
             return FileResponse(index_path)
         
         raise HTTPException(status_code=404, detail="File not found")
+# Add explicit root path handler
+@app.get("/")
+async def root():
+    """Serve index.html at the root path"""
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
+    
+    return {
+        "message": "Crooks Command Center V2 API",
+        "status": "running",
+        "version": "2.0.4",
+        "api_docs": "/docs",
+        "health_check": "/api/health"
+    }
 
 print("✅ All routers loaded successfully")
 print("🚀 Crooks Command Center V2 ready for deployment")
