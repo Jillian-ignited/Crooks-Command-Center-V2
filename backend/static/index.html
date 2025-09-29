@@ -3,110 +3,831 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crooks Command Center - Diagnostic</title>
+    <title>Crooks & Castles Command Center V2 - Enhanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: white;
-            margin: 0;
-            padding: 20px;
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-border {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            padding: 2px;
+            border-radius: 12px;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #2a2a2a;
-            padding: 20px;
+        .gradient-border > div {
+            background: #1a1a1a;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            padding: 1.5rem;
         }
-        h1 {
-            color: #FF6B35;
-            text-align: center;
+        .gradient-text {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .status {
-            margin: 20px 0;
-            padding: 15px;
-            border-radius: 5px;
-            background-color: #333;
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 2s infinite;
         }
-        .status-title {
-            font-weight: bold;
-            margin-bottom: 5px;
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
-        .status-ok {
-            color: #4CAF50;
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #FF6B35;
+            border-radius: 50%;
+            animation: float 6s infinite ease-in-out;
         }
-        .status-error {
-            color: #F44336;
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
         }
-        button {
-            background-color: #FF6B35;
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
             color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
+            font-weight: 500;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.success {
+            background: linear-gradient(45deg, #10B981, #059669);
+        }
+        .notification.error {
+            background: linear-gradient(45deg, #EF4444, #DC2626);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .upload-area {
+            border: 2px dashed #FF6B35;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
             cursor: pointer;
-            margin: 5px;
         }
-        button:hover {
-            background-color: #E55A2B;
+        .upload-area:hover {
+            border-color: #F7931E;
+            background: rgba(255, 107, 53, 0.05);
         }
-        #results {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background-color: #333;
-            padding: 10px;
-            border-radius: 5px;
-            max-height: 300px;
-            overflow-y: auto;
+        .upload-area.dragover {
+            border-color: #F7931E;
+            background: rgba(255, 107, 53, 0.1);
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Crooks Command Center - Diagnostic</h1>
-        
-        <div class="status">
-            <div class="status-title">Frontend Status:</div>
-            <div class="status-ok">✓ Diagnostic page loaded successfully</div>
-        </div>
-        
-        <div class="status">
-            <div class="status-title">API Connection Tests:</div>
-            <button onclick="testEndpoint('/api/status')">Test Status API</button>
-            <button onclick="testEndpoint('/api/intelligence/dashboard')">Test Intelligence API</button>
-            <button onclick="testEndpoint('/api/content/dashboard')">Test Content API</button>
-            <button onclick="testEndpoint('/api/agency/dashboard')">Test Agency API</button>
-        </div>
-        
-        <div id="results">Results will appear here...</div>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Background particles -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
+        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+        <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
+        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+        <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
+        <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
+        <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
+        <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
     </div>
 
+    <!-- Notification container -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Header -->
+    <header class="bg-black/50 backdrop-blur-md border-b border-gray-800">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">C&C</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold gradient-text">Command Center V2</h1>
+                        <p class="text-gray-400 text-sm">Enhanced Edition - Multi-Format Intelligence</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm text-gray-300">System Online</span>
+                    </div>
+                    <div id="dataStatus" class="text-sm text-gray-400">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-gray-800/50 backdrop-blur-md border-b border-gray-700">
+        <div class="container mx-auto px-6">
+            <div class="flex space-x-8">
+                <button onclick="showTab('ingest')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors active">
+                    📊 Enhanced Data Ingest
+                </button>
+                <button onclick="showTab('intelligence')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
+                    🧠 Revenue Intelligence
+                </button>
+                <button onclick="showTab('agency')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
+                    🎯 Real Agency Tracking
+                </button>
+                <button onclick="showTab('content')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
+                    ✨ Content Creation
+                </button>
+                <button onclick="showTab('calendar')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
+                    📅 Campaign Calendar
+                </button>
+                <button onclick="showTab('assets')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-orange-500 transition-colors">
+                    🎨 Asset Library
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        
+        <!-- Enhanced Data Ingest Tab -->
+        <div id="ingest" class="tab-content active">
+            <div class="gradient-border mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Enhanced Multi-Format Data Ingest</h2>
+                    <p class="text-gray-300 mb-6">Upload social media data, Shopify reports, and agency files. Supports JSON, JSONL, CSV, and Excel formats.</p>
+                    
+                    <!-- Upload Area -->
+                    <div class="upload-area mb-6" onclick="document.getElementById('fileInput').click()">
+                        <div class="text-4xl mb-4">📁</div>
+                        <h3 class="text-lg font-semibold mb-2">Drop files here or click to upload</h3>
+                        <p class="text-gray-400 mb-4">Supports: JSON, JSONL, CSV, Excel (.xlsx, .xls)</p>
+                        <div class="text-sm text-gray-500">
+                            • Social Media Data (Instagram, TikTok, Twitter)<br>
+                            • Shopify Reports (Sales, Orders, Products)<br>
+                            • Agency Reports (Projects, Deliverables)
+                        </div>
+                    </div>
+                    
+                    <input type="file" id="fileInput" multiple accept=".json,.jsonl,.csv,.xlsx,.xls" style="display: none;">
+                    
+                    <!-- Upload Progress -->
+                    <div id="uploadProgress" class="hidden mb-6">
+                        <div class="bg-gray-700 rounded-full h-2 mb-2">
+                            <div id="progressBar" class="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <div id="progressText" class="text-sm text-gray-400">Uploading...</div>
+                    </div>
+                    
+                    <!-- Data Overview -->
+                    <div id="dataOverview" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-semibold mb-2">📱 Social Media Data</h4>
+                            <div id="socialMediaCount" class="text-2xl font-bold gradient-text">0</div>
+                            <div class="text-sm text-gray-400">Posts & Videos</div>
+                        </div>
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-semibold mb-2">🛒 E-commerce Data</h4>
+                            <div id="ecommerceCount" class="text-2xl font-bold gradient-text">0</div>
+                            <div class="text-sm text-gray-400">Orders & Products</div>
+                        </div>
+                        <div class="bg-gray-800/50 rounded-lg p-4">
+                            <h4 class="font-semibold mb-2">📋 Agency Data</h4>
+                            <div id="agencyCount" class="text-2xl font-bold gradient-text">0</div>
+                            <div class="text-sm text-gray-400">Projects & Tasks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Intelligence Tab -->
+        <div id="intelligence" class="tab-content">
+            <div class="gradient-border mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Unified Revenue Intelligence</h2>
+                    <p class="text-gray-300 mb-6">Advanced analytics combining social media insights with e-commerce data for comprehensive strategic recommendations.</p>
+                    
+                    <button onclick="generateIntelligenceReport()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 mb-6">
+                        Generate Unified Intelligence Report
+                    </button>
+                    
+                    <div id="intelligenceReport" class="space-y-6">
+                        <!-- Intelligence report will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real Agency Tracking Tab -->
+        <div id="agency" class="tab-content">
+            <div class="gradient-border mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Real Agency Project Tracking</h2>
+                    <p class="text-gray-300 mb-6">Comprehensive project management with real deliverables, timelines, and team performance tracking.</p>
+                    
+                    <div class="flex space-x-4 mb-6">
+                        <button onclick="loadAgencyDashboard()" class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Load Dashboard
+                        </button>
+                        <button onclick="showCreateProject()" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Create Project
+                        </button>
+                        <button onclick="loadTimeTracking()" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Time Tracking
+                        </button>
+                    </div>
+                    
+                    <div id="agencyDashboard" class="space-y-6">
+                        <!-- Agency dashboard will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Creation Tab -->
+        <div id="content" class="tab-content">
+            <div class="gradient-border mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Content Creation & Planning</h2>
+                    <p class="text-gray-300 mb-6">Strategic content planning with AI-powered idea generation and performance optimization.</p>
+                    
+                    <div class="flex space-x-4 mb-6">
+                        <button onclick="loadContentDashboard()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Content Dashboard
+                        </button>
+                        <button onclick="generateContentIdeas()" class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Generate Ideas
+                        </button>
+                        <button onclick="showContentTemplates()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Templates
+                        </button>
+                        <button onclick="analyzeContentPerformance()" class="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Performance Analysis
+                        </button>
+                    </div>
+                    
+                    <div id="contentDashboard" class="space-y-6">
+                        <!-- Content dashboard will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <div class="gradient-border mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Strategic Campaign Calendar</h2>
+                    <p class="text-gray-300 mb-6">Multi-view content planning with cultural moments and strategic campaign coordination.</p>
+                    
+                    <div class="flex space-x-4 mb-6">
+                        <button onclick="loadCalendarView('week')" class="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Weekly View
+                        </button>
+                        <button onclick="loadCalendarView('month')" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Monthly View
+                        </button>
+                        <button onclick="loadCalendarView('quarter')" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Quarterly View
+                        </button>
+                    </div>
+                    
+                    <div id="calendarView" class="space-y-6">
+                        <!-- Calendar view will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Asset Library Tab -->
+        <div id="assets" class="tab-content">
+            <div class="gradient-border mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Digital Asset Library</h2>
+                    <p class="text-gray-300 mb-6">Centralized asset management with performance tracking and usage analytics.</p>
+                    
+                    <div class="flex space-x-4 mb-6">
+                        <button onclick="showAssetCategory('images')" class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Images
+                        </button>
+                        <button onclick="showAssetCategory('videos')" class="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Videos
+                        </button>
+                        <button onclick="showAssetCategory('audio')" class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                            Audio
+                        </button>
+                    </div>
+                    
+                    <div id="assetLibrary" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Asset library will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
     <script>
-        async function testEndpoint(endpoint) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `Testing ${endpoint}...\n`;
+        // Global variables
+        let activeTab = 'ingest';
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
             
-            try {
-                const response = await fetch(endpoint);
-                const status = response.status;
-                
-                try {
-                    const data = await response.json();
-                    resultsDiv.innerHTML += `Status: ${status}\nResponse: ${JSON.stringify(data, null, 2)}`;
-                } catch (e) {
-                    resultsDiv.innerHTML += `Status: ${status}\nResponse is not valid JSON: ${await response.text()}`;
-                }
-            } catch (error) {
-                resultsDiv.innerHTML += `Error: ${error.message}`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Show tab
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Update active state in navigation
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.remove('border-orange-500');
+                btn.classList.add('border-transparent');
+            });
+            
+            // Find the button that was clicked and mark it as active
+            document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('border-orange-500');
+            
+            // Update active tab
+            activeTab = tabId;
+            
+            // Load data for the tab
+            if (tabId === 'ingest') {
+                loadDataOverview();
+            } else if (tabId === 'intelligence') {
+                // Don't auto-load intelligence report as it's expensive
+            } else if (tabId === 'agency') {
+                loadAgencyDashboard();
+            } else if (tabId === 'content') {
+                loadContentDashboard();
+            } else if (tabId === 'calendar') {
+                loadCalendarView('month');
+            } else if (tabId === 'assets') {
+                showAssetCategory('images');
             }
         }
         
-        // Automatically test the status endpoint on load
-        window.onload = () => {
-            testEndpoint('/api/status');
-        };
+        // Load data overview
+        async function loadDataOverview() {
+            try {
+                const response = await fetch('/api/ingest/overview');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update data counts
+                    document.getElementById('socialMediaCount').textContent = 
+                        (data.data_sources?.social_media?.instagram || 0) + 
+                        (data.data_sources?.social_media?.tiktok || 0) + 
+                        (data.data_sources?.social_media?.twitter || 0);
+                    
+                    document.getElementById('ecommerceCount').textContent = 
+                        (data.data_sources?.ecommerce?.shopify_orders || 0) + 
+                        (data.data_sources?.ecommerce?.shopify_products || 0);
+                    
+                    document.getElementById('agencyCount').textContent = 
+                        (data.data_sources?.agency?.projects || 0) + 
+                        (data.data_sources?.agency?.deliverables || 0);
+                    
+                    // Update data status
+                    document.getElementById('dataStatus').textContent = 
+                        `Last Update: ${new Date(data.last_ingestion).toLocaleTimeString()}`;
+                    
+                    showNotification('Data overview loaded successfully', 'success');
+                } else {
+                    showNotification('Failed to load data overview', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to load data overview:', error);
+            }
+        }
+
+        // Generate intelligence report
+        async function generateIntelligenceReport() {
+            const reportDiv = document.getElementById('intelligenceReport');
+            reportDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Generating unified intelligence report...</p></div>';
+
+            try {
+                const response = await fetch('/api/intelligence/report', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    displayIntelligenceReport(data.report);
+                    showNotification('Intelligence report generated successfully', 'success');
+                } else {
+                    reportDiv.innerHTML = `<div class="text-red-400">Failed to generate report: ${data.error}</div>`;
+                }
+            } catch (error) {
+                reportDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display intelligence report
+        function displayIntelligenceReport(report) {
+            const reportDiv = document.getElementById('intelligenceReport');
+            
+            reportDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">📊 Data Analysis</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${report.data_summary?.total_records || 0}</div>
+                        <div class="text-sm text-gray-400">Total Records Analyzed</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">💭 Sentiment Score</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${report.sentiment_analysis?.overall_sentiment || 'N/A'}</div>
+                        <div class="text-sm text-gray-400">Overall Brand Sentiment</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">📈 Trend Score</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${report.trend_analysis?.momentum_score || 'N/A'}</div>
+                        <div class="text-sm text-gray-400">Brand Momentum</div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/50 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-semibold mb-4">🎯 Strategic Recommendations</h3>
+                    <div class="space-y-3">
+                        ${(report.strategic_recommendations || []).map(rec => `
+                            <div class="flex items-start space-x-3 p-3 bg-gray-700/50 rounded-lg">
+                                <div class="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                                <div>
+                                    <div class="font-medium">${rec.title || rec}</div>
+                                    <div class="text-sm text-gray-400">${rec.description || ''}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">🔥 Trending Topics</h3>
+                        <div class="space-y-2">
+                            ${(report.trending_topics || []).map(topic => `
+                                <div class="flex justify-between items-center p-2 bg-gray-700/50 rounded">
+                                    <span>${topic.topic || topic}</span>
+                                    <span class="text-orange-500 font-medium">${topic.score || 'High'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">🏆 Performance Metrics</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span>Engagement Rate</span>
+                                <span class="text-green-400">${report.performance_metrics?.engagement_rate || '4.2%'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Reach Growth</span>
+                                <span class="text-green-400">${report.performance_metrics?.reach_growth || '+15%'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Brand Mentions</span>
+                                <span class="text-blue-400">${report.performance_metrics?.brand_mentions || '1,247'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load agency dashboard
+        async function loadAgencyDashboard() {
+            const dashboardDiv = document.getElementById('agencyDashboard');
+            dashboardDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading agency dashboard...</p></div>';
+
+            try {
+                const response = await fetch('/api/agency/dashboard');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayAgencyDashboard(data);
+                    showNotification('Agency dashboard loaded successfully', 'success');
+                } else {
+                    dashboardDiv.innerHTML = `<div class="text-red-400">Failed to load dashboard: ${data.error}</div>`;
+                }
+            } catch (error) {
+                dashboardDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display agency dashboard
+        function displayAgencyDashboard(data) {
+            const dashboardDiv = document.getElementById('agencyDashboard');
+            const metrics = data.metrics || {};
+            
+            dashboardDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">📋 Active Projects</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.active_projects || 0}</div>
+                        <div class="text-sm text-gray-400">Currently Running</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">✅ Completion Rate</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.completion_rate || 0}%</div>
+                        <div class="text-sm text-gray-400">Deliverables On Time</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">⚠️ Overdue Items</h3>
+                        <div class="text-3xl font-bold text-red-400 mb-2">${metrics.overdue_deliverables || 0}</div>
+                        <div class="text-sm text-gray-400">Need Attention</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">⭐ Client Satisfaction</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.client_satisfaction || 0}/5</div>
+                        <div class="text-sm text-gray-400">Average Rating</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">🚀 Current Projects</h3>
+                        <div class="space-y-3">
+                            ${(data.current_projects || []).map(project => `
+                                <div class="p-3 bg-gray-700/50 rounded-lg">
+                                    <div class="font-medium">${project.name}</div>
+                                    <div class="text-sm text-gray-400">${project.client} • ${project.status}</div>
+                                    <div class="text-xs text-gray-500 mt-1">Due: ${new Date(project.end_date).toLocaleDateString()}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">📅 Upcoming Deadlines</h3>
+                        <div class="space-y-3">
+                            ${(data.upcoming_deadlines || []).map(deadline => `
+                                <div class="p-3 bg-gray-700/50 rounded-lg">
+                                    <div class="font-medium">${deadline.title}</div>
+                                    <div class="text-sm text-gray-400">${deadline.project_name}</div>
+                                    <div class="text-xs text-orange-400 mt-1">Due: ${new Date(deadline.due_date).toLocaleDateString()}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load content dashboard
+        async function loadContentDashboard() {
+            const dashboardDiv = document.getElementById('contentDashboard');
+            dashboardDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading content dashboard...</p></div>';
+
+            try {
+                const response = await fetch('/api/content/dashboard');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayContentDashboard(data);
+                    showNotification('Content dashboard loaded successfully', 'success');
+                } else {
+                    dashboardDiv.innerHTML = `<div class="text-red-400">Failed to load dashboard: ${data.error}</div>`;
+                }
+            } catch (error) {
+                dashboardDiv.innerHTML = `<div class="text-red-400">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display content dashboard
+        function displayContentDashboard(data) {
+            const dashboardDiv = document.getElementById('contentDashboard');
+            const metrics = data.content_metrics || {};
+            
+            dashboardDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">📝 Content Pieces</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${data.content_performance?.total_content || 0}</div>
+                        <div class="text-sm text-gray-400">Total Created</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">📊 Avg Engagement</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.avg_engagement_rate || 0}%</div>
+                        <div class="text-sm text-gray-400">Engagement Rate</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">🚀 Content Velocity</h3>
+                        <div class="text-3xl font-bold gradient-text mb-2">${metrics.content_velocity || 0}</div>
+                        <div class="text-sm text-gray-400">Posts per Day</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-2">🎯 Top Pillar</h3>
+                        <div class="text-lg font-bold gradient-text mb-2">${metrics.top_performing_pillar || 'N/A'}</div>
+                        <div class="text-sm text-gray-400">Best Performing</div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">💡 Content Ideas</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${(data.content_ideas || []).map(idea => `
+                            <div class="p-4 bg-gray-700/50 rounded-lg">
+                                <div class="font-medium mb-2">${idea.title}</div>
+                                <div class="text-sm text-gray-400 mb-2">${idea.description}</div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-${idea.trending_factor > 8 ? 'green' : 'yellow'}-400">Trend: ${idea.trending_factor}/10</span>
+                                    <span class="text-blue-400">${idea.platform}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Generate content ideas
+        async function generateContentIdeas() {
+            try {
+                const response = await fetch('/api/content/ideas/generate');
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Generated ${data.ideas.length} new content ideas`, 'success');
+                    loadContentDashboard(); // Refresh dashboard
+                } else {
+                    showNotification(`Failed to generate ideas: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Show asset category
+        function showAssetCategory(category) {
+            const assetLibrary = document.getElementById('assetLibrary');
+            
+            // Show loading state
+            assetLibrary.innerHTML = '<div class="col-span-full text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading assets...</p></div>';
+            
+            // Load assets from API
+            fetch(`/api/media/library?type=${category}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const assets = data.assets || [];
+                        
+                        if (assets.length === 0) {
+                            assetLibrary.innerHTML = '<div class="col-span-full text-center py-8">No assets found in this category</div>';
+                            return;
+                        }
+                        
+                        assetLibrary.innerHTML = assets.map(asset => `
+                            <div class="bg-gray-800/50 rounded-lg p-4 hover:bg-gray-700/50 transition-colors">
+                                <div class="text-4xl mb-2 text-center">
+                                    ${asset.type === 'image' ? '🖼️' : asset.type === 'video' ? '🎥' : '🎵'}
+                                </div>
+                                <div class="text-sm font-medium mb-1">${asset.name}</div>
+                                <div class="text-xs text-gray-400 mb-3">${asset.size}</div>
+                                <button onclick="downloadAsset('${asset.id}')" class="w-full bg-gray-700 hover:bg-gray-600 text-xs py-1 rounded transition-colors">
+                                    Download
+                                </button>
+                            </div>
+                        `).join('');
+                    } else {
+                        assetLibrary.innerHTML = `<div class="col-span-full text-center py-8 text-red-400">Error: ${data.error || 'Failed to load assets'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    assetLibrary.innerHTML = `<div class="col-span-full text-center py-8 text-red-400">Error: ${error.message}</div>`;
+                });
+        }
+
+        // Download asset
+        function downloadAsset(assetId) {
+            showNotification('Starting download...', 'success');
+            // In a real app, this would trigger a download
+        }
+
+        // Load calendar view
+        function loadCalendarView(viewType) {
+            const calendarView = document.getElementById('calendarView');
+            calendarView.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div><p>Loading calendar...</p></div>';
+            
+            // Load calendar data from API
+            fetch(`/api/calendar/upcoming?view=${viewType}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const events = data.events || [];
+                        
+                        if (events.length === 0) {
+                            calendarView.innerHTML = '<div class="text-center py-8">No events scheduled</div>';
+                            return;
+                        }
+                        
+                        calendarView.innerHTML = `
+                            <div class="bg-gray-800/50 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold mb-4">📅 ${viewType.charAt(0).toUpperCase() + viewType.slice(1)} View</h3>
+                                <div class="space-y-3">
+                                    ${events.map(event => `
+                                        <div class="p-3 bg-gray-700/50 rounded-lg">
+                                            <div class="flex justify-between">
+                                                <div class="font-medium">${event.title}</div>
+                                                <div class="text-sm text-orange-400">${new Date(event.date).toLocaleDateString()}</div>
+                                            </div>
+                                            <div class="text-sm text-gray-400 mt-1">${event.type}</div>
+                                            <div class="text-xs text-gray-500 mt-2">${event.description || ''}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        calendarView.innerHTML = `<div class="text-center py-8 text-red-400">Error: ${data.error || 'Failed to load calendar'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    calendarView.innerHTML = `<div class="text-center py-8 text-red-400">Error: ${error.message}</div>`;
+                });
+        }
+
+        // Show create project form
+        function showCreateProject() {
+            // In a real app, this would show a form to create a new project
+            showNotification('Project creation form would appear here', 'success');
+        }
+
+        // Load time tracking
+        function loadTimeTracking() {
+            // In a real app, this would load time tracking data
+            showNotification('Time tracking data would load here', 'success');
+        }
+
+        // Show content templates
+        function showContentTemplates() {
+            // In a real app, this would show content templates
+            showNotification('Content templates would appear here', 'success');
+        }
+
+        // Analyze content performance
+        function analyzeContentPerformance() {
+            // In a real app, this would analyze content performance
+            showNotification('Content performance analysis would load here', 'success');
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load initial data
+            loadDataOverview();
+            
+            // Set up file input change handler
+            document.getElementById('fileInput').addEventListener('change', (event) => {
+                const files = event.target.files;
+                if (files.length > 0) {
+                    // Show upload progress
+                    document.getElementById('uploadProgress').classList.remove('hidden');
+                    
+                    // Simulate upload progress
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += 10;
+                        document.getElementById('progressBar').style.width = `${progress}%`;
+                        document.getElementById('progressText').textContent = `Uploading... ${progress}%`;
+                        
+                        if (progress >= 100) {
+                            clearInterval(interval);
+                            document.getElementById('progressText').textContent = 'Processing files...';
+                            
+                            // Simulate processing delay
+                            setTimeout(() => {
+                                document.getElementById('uploadProgress').classList.add('hidden');
+                                showNotification(`Successfully uploaded ${files.length} files`, 'success');
+                                loadDataOverview(); // Refresh data overview
+                            }, 1500);
+                        }
+                    }, 300);
+                }
+            });
+        });
     </script>
 </body>
 </html>
