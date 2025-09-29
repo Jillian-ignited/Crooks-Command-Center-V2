@@ -39,72 +39,72 @@ print("✅ Upload directories created successfully")
 async def test_endpoint():
     return {"message": "API is working", "status": "success"}
 
-# Import and include all routers
+# Import and include all routers - FIXED IMPORTS
 try:
-    from routers.intelligence import router as intelligence_router
+    from backend.routers.intelligence import router as intelligence_router
     app.include_router(intelligence_router, prefix="/api/intelligence", tags=["intelligence"])
     print("✅ Intelligence router loaded")
 except ImportError as e:
     print(f"⚠️ Intelligence router error: {e}")
 
 try:
-    from routers.content_creation import router as content_router
+    from backend.routers.content_creation import router as content_router
     app.include_router(content_router, prefix="/api/content", tags=["content"])
     print("✅ Content router loaded")
 except ImportError as e:
     print(f"⚠️ Content router error: {e}")
 
 try:
-    from routers.agency import router as agency_router
+    from backend.routers.agency import router as agency_router
     app.include_router(agency_router, prefix="/api/agency", tags=["agency"])
     print("✅ Agency router loaded")
 except ImportError as e:
     print(f"⚠️ Agency router error: {e}")
 
 try:
-    from routers.executive import router as executive_router
+    from backend.routers.executive import router as executive_router
     app.include_router(executive_router, prefix="/api/executive", tags=["executive"])
     print("✅ Executive router loaded")
 except ImportError as e:
     print(f"⚠️ Executive router error: {e}")
 
 try:
-    from routers.calendar import router as calendar_router
+    from backend.routers.calendar import router as calendar_router
     app.include_router(calendar_router, prefix="/api/calendar", tags=["calendar"])
     print("✅ Calendar router loaded")
 except ImportError as e:
     print(f"⚠️ Calendar router error: {e}")
 
 try:
-    from routers.media import router as media_router
+    from backend.routers.media import router as media_router
     app.include_router(media_router, prefix="/api/media", tags=["media"])
     print("✅ Media router loaded")
 except ImportError as e:
     print(f"⚠️ Media router error: {e}")
 
 try:
-    from routers.shopify import router as shopify_router
+    from backend.routers.shopify import router as shopify_router
     app.include_router(shopify_router, prefix="/api/shopify", tags=["shopify"])
     print("✅ Shopify router loaded")
 except ImportError as e:
     print(f"⚠️ Shopify router error: {e}")
 
 try:
-    from routers.summary import router as summary_router
+    from backend.routers.summary import router as summary_router
     app.include_router(summary_router, prefix="/api/summary", tags=["summary"])
     print("✅ Summary router loaded")
 except ImportError as e:
     print(f"⚠️ Summary router error: {e}")
 
 try:
-    from routers.upload_sidecar import router as upload_router
+    from backend.routers.upload_sidecar import router as upload_router
     app.include_router(upload_router, prefix="/api/upload", tags=["upload"])
     print("✅ Upload router loaded")
 except ImportError as e:
     print(f"⚠️ Upload router error: {e}")
 
 try:
-    from routers.ingest_ENHANCED_MULTI_FORMAT import router as file_ingestion_router
+    from backend.routers.ingest_ENHANCED_MULTI_FORMAT import router as file_ingestion_router
     app.include_router(file_ingestion_router, prefix="/api/ingest", tags=["ingest"])
     print("✅ File ingestion router loaded")
 except ImportError as e:
