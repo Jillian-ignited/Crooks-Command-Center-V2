@@ -1,220 +1,77 @@
-from fastapi import APIRouter
+# backend/routers/agency.py
+from __future__ import annotations
+from pathlib import Path
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, UploadFile, File, Query
+from fastapi.responses import JSONResponse
+
+from backend.services import agency_store as store
 
 router = APIRouter()
 
-@router.get("/")
-async def agency_root():
-    """Agency root endpoint"""
-    return {
-        "success": True,
-        "message": "Agency API operational",
-        "endpoints": ["/dashboard", "/projects", "/deliverables", "/metrics"]
-    }
+@router.get("/", name="agency_root")
+def agency_root():
+    store.init_schema()
+    return {"ok": True, "message": "Agency API ready"}
 
-@router.get("/dashboard")
-async def agency_dashboard():
-    """Get agency dashboard data"""
-    return {
-        "success": True,
-        "metrics": {
-            "active_projects": 8,
-            "completion_rate": 92,
-            "overdue_deliverables": 3,
-            "client_satisfaction": 4.8
-        },
-        "current_projects": [
-            {
-                "name": "Fall Collection Campaign",
-                "client": "Crooks & Castles",
-                "status": "In Progress",
-                "progress": 65,
-                "start_date": "2023-08-15",
-                "end_date": "2023-10-15"
-            },
-            {
-                "name": "Website Redesign",
-                "client": "Crooks & Castles",
-                "status": "In Progress",
-                "progress": 40,
-                "start_date": "2023-09-01",
-                "end_date": "2023-11-15"
-            },
-            {
-                "name": "Holiday Campaign Planning",
-                "client": "Crooks & Castles",
-                "status": "Planning",
-                "progress": 15,
-                "start_date": "2023-09-15",
-                "end_date": "2023-12-01"
-            },
-            {
-                "name": "Influencer Partnership Program",
-                "client": "Crooks & Castles",
-                "status": "In Progress",
-                "progress": 50,
-                "start_date": "2023-07-01",
-                "end_date": "2023-10-31"
-            }
-        ],
-        "upcoming_deadlines": [
-            {
-                "title": "Campaign Creative Approval",
-                "project_name": "Fall Collection Campaign",
-                "due_date": "2023-09-30"
-            },
-            {
-                "title": "Website Wireframes",
-                "project_name": "Website Redesign",
-                "due_date": "2023-10-05"
-            },
-            {
-                "title": "Influencer Shortlist",
-                "project_name": "Influencer Partnership Program",
-                "due_date": "2023-10-10"
-            }
-        ]
-    }
+@router.get("/deliverables", name="agency_deliverables")
+def agency_deliverables(
+    phase: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    q: Optional[str] = Query(None)
+):
+    rows = store.list_deliverables(phase=phase, status=status, q=q)
+    return {"items": rows, "phases": store.phases(), "stats": store.stats()}
 
-@router.get("/projects")
-async def agency_projects():
-    """Get agency projects data"""
-    return {
-        "success": True,
-        "projects": [
-            {
-                "id": "proj1",
-                "name": "Fall Collection Campaign",
-                "client": "Crooks & Castles",
-                "status": "In Progress",
-                "progress": 65,
-                "start_date": "2023-08-15",
-                "end_date": "2023-10-15",
-                "team": ["Creative Director", "Photographer", "Copywriter", "Social Media Manager"],
-                "deliverables": ["Campaign Strategy", "Photoshoot", "Social Media Assets", "Website Banner", "Email Campaign"]
-            },
-            {
-                "id": "proj2",
-                "name": "Website Redesign",
-                "client": "Crooks & Castles",
-                "status": "In Progress",
-                "progress": 40,
-                "start_date": "2023-09-01",
-                "end_date": "2023-11-15",
-                "team": ["UX Designer", "UI Designer", "Web Developer", "Content Strategist"],
-                "deliverables": ["Wireframes", "UI Design", "Frontend Development", "CMS Integration", "Content Migration"]
-            },
-            {
-                "id": "proj3",
-                "name": "Holiday Campaign Planning",
-                "client": "Crooks & Castles",
-                "status": "Planning",
-                "progress": 15,
-                "start_date": "2023-09-15",
-                "end_date": "2023-12-01",
-                "team": ["Creative Director", "Strategist", "Copywriter", "Designer"],
-                "deliverables": ["Campaign Concept", "Content Calendar", "Creative Brief", "Budget Allocation"]
-            },
-            {
-                "id": "proj4",
-                "name": "Influencer Partnership Program",
-                "client": "Crooks & Castles",
-                "status": "In Progress",
-                "progress": 50,
-                "start_date": "2023-07-01",
-                "end_date": "2023-10-31",
-                "team": ["Influencer Manager", "Social Media Manager", "Content Strategist", "Analytics Specialist"],
-                "deliverables": ["Influencer Selection", "Partnership Terms", "Content Guidelines", "Performance Tracking"]
-            }
-        ],
-        "total": 4,
-        "active": 3,
-        "planning": 1,
-        "completed": 0
-    }
+@router.get("/deliverables/{item_id}", name="agency_deliverable_get")
+def agency_deliverable_get(item_id: int):
+    row = store.get_one(item_id)
+    if not row:
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    return row
 
-@router.get("/deliverables")
-async def agency_deliverables():
-    """Get agency deliverables data"""
-    return {
-        "success": True,
-        "deliverables": [
-            {
-                "id": "del1",
-                "title": "Campaign Creative Approval",
-                "project": "Fall Collection Campaign",
-                "status": "Pending Approval",
-                "due_date": "2023-09-30",
-                "assigned_to": "Creative Director"
-            },
-            {
-                "id": "del2",
-                "title": "Website Wireframes",
-                "project": "Website Redesign",
-                "status": "In Progress",
-                "due_date": "2023-10-05",
-                "assigned_to": "UX Designer"
-            },
-            {
-                "id": "del3",
-                "title": "Influencer Shortlist",
-                "project": "Influencer Partnership Program",
-                "status": "In Progress",
-                "due_date": "2023-10-10",
-                "assigned_to": "Influencer Manager"
-            },
-            {
-                "id": "del4",
-                "title": "Holiday Campaign Concept",
-                "project": "Holiday Campaign Planning",
-                "status": "Not Started",
-                "due_date": "2023-10-15",
-                "assigned_to": "Creative Director"
-            },
-            {
-                "id": "del5",
-                "title": "Social Media Assets",
-                "project": "Fall Collection Campaign",
-                "status": "Completed",
-                "due_date": "2023-09-15",
-                "assigned_to": "Designer"
-            }
-        ],
-        "total": 5,
-        "completed": 1,
-        "in_progress": 2,
-        "pending_approval": 1,
-        "not_started": 1
-    }
+@router.put("/deliverables/{item_id}", name="agency_deliverable_update")
+async def agency_deliverable_update(item_id: int, payload: Dict[str, Any]):
+    row = store.update_one(item_id, payload or {})
+    if not row:
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    return row
 
-@router.get("/metrics")
-async def agency_metrics():
-    """Get agency performance metrics"""
-    return {
-        "success": True,
-        "metrics": {
-            "project_metrics": {
-                "on_time_completion": "92%",
-                "average_project_duration": "45 days",
-                "budget_adherence": "97%",
-                "scope_changes": "2.3 per project"
-            },
-            "team_metrics": {
-                "resource_utilization": "85%",
-                "billable_hours": 1245,
-                "non_billable_hours": 220,
-                "overtime_hours": 45
-            },
-            "client_metrics": {
-                "satisfaction_score": 4.8,
-                "nps": 72,
-                "retention_rate": "95%",
-                "feedback_score": 4.6
-            },
-            "financial_metrics": {
-                "revenue": "$245,000",
-                "profit_margin": "32%",
-                "average_project_value": "$61,250",
-                "forecasted_q4_revenue": "$320,000"
-            }
-        }
-    }
+@router.get("/phases", name="agency_phases")
+def agency_phases():
+    return {"phases": store.phases()}
+
+@router.get("/stats", name="agency_stats")
+def agency_stats():
+    return store.stats()
+
+@router.post("/import", name="agency_import_csv")
+async def agency_import_csv(file: UploadFile = File(...), truncate: bool = True):
+    """
+    Upload a CSV exported from your 'Agency Deliverables' plan.
+    Headers should include: Phase, Task, Owner, Channel, Assets, Dependencies, Notes, Due Date, Priority
+    """
+    tmp = Path("/tmp/agency_upload.csv")
+    data = await file.read()
+    tmp.write_bytes(data)
+    count = store.import_csv(tmp, truncate=truncate)
+    return {"ok": True, "imported": count}
+
+@router.get("/dashboard", name="agency_dashboard")
+def agency_dashboard():
+    # Minimal health/dashboard stub – extend later with KPIs
+    return {"ok": True, "stats": store.stats()}
+
+@router.get("/projects", name="agency_projects")
+def agency_projects():
+    # Optional group-by phase for a quick project view
+    groups = {}
+    for row in store.list_deliverables():
+        groups.setdefault(row["phase"] or "Unassigned", []).append(row)
+    return {"projects": [{"phase": k, "count": len(v)} for k, v in groups.items()]}
+
+@router.get("/deliverables/assets-needed", name="agency_assets_needed")
+def agency_assets_needed():
+    # Items that mention assets but aren't 'Done' or 'Approved'
+    rows = [r for r in store.list_deliverables() if (r["assets"] or "").strip() and r["status"] not in ("Approved","Done")]
+    return {"items": rows}
