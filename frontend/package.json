@@ -5,10 +5,13 @@
   "description": "Next.js frontend for Crooks Command Center (static-exported and served by FastAPI).",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && next export -o out",
-    "export": "next export -o out",
+    "build": "next build && next export",              // <-- no -o flag
+    "export": "next export",                            // <-- no -o flag
     "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
     "start": "next start"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "next": "14.2.33",
