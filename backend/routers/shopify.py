@@ -1,340 +1,409 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, List, Dict, Any
+from pydantic import BaseModel
 import json
 from datetime import datetime, timedelta
 import random
 
+# Create router
 router = APIRouter()
 
-@router.get("/")
-async def shopify_root():
-    """Shopify root endpoint"""
-    return {
-        "success": True,
-        "message": "Shopify API operational",
-        "endpoints": ["/analytics", "/products", "/orders", "/customers"]
-    }
+# Models
+class ShopifyAnalytics(BaseModel):
+    success: bool = True
+    analytics: Dict[str, Any]
 
-@router.get("/analytics")
-async def shopify_analytics(days: int = Query(30, description="Number of days to analyze")):
-    """Get Shopify analytics data"""
-    # Generate realistic Shopify analytics data
-    today = datetime.now()
-    
-    # Generate daily sales data
-    daily_sales = []
-    for i in range(days):
-        date = today - timedelta(days=i)
-        daily_sales.append({
-            "date": date.strftime("%Y-%m-%d"),
-            "revenue": round(random.uniform(500, 2500), 2),
-            "orders": random.randint(5, 25),
-            "aov": round(random.uniform(80, 120), 2),
-            "visitors": random.randint(100, 500),
-            "conversion_rate": round(random.uniform(1.5, 4.5), 2)
-        })
-    
-    # Sort by date ascending
-    daily_sales.sort(key=lambda x: x["date"])
-    
-    # Calculate totals and averages
-    total_revenue = sum(day["revenue"] for day in daily_sales)
-    total_orders = sum(day["orders"] for day in daily_sales)
-    total_visitors = sum(day["visitors"] for day in daily_sales)
-    avg_aov = round(total_revenue / total_orders if total_orders > 0 else 0, 2)
-    avg_conversion = round((total_orders / total_visitors * 100) if total_visitors > 0 else 0, 2)
-    
-    # Calculate previous period for comparison
-    prev_start = today - timedelta(days=days*2)
-    prev_end = today - timedelta(days=days)
-    prev_revenue = round(total_revenue * random.uniform(0.8, 1.2), 2)
-    prev_orders = round(total_orders * random.uniform(0.8, 1.2))
-    
-    # Calculate growth rates
-    revenue_growth = round(((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0, 1)
-    orders_growth = round(((total_orders - prev_orders) / prev_orders * 100) if prev_orders > 0 else 0, 1)
-    
-    return {
-        "success": True,
-        "analytics": {
-            "summary": {
-                "total_revenue": total_revenue,
-                "total_orders": total_orders,
-                "average_order_value": avg_aov,
-                "conversion_rate": avg_conversion,
-                "revenue_growth": revenue_growth,
-                "orders_growth": orders_growth
-            },
-            "daily_data": daily_sales,
-            "top_products": [
-                {
-                    "id": "prod_1",
-                    "name": "Classic Logo Hoodie",
-                    "sales": round(total_revenue * 0.25, 2),
-                    "units": round(total_orders * 0.22),
-                    "growth": round(random.uniform(-5, 15), 1)
-                },
-                {
-                    "id": "prod_2",
-                    "name": "Signature T-Shirt",
-                    "sales": round(total_revenue * 0.18, 2),
-                    "units": round(total_orders * 0.25),
-                    "growth": round(random.uniform(-5, 15), 1)
-                },
-                {
-                    "id": "prod_3",
-                    "name": "Embroidered Cap",
-                    "sales": round(total_revenue * 0.12, 2),
-                    "units": round(total_orders * 0.15),
-                    "growth": round(random.uniform(-5, 15), 1)
-                },
-                {
-                    "id": "prod_4",
-                    "name": "Logo Sweatpants",
-                    "sales": round(total_revenue * 0.10, 2),
-                    "units": round(total_orders * 0.08),
-                    "growth": round(random.uniform(-5, 15), 1)
-                },
-                {
-                    "id": "prod_5",
-                    "name": "Varsity Jacket",
-                    "sales": round(total_revenue * 0.08, 2),
-                    "units": round(total_orders * 0.05),
-                    "growth": round(random.uniform(-5, 15), 1)
-                }
-            ],
-            "customer_segments": [
-                {
-                    "segment": "Returning Customers",
-                    "revenue": round(total_revenue * 0.65, 2),
-                    "orders": round(total_orders * 0.55),
-                    "customers": round(total_orders * 0.45)
-                },
-                {
-                    "segment": "New Customers",
-                    "revenue": round(total_revenue * 0.35, 2),
-                    "orders": round(total_orders * 0.45),
-                    "customers": round(total_orders * 0.55)
-                }
-            ],
-            "sales_channels": [
-                {
-                    "channel": "Online Store",
-                    "revenue": round(total_revenue * 0.72, 2),
-                    "orders": round(total_orders * 0.70)
-                },
-                {
-                    "channel": "Instagram",
-                    "revenue": round(total_revenue * 0.15, 2),
-                    "orders": round(total_orders * 0.18)
-                },
-                {
-                    "channel": "Facebook",
-                    "revenue": round(total_revenue * 0.08, 2),
-                    "orders": round(total_orders * 0.07)
-                },
-                {
-                    "channel": "Wholesale",
-                    "revenue": round(total_revenue * 0.05, 2),
-                    "orders": round(total_orders * 0.05)
-                }
-            ],
-            "period": {
-                "start_date": (today - timedelta(days=days)).strftime("%Y-%m-%d"),
-                "end_date": today.strftime("%Y-%m-%d"),
-                "days": days
-            }
+class ShopifyProduct(BaseModel):
+    id: int
+    title: str
+    price: float
+    inventory_quantity: int
+    vendor: str
+    product_type: str
+    tags: List[str]
+    created_at: str
+    updated_at: str
+    variants: List[Dict[str, Any]]
+    images: List[Dict[str, Any]]
+
+class ShopifyProducts(BaseModel):
+    success: bool = True
+    products: List[ShopifyProduct]
+    total: int
+    page: int
+    limit: int
+
+class ShopifyOrder(BaseModel):
+    id: int
+    order_number: int
+    customer: Dict[str, Any]
+    total_price: float
+    subtotal_price: float
+    total_tax: float
+    shipping_cost: float
+    discount_codes: List[Dict[str, Any]]
+    line_items: List[Dict[str, Any]]
+    created_at: str
+    updated_at: str
+    financial_status: str
+    fulfillment_status: str
+    tags: List[str]
+
+class ShopifyOrders(BaseModel):
+    success: bool = True
+    orders: List[ShopifyOrder]
+    total: int
+    page: int
+    limit: int
+
+class ShopifyCustomer(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    email: str
+    phone: Optional[str]
+    orders_count: int
+    total_spent: float
+    tags: List[str]
+    addresses: List[Dict[str, Any]]
+    created_at: str
+    updated_at: str
+    segment: Optional[str]
+
+class ShopifyCustomers(BaseModel):
+    success: bool = True
+    customers: List[ShopifyCustomer]
+    total: int
+    page: int
+    limit: int
+
+class ShopifyOverview(BaseModel):
+    success: bool = True
+    store_name: str
+    total_products: int
+    total_orders: int
+    total_customers: int
+    revenue: Dict[str, Any]
+    top_products: List[Dict[str, Any]]
+    recent_orders: List[Dict[str, Any]]
+    analytics_summary: Dict[str, Any]
+
+# Helper function to generate realistic Shopify data
+def generate_shopify_data():
+    # Generate analytics data
+    analytics = {
+        "summary": {
+            "revenue": random.randint(50000, 150000),
+            "orders": random.randint(500, 1500),
+            "aov": random.randint(80, 120),
+            "conversion_rate": round(random.uniform(1.5, 3.5), 2),
+            "revenue_growth": round(random.uniform(-5, 15), 1),
+            "orders_growth": round(random.uniform(-3, 12), 1)
+        },
+        "traffic": {
+            "total_sessions": random.randint(10000, 30000),
+            "unique_visitors": random.randint(8000, 25000),
+            "bounce_rate": round(random.uniform(30, 60), 1),
+            "avg_session_duration": round(random.uniform(120, 300), 1)
+        },
+        "products": {
+            "total_products": random.randint(50, 150),
+            "out_of_stock": random.randint(3, 15),
+            "low_inventory": random.randint(5, 20)
+        },
+        "customers": {
+            "total_customers": random.randint(1000, 5000),
+            "new_customers": random.randint(100, 500),
+            "returning_customers": random.randint(200, 800)
         }
     }
+    
+    # Generate products data
+    products = []
+    product_types = ["T-Shirt", "Hoodie", "Hat", "Jacket", "Pants", "Accessories"]
+    vendors = ["Crooks & Castles", "In-House", "Collaborations", "Limited Edition"]
+    
+    for i in range(1, 21):
+        product_type = random.choice(product_types)
+        vendor = random.choice(vendors)
+        price = round(random.uniform(29.99, 149.99), 2)
+        inventory = random.randint(0, 50)
+        
+        products.append({
+            "id": 1000 + i,
+            "title": f"{vendor} {product_type} {random.choice(['Classic', 'Premium', 'Signature', 'Limited'])}",
+            "price": price,
+            "inventory_quantity": inventory,
+            "vendor": vendor,
+            "product_type": product_type,
+            "tags": [product_type.lower(), vendor.lower().replace(" & ", "-"), "fw23"],
+            "created_at": (datetime.now() - timedelta(days=random.randint(30, 365))).isoformat(),
+            "updated_at": (datetime.now() - timedelta(days=random.randint(1, 30))).isoformat(),
+            "variants": [
+                {
+                    "id": 10000 + i,
+                    "title": "Default",
+                    "price": price,
+                    "inventory_quantity": inventory
+                }
+            ],
+            "images": [
+                {
+                    "id": 100000 + i,
+                    "src": f"https://example.com/products/{1000 + i}/image.jpg",
+                    "position": 1
+                }
+            ]
+        })
+    
+    # Generate orders data
+    orders = []
+    statuses = ["paid", "pending", "refunded"]
+    fulfillment = ["fulfilled", "partial", "unfulfilled"]
+    
+    for i in range(1, 16):
+        order_date = datetime.now() - timedelta(days=random.randint(1, 30))
+        subtotal = round(random.uniform(50, 300), 2)
+        tax = round(subtotal * 0.08, 2)
+        shipping = round(random.uniform(5, 15), 2)
+        total = subtotal + tax + shipping
+        
+        orders.append({
+            "id": 2000 + i,
+            "order_number": 1000 + i,
+            "customer": {
+                "id": 3000 + random.randint(1, 20),
+                "first_name": random.choice(["John", "Jane", "Michael", "Sarah", "David"]),
+                "last_name": random.choice(["Smith", "Johnson", "Williams", "Brown", "Jones"]),
+                "email": f"customer{3000 + random.randint(1, 20)}@example.com"
+            },
+            "total_price": total,
+            "subtotal_price": subtotal,
+            "total_tax": tax,
+            "shipping_cost": shipping,
+            "discount_codes": [],
+            "line_items": [
+                {
+                    "id": 30000 + i,
+                    "product_id": 1000 + random.randint(1, 20),
+                    "title": f"{random.choice(vendors)} {random.choice(product_types)}",
+                    "quantity": random.randint(1, 3),
+                    "price": round(random.uniform(29.99, 149.99), 2)
+                }
+            ],
+            "created_at": order_date.isoformat(),
+            "updated_at": (order_date + timedelta(hours=random.randint(1, 24))).isoformat(),
+            "financial_status": random.choice(statuses),
+            "fulfillment_status": random.choice(fulfillment),
+            "tags": ["online", "web"]
+        })
+    
+    # Generate customers data
+    customers = []
+    segments = ["VIP", "Regular", "New", "At Risk", "Dormant"]
+    
+    for i in range(1, 21):
+        orders_count = random.randint(1, 10)
+        total_spent = round(random.uniform(50, 1000), 2)
+        created_date = datetime.now() - timedelta(days=random.randint(30, 365))
+        
+        customers.append({
+            "id": 3000 + i,
+            "first_name": random.choice(["John", "Jane", "Michael", "Sarah", "David", "Emily", "Robert", "Lisa"]),
+            "last_name": random.choice(["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis"]),
+            "email": f"customer{3000 + i}@example.com",
+            "phone": f"+1{random.randint(2000000000, 9999999999)}",
+            "orders_count": orders_count,
+            "total_spent": total_spent,
+            "tags": [random.choice(["loyal", "returning", "new"])],
+            "addresses": [
+                {
+                    "id": 40000 + i,
+                    "address1": f"{random.randint(100, 999)} Main St",
+                    "city": random.choice(["New York", "Los Angeles", "Chicago", "Houston", "Phoenix"]),
+                    "province": random.choice(["NY", "CA", "IL", "TX", "AZ"]),
+                    "zip": f"{random.randint(10000, 99999)}",
+                    "country": "US",
+                    "default": True
+                }
+            ],
+            "created_at": created_date.isoformat(),
+            "updated_at": (created_date + timedelta(days=random.randint(1, 30))).isoformat(),
+            "segment": random.choice(segments)
+        })
+    
+    # Generate store overview
+    overview = {
+        "store_name": "Crooks & Castles",
+        "total_products": len(products),
+        "total_orders": len(orders),
+        "total_customers": len(customers),
+        "revenue": {
+            "total": sum(order["total_price"] for order in orders),
+            "average_order_value": round(sum(order["total_price"] for order in orders) / len(orders), 2),
+            "growth": round(random.uniform(-5, 15), 1)
+        },
+        "top_products": sorted(products, key=lambda x: x["inventory_quantity"], reverse=True)[:5],
+        "recent_orders": sorted(orders, key=lambda x: x["created_at"], reverse=True)[:5],
+        "analytics_summary": analytics["summary"]
+    }
+    
+    return {
+        "analytics": analytics,
+        "products": products,
+        "orders": orders,
+        "customers": customers,
+        "overview": overview
+    }
 
-@router.get("/products")
-async def shopify_products(
-    limit: int = Query(10, description="Number of products to return"),
-    offset: int = Query(0, description="Offset for pagination"),
-    category: Optional[str] = Query(None, description="Filter by category")
+# Cache the generated data
+_shopify_data = generate_shopify_data()
+
+# Root endpoint for Shopify
+@router.get("/", response_model=ShopifyOverview)
+async def get_shopify_overview():
+    """
+    Get an overview of the Shopify store including key metrics, top products, and recent orders.
+    """
+    return {"success": True, **_shopify_data["overview"]}
+
+# Analytics endpoint
+@router.get("/analytics", response_model=ShopifyAnalytics)
+async def get_analytics():
+    """
+    Get Shopify analytics data including revenue, orders, and traffic metrics.
+    """
+    return {"success": True, "analytics": _shopify_data["analytics"]}
+
+# Products endpoint
+@router.get("/products", response_model=ShopifyProducts)
+async def get_products(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    product_type: Optional[str] = None,
+    vendor: Optional[str] = None
 ):
-    """Get Shopify products"""
-    # Generate product categories
-    categories = ["Hoodies", "T-Shirts", "Hats", "Pants", "Jackets", "Accessories"]
+    """
+    Get Shopify products with optional filtering by product type and vendor.
+    """
+    products = _shopify_data["products"]
     
-    # Filter by category if provided
-    filtered_categories = [category] if category and category in categories else categories
+    # Apply filters
+    if product_type:
+        products = [p for p in products if p["product_type"].lower() == product_type.lower()]
     
-    # Generate products
-    all_products = []
-    product_id = 1
-    
-    for cat in filtered_categories:
-        for i in range(5):  # 5 products per category
-            price = round(random.uniform(29.99, 149.99), 2)
-            all_products.append({
-                "id": f"prod_{product_id}",
-                "title": f"{['Classic', 'Signature', 'Premium', 'Limited', 'Exclusive'][i % 5]} {cat[:-1]}",
-                "description": f"High-quality {cat.lower()} featuring the iconic Crooks & Castles design.",
-                "price": price,
-                "compare_at_price": round(price * 1.2, 2) if random.random() > 0.7 else None,
-                "category": cat,
-                "tags": ["bestseller" if random.random() > 0.8 else None, "new" if random.random() > 0.8 else None, "sale" if random.random() > 0.8 else None],
-                "variants": random.randint(1, 5),
-                "inventory_quantity": random.randint(0, 50),
-                "image_url": f"https://example.com/products/{cat.lower()}/{i+1}.jpg",
-                "created_at": (datetime.now() - timedelta(days=random.randint(1, 365))).strftime("%Y-%m-%d"),
-                "updated_at": (datetime.now() - timedelta(days=random.randint(0, 30))).strftime("%Y-%m-%d"),
-                "status": "active" if random.random() > 0.1 else "draft"
-            })
-            product_id += 1
+    if vendor:
+        products = [p for p in products if p["vendor"].lower() == vendor.lower()]
     
     # Apply pagination
-    paginated_products = all_products[offset:offset+limit]
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_products = products[start_idx:end_idx]
     
     return {
         "success": True,
         "products": paginated_products,
-        "pagination": {
-            "total": len(all_products),
-            "limit": limit,
-            "offset": offset,
-            "next_offset": offset + limit if offset + limit < len(all_products) else None
-        }
+        "total": len(products),
+        "page": page,
+        "limit": limit
     }
 
-@router.get("/orders")
-async def shopify_orders(
-    limit: int = Query(10, description="Number of orders to return"),
-    offset: int = Query(0, description="Offset for pagination"),
-    status: Optional[str] = Query(None, description="Filter by status")
+# Orders endpoint
+@router.get("/orders", response_model=ShopifyOrders)
+async def get_orders(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    status: Optional[str] = None
 ):
-    """Get Shopify orders"""
-    # Generate order statuses
-    statuses = ["fulfilled", "unfulfilled", "partially_fulfilled", "cancelled"]
+    """
+    Get Shopify orders with optional filtering by status.
+    """
+    orders = _shopify_data["orders"]
     
-    # Filter by status if provided
-    filtered_statuses = [status] if status and status in statuses else statuses
-    
-    # Generate orders
-    all_orders = []
-    
-    for i in range(50):  # Generate 50 orders
-        order_status = random.choice(filtered_statuses)
-        order_date = datetime.now() - timedelta(days=random.randint(0, 30))
-        
-        # Generate line items
-        line_items = []
-        item_count = random.randint(1, 5)
-        for j in range(item_count):
-            price = round(random.uniform(29.99, 149.99), 2)
-            quantity = random.randint(1, 3)
-            line_items.append({
-                "id": f"item_{i}_{j}",
-                "product_id": f"prod_{random.randint(1, 30)}",
-                "title": f"{['Classic', 'Signature', 'Premium', 'Limited', 'Exclusive'][j % 5]} {['Hoodie', 'T-Shirt', 'Hat', 'Pants', 'Jacket'][j % 5]}",
-                "price": price,
-                "quantity": quantity,
-                "total": round(price * quantity, 2)
-            })
-        
-        # Calculate totals
-        subtotal = sum(item["total"] for item in line_items)
-        tax = round(subtotal * 0.08, 2)
-        shipping = round(random.uniform(5, 15), 2)
-        total = round(subtotal + tax + shipping, 2)
-        
-        all_orders.append({
-            "id": f"order_{i+1}",
-            "order_number": f"#{10000 + i}",
-            "customer": {
-                "id": f"cust_{random.randint(1, 100)}",
-                "name": f"{['John', 'Jane', 'Michael', 'Emily', 'David'][i % 5]} {['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'][i % 5]}",
-                "email": f"customer{i}@example.com"
-            },
-            "created_at": order_date.strftime("%Y-%m-%d %H:%M:%S"),
-            "status": order_status,
-            "financial_status": "paid" if random.random() > 0.1 else "pending",
-            "fulfillment_status": "fulfilled" if order_status == "fulfilled" else "unfulfilled",
-            "currency": "USD",
-            "subtotal": subtotal,
-            "tax": tax,
-            "shipping": shipping,
-            "total": total,
-            "item_count": item_count,
-            "line_items": line_items,
-            "shipping_address": {
-                "address1": f"{random.randint(100, 999)} Main St",
-                "city": random.choice(["New York", "Los Angeles", "Chicago", "Houston", "Phoenix"]),
-                "state": random.choice(["NY", "CA", "IL", "TX", "AZ"]),
-                "zip": f"{random.randint(10000, 99999)}",
-                "country": "US"
-            }
-        })
+    # Apply filters
+    if status:
+        orders = [o for o in orders if o["financial_status"].lower() == status.lower()]
     
     # Apply pagination
-    paginated_orders = all_orders[offset:offset+limit]
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_orders = orders[start_idx:end_idx]
     
     return {
         "success": True,
         "orders": paginated_orders,
-        "pagination": {
-            "total": len(all_orders),
-            "limit": limit,
-            "offset": offset,
-            "next_offset": offset + limit if offset + limit < len(all_orders) else None
-        }
+        "total": len(orders),
+        "page": page,
+        "limit": limit
     }
 
-@router.get("/customers")
-async def shopify_customers(
-    limit: int = Query(10, description="Number of customers to return"),
-    offset: int = Query(0, description="Offset for pagination"),
-    sort: Optional[str] = Query("orders_count", description="Sort by field")
+# Customers endpoint
+@router.get("/customers", response_model=ShopifyCustomers)
+async def get_customers(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    segment: Optional[str] = None
 ):
-    """Get Shopify customers"""
-    # Generate customers
-    all_customers = []
+    """
+    Get Shopify customers with optional filtering by segment.
+    """
+    customers = _shopify_data["customers"]
     
-    for i in range(100):  # Generate 100 customers
-        orders_count = random.randint(1, 20)
-        total_spent = round(orders_count * random.uniform(50, 200), 2)
-        
-        all_customers.append({
-            "id": f"cust_{i+1}",
-            "first_name": random.choice(["John", "Jane", "Michael", "Emily", "David", "Sarah", "Robert", "Lisa", "William", "Elizabeth"]),
-            "last_name": random.choice(["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"]),
-            "email": f"customer{i+1}@example.com",
-            "phone": f"+1{random.randint(2000000000, 9999999999)}",
-            "orders_count": orders_count,
-            "total_spent": total_spent,
-            "average_order_value": round(total_spent / orders_count, 2),
-            "created_at": (datetime.now() - timedelta(days=random.randint(1, 365))).strftime("%Y-%m-%d"),
-            "last_order_date": (datetime.now() - timedelta(days=random.randint(0, 90))).strftime("%Y-%m-%d"),
-            "accepts_marketing": random.choice([True, False]),
-            "tags": random.sample(["vip", "repeat", "wholesale", "retail", "international"], k=random.randint(0, 3)),
-            "address": {
-                "address1": f"{random.randint(100, 999)} {random.choice(['Main', 'Oak', 'Maple', 'Washington', 'Park'])} {random.choice(['St', 'Ave', 'Blvd', 'Rd', 'Ln'])}",
-                "city": random.choice(["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]),
-                "state": random.choice(["NY", "CA", "IL", "TX", "AZ", "PA", "TX", "CA", "TX", "CA"]),
-                "zip": f"{random.randint(10000, 99999)}",
-                "country": "US"
-            }
-        })
-    
-    # Sort customers
-    if sort == "orders_count":
-        all_customers.sort(key=lambda x: x["orders_count"], reverse=True)
-    elif sort == "total_spent":
-        all_customers.sort(key=lambda x: x["total_spent"], reverse=True)
-    elif sort == "created_at":
-        all_customers.sort(key=lambda x: x["created_at"], reverse=True)
+    # Apply filters
+    if segment:
+        customers = [c for c in customers if c.get("segment", "").lower() == segment.lower()]
     
     # Apply pagination
-    paginated_customers = all_customers[offset:offset+limit]
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated_customers = customers[start_idx:end_idx]
     
     return {
         "success": True,
         "customers": paginated_customers,
-        "pagination": {
-            "total": len(all_customers),
-            "limit": limit,
-            "offset": offset,
-            "next_offset": offset + limit if offset + limit < len(all_customers) else None
-        }
+        "total": len(customers),
+        "page": page,
+        "limit": limit
     }
+
+# Get a specific product by ID
+@router.get("/products/{product_id}", response_model=dict)
+async def get_product(product_id: int):
+    """
+    Get a specific Shopify product by ID.
+    """
+    products = _shopify_data["products"]
+    product = next((p for p in products if p["id"] == product_id), None)
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return {"success": True, "product": product}
+
+# Get a specific order by ID
+@router.get("/orders/{order_id}", response_model=dict)
+async def get_order(order_id: int):
+    """
+    Get a specific Shopify order by ID.
+    """
+    orders = _shopify_data["orders"]
+    order = next((o for o in orders if o["id"] == order_id), None)
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    return {"success": True, "order": order}
+
+# Get a specific customer by ID
+@router.get("/customers/{customer_id}", response_model=dict)
+async def get_customer(customer_id: int):
+    """
+    Get a specific Shopify customer by ID.
+    """
+    customers = _shopify_data["customers"]
+    customer = next((c for c in customers if c["id"] == customer_id), None)
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    return {"success": True, "customer": customer}
