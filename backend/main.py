@@ -8,11 +8,12 @@ import importlib, os
 from types import ModuleType
 from typing import Optional, List, Tuple
 
+APP_VERSION = "frontend-static-v3"
 STATIC_ROOT = "backend/static/site"
 NEXT_DIR    = os.path.join(STATIC_ROOT, "_next")
 NEXT_STATIC = os.path.join(NEXT_DIR, "static")
 
-app = FastAPI(title="Crooks Command Center", version="1.0.0")
+app = FastAPI(title="Crooks Command Center", version=APP_VERSION)
 
 # --- CORS ---
 app.add_middleware(
@@ -25,7 +26,11 @@ app.add_middleware(
 @app.get("/health")
 @app.get("/api/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "version": APP_VERSION}
+
+@app.get("/__whoami", response_class=PlainTextResponse)
+def whoami():
+    return f"main.py={APP_VERSION}"
 
 # --- Tolerant router loader ---
 def _try_import(paths: List[str]) -> Tuple[Optional[ModuleType], Optional[str], Optional[Exception]]:
@@ -60,22 +65,20 @@ _mount("shopify",          "/shopify",          ["backend.routers.shopify"])
 _mount("summary",          "/summary",          ["backend.routers.summary"])
 _mount("upload_sidecar",   "/sidecar",          ["backend.routers.upload_sidecar","backend.routers.sidecar"])
 
-# --- Explicit Next.js mounts (preempt 404s for hashed files) ---
-# Mount the entire _next tree explicitly:
+# --- Explicit Next.js mounts (avoid 404s on hashed files) ---
 if os.path.isdir(NEXT_DIR):
     app.mount("/_next", StaticFiles(directory=NEXT_DIR, html=False), name="next")
     print(f"[main] Mounted '/_next' from {os.path.abspath(NEXT_DIR)}")
 else:
     print(f"[main] WARN: Missing Next dir: {os.path.abspath(NEXT_DIR)}")
 
-# Mount the static subtree explicitly as well (paranoid):
 if os.path.isdir(NEXT_STATIC):
     app.mount("/_next/static", StaticFiles(directory=NEXT_STATIC, html=False), name="next-static")
     print(f"[main] Mounted '/_next/static' from {os.path.abspath(NEXT_STATIC)}")
 else:
     print(f"[main] WARN: Missing Next static dir: {os.path.abspath(NEXT_STATIC)}")
 
-# Mount the site root (SPA) last so /, /agency, etc. serve index.html
+# Mount the site root (SPA) last so / and /agency, /calendar, etc. serve index.html
 app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="site")
 
 # --- Static diagnostics ---
@@ -94,7 +97,7 @@ def __static_debug():
         "root": {"path": os.path.abspath(STATIC_ROOT), "exists": os.path.isdir(STATIC_ROOT)},
         "next": {"path": os.path.abspath(NEXT_DIR),    "exists": os.path.isdir(NEXT_DIR)},
         "static": {"path": os.path.abspath(NEXT_STATIC), "exists": os.path.isdir(NEXT_STATIC)},
-        "samples": {"index_html": False, "css": [], "chunks": []},
+        "samples": {"index_html": False, "css": [], "chunks": [], "has_health": False},
     }
     files = []
     if info["root"]["exists"]:
@@ -102,6 +105,7 @@ def __static_debug():
             for f in fs:
                 files.append(os.path.relpath(os.path.join(r, f), STATIC_ROOT))
     info["samples"]["index_html"] = any(p == "index.html" for p in files)
+    info["samples"]["has_health"] = any(p == "health.txt" for p in files)
     info["samples"]["css"]    = [p for p in files if p.startswith("_next/static/css/")][:5]
     info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
     return JSONResponse(info)
