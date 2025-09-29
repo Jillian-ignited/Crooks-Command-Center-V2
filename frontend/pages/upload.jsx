@@ -8,50 +8,76 @@ export default function UploadPage(){
 
   async function uploadToIntelligence(e){
     e.preventDefault();
+    const form = e.currentTarget; // capture before any await
     setErr(""); setMsg(""); setLoading(true);
-    const f = e.currentTarget.file.files[0];
-    const kind = e.currentTarget.kind.value || "exec";
-    if(!f){ setErr("Choose a file"); setLoading(false); return; }
-    const fd = new FormData();
-    fd.append("file", f); fd.append("kind", kind);
     try {
+      const file = form.file?.files?.[0];
+      const kind = form.kind?.value || "exec";
+      if(!file){ throw new Error("Choose a file"); }
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", kind);
+
       const res = await apiPost("/intelligence/upload", fd);
       setMsg(`Uploaded to intelligence: ${res.filename} (${res.size} bytes)`);
-      e.currentTarget.reset();
-    } catch (e){ setErr(e.message); } finally { setLoading(false); }
+      form.reset?.(); // safe call even if null/undefined
+    } catch (e){
+      setErr(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function uploadToIngest(e){
     e.preventDefault();
+    const form = e.currentTarget; // capture before await
     setErr(""); setMsg(""); setLoading(true);
-    const f = e.currentTarget.file.files[0];
-    const source = e.currentTarget.source.value || "manual";
-    const notes = e.currentTarget.notes.value || "";
-    if(!f){ setErr("Choose a file"); setLoading(false); return; }
-    const fd = new FormData();
-    fd.append("file", f); fd.append("source", source); fd.append("notes", notes);
     try {
+      const file = form.file?.files?.[0];
+      const source = form.source?.value || "manual";
+      const notes = form.notes?.value || "";
+      if(!file){ throw new Error("Choose a file"); }
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("source", source);
+      fd.append("notes", notes);
+
       const res = await apiPost("/ingest/upload", fd);
       setMsg(`Ingest job ${res.job_id} created from ${res.filename} (${res.size} bytes)`);
-      e.currentTarget.reset();
-    } catch (e){ setErr(e.message); } finally { setLoading(false); }
+      form.reset?.();
+    } catch (e){
+      setErr(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function jsonUpload(e){
     e.preventDefault();
+    const form = e.currentTarget; // capture before await
     setErr(""); setMsg(""); setLoading(true);
-    const content = e.currentTarget.content.value || "";
-    const kind = e.currentTarget.kind.value || "notes";
     try {
+      const content = form.content?.value || "";
+      const kind = form.kind?.value || "notes";
+      if(!content.trim()){ throw new Error("Enter JSON or text"); }
+
       const res = await apiPost("/intelligence/upload", { content, filename: "payload.txt", kind });
       setMsg(`Uploaded JSON payload (${res.size} bytes)`);
-      e.currentTarget.reset();
-    } catch (e){ setErr(e.message); } finally { setLoading(false); }
+      form.reset?.();
+    } catch (e){
+      setErr(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <main style={{maxWidth:900,margin:"40px auto",padding:"0 16px",fontFamily:"system-ui"}}>
       <h1>Upload Center</h1>
+
+      {err && <p style={{color:"crimson"}}>{err}</p>}
+      {msg && <p style={{color:"seagreen"}}>{msg}</p>}
 
       <section style={{margin:"16px 0",padding:16,border:"1px solid #eee",borderRadius:10}}>
         <h2>Upload to Intelligence</h2>
@@ -80,9 +106,6 @@ export default function UploadPage(){
           <button disabled={loading} type="submit">{loading?"Submitting…":"Submit JSON"}</button>
         </form>
       </section>
-
-      {err && <p style={{color:"crimson"}}>{err}</p>}
-      {msg && <p style={{color:"seagreen"}}>{msg}</p>}
     </main>
   );
 }
