@@ -9,7 +9,7 @@ export default function SummaryPage() {
   async function load(d = days) {
     setErr("");
     try {
-      // backend/routers/summary.py exposes both /summary and /overview
+      // backend/routers/summary.py exposes /summary/overview
       const res = await apiGet("/summary/overview", { query: { days: d } });
       setData(res);
     } catch (e) {
