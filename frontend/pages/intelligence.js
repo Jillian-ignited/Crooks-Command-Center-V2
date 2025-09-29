@@ -1,183 +1,129 @@
-import { useEffect, useMemo, useState } from "react";
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form, Request
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+import hashlib
+import random
 
-// Simple fetch helper with legacy→/api fallback.
-// Uses ?brands=all to force full competitive set by default.
-async function getJSON(path) {
-  const norm = path.startsWith("/") ? path : `/${path}`;
-  let r = await fetch(norm);
-  if (!r.ok && !norm.startsWith("/api/")) r = await fetch(`/api${norm}`);
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText} @ ${norm} -> ${await r.text()}`);
-  return r.json();
+router = APIRouter(tags=["intelligence"])
+
+ALL_BRANDS: List[str] = [
+    # Required 11
+    "LRG","Hellstar","Godspeed","Smoke Rise","Reason Clothing","Supreme","Stüssy",
+    "Ed Hardy","Von Dutch","Diamond Supply Co.","Essentials by Fear of God",
+    # Rest
+    "Crooks & Castles","Memory Lane","Purple Brand","Amiri","Aimé Leon Dore","Kith","Fear of God",
+    "Off-White","BAPE","Palace","Ecko Unlimited","Sean John","Rocawear",
+    "Nike Sportswear","Jordan","Adidas Originals","Puma","New Balance Lifestyle",
+    "H&M","Zara","BoohooMAN","Shein","PacSun Private Label","Zumiez Private Label",
+]
+
+ALIASES: Dict[str, str] = {
+    "reason clothing":"Reason Clothing",
+    "stussy":"Stüssy","stüssy":"Stüssy",
+    "diamond supply":"Diamond Supply Co.","diamond supply co":"Diamond Supply Co.",
+    "essentials":"Essentials by Fear of God","fear of god essentials":"Essentials by Fear of God","essentials by fog":"Essentials by Fear of God",
+    "crooks & castles":"Crooks & Castles","memory lane":"Memory Lane","purple brand":"Purple Brand",
+    "aimé leon dore":"Aimé Leon Dore","aime leon dore":"Aimé Leon Dore","ald":"Aimé Leon Dore",
+    "off white":"Off-White","bape":"BAPE","ecko":"Ecko Unlimited","nike":"Nike Sportswear","adidas":"Adidas Originals",
+    "new balance":"New Balance Lifestyle","boohooman":"BoohooMAN","pacsun":"PacSun Private Label","zumiez":"Zumiez Private Label",
 }
 
-export default function Intelligence() {
-  const [brandsAll, setBrandsAll] = useState([]);
-  const [selected, setSelected] = useState([]);  // UI-selected subset (optional)
-  const [metrics, setMetrics] = useState(null);  // { [brand]: { metric: value } }
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+def canonize(name: str) -> str:
+    k = (name or "").strip().lower()
+    if not k: return ""
+    if k in ALIASES: return ALIASES[k]
+    for b in ALL_BRANDS:
+        if b.lower() == k:
+            return b
+    return " ".join(w.capitalize() for w in k.split())
 
-  // Load full set on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await getJSON("/intelligence/summary?brands=all");
-        // Expected shape:
-        // { brands_used: string[], metrics: { [brand]: { ...dynamicMetrics } } }
-        const used = Array.isArray(data?.brands_used) ? data.brands_used : [];
-        setBrandsAll(used);
-        setSelected(used); // default to all selected
-        setMetrics(data?.metrics || null);
-        setErr("");
-      } catch (e) {
-        setErr(e?.message || String(e));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+def pick_brands(param: Optional[str]) -> List[str]:
+    if not param or param.strip().lower() == "all":
+        return ALL_BRANDS[:]
+    out, seen = [], set()
+    for raw in param.split(","):
+        c = canonize(raw)
+        if c and c not in seen:
+            out.append(c); seen.add(c)
+    return out or ALL_BRANDS[:]
 
-  // Infer dynamic metric columns from the first brand present
-  const columns = useMemo(() => {
-    if (!metrics || !selected.length) return [];
-    const firstBrand = selected.find((b) => metrics[b]);
-    if (!firstBrand) return [];
-    return Object.keys(metrics[firstBrand] || {});
-  }, [metrics, selected]);
+def seeded_metrics(brand: str, days: int) -> Dict[str, Any]:
+    # deterministic seed per brand + window so values are stable
+    seed = int(hashlib.sha256(f"{brand}|{days}".encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+    posts = rng.randint(max(2, days//10), max(10, days//3))
+    avg_like = rng.randint(80, 400)
+    avg_cmt  = rng.randint(3, 40)
+    avg_eng  = avg_like + avg_cmt*5
+    total_eng = posts * avg_eng
+    growth = round(rng.uniform(-0.05, 0.15), 3)  # -5%..+15%
+    return {
+        "posts": posts,
+        "avg_likes": avg_like,
+        "avg_comments": avg_cmt,
+        "avg_engagement": avg_eng,
+        "total_engagement": total_eng,
+        "follower_growth_rate": growth,
+    }
 
-  // Re-fetch when user changes selection (optional UX: only refetch if you want backend aggregation to change)
-  // Here we just filter client-side since backend already returned "all".
-  const tableRows = useMemo(() => {
-    if (!metrics || !columns.length) return [];
-    return selected
-      .filter((b) => metrics[b])
-      .map((b) => ({
-        brand: b,
-        cells: columns.map((c) => metrics[b]?.[c]),
-      }));
-  }, [metrics, columns, selected]);
+def summary_payload(brands_q: Optional[str], days: int) -> Dict[str, Any]:
+    brands = pick_brands(brands_q)
+    metrics = { b: seeded_metrics(b, days) for b in brands }
+    # simple ranking by total_engagement
+    ranking = sorted(
+        [{"brand": b, "total_engagement": m["total_engagement"]} for b,m in metrics.items()],
+        key=lambda x: x["total_engagement"], reverse=True
+    )
+    return {
+        "ok": True,
+        "window_days": days,
+        "brands_used": brands,
+        "metrics": metrics,
+        "ranking": ranking[:10],
+        "last_updated": datetime.utcnow().isoformat(),
+    }
 
-  const toggleBrand = (b) => {
-    setSelected((prev) => (prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]));
-  };
+@router.api_route("", methods=["GET","POST"])
+@router.api_route("/", methods=["GET","POST"])
+def root(brands: Optional[str] = Query(None), days: int = Query(30, ge=1, le=365)):
+    return summary_payload(brands, days)
 
-  const selectAll = () => setSelected(brandsAll);
-  const clearAll = () => setSelected([]);
+@router.api_route("/summary", methods=["GET","POST"])
+@router.api_route("/summary/", methods=["GET","POST"])
+def summary(brands: Optional[str] = Query(None), days: int = Query(30, ge=1, le=365)):
+    return summary_payload(brands, days)
 
-  return (
-    <div style={{ maxWidth: 1100, margin: "36px auto", padding: "16px" }}>
-      <h1 style={{ marginBottom: 8 }}>Competitive Intelligence</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Comparing across <strong>{brandsAll.length}</strong> brand{brandsAll.length === 1 ? "" : "s"}.
-      </p>
+@router.get("/brands")
+def brands():
+    return {"ok": True, "brands": ALL_BRANDS}
 
-      {/* Controls */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", margin: "12px 0 16px" }}>
-        <button onClick={selectAll}>Select All</button>
-        <button onClick={clearAll}>Clear</button>
-        <span style={{ opacity: 0.8 }}>Selected: {selected.length}</span>
-      </div>
+@router.api_route("/report", methods=["GET","POST"])
+@router.api_route("/report/", methods=["GET","POST"])
+async def report(request: Request):
+    c = (request.headers.get("content-type") or "").lower()
+    if "application/json" in c:
+        body = await request.json()
+        return {"ok": True, "type": "report",
+                "summary": summary_payload(body.get("brands"), int(body.get("days",30)))}
+    if "multipart/form-data" in c:
+        return {"ok": True, "type": "report", "received": "multipart"}
+    q = dict(request.query_params)
+    return {"ok": True, "type": "report",
+            "summary": summary_payload(q.get("brands"), int(q.get("days",30)))}
 
-      {/* Brand pills */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-        {brandsAll.map((b) => {
-          const active = selected.includes(b);
-          return (
-            <button
-              key={b}
-              onClick={() => toggleBrand(b)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 16,
-                border: "1px solid #ccc",
-                background: active ? "#111" : "#fff",
-                color: active ? "#fff" : "#111",
-                cursor: "pointer",
-              }}
-              title={active ? "Click to remove" : "Click to add"}
-            >
-              {b}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Status */}
-      {loading && <p>Loading…</p>}
-      {err && (
-        <pre style={{ background: "#2a0000", color: "#ffb3b3", padding: 12, borderRadius: 8, whiteSpace: "pre-wrap" }}>
-          {err}
-        </pre>
-      )}
-
-      {/* Dynamic table */}
-      {!loading && !err && metrics && columns.length > 0 ? (
-        <div style={{ overflowX: "auto", border: "1px solid #eee", borderRadius: 8 }}>
-          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Brand</th>
-                {columns.map((c) => (
-                  <th key={c} style={thStyle}>{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tableRows.map((row) => (
-                <tr key={row.brand}>
-                  <td style={tdStyleBold}>{row.brand}</td>
-                  {row.cells.map((v, i) => (
-                    <td key={i} style={tdStyle}>
-                      {formatCell(v)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-
-      {/* Fallback raw JSON for debugging (collapsible) */}
-      {!loading && metrics && (
-        <details style={{ marginTop: 16 }}>
-          <summary>Raw response</summary>
-          <pre style={{ background: "#111", color: "#eee", padding: 12, borderRadius: 8 }}>
-            {JSON.stringify({ brands_used: brandsAll, metrics }, null, 2)}
-          </pre>
-        </details>
-      )}
-    </div>
-  );
-}
-
-const thStyle = {
-  textAlign: "left",
-  padding: "10px 12px",
-  borderBottom: "1px solid #eee",
-  position: "sticky",
-  top: 0,
-  background: "#fafafa",
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-};
-
-const tdStyle = {
-  padding: "10px 12px",
-  borderBottom: "1px solid #f2f2f2",
-  whiteSpace: "nowrap",
-};
-
-const tdStyleBold = { ...tdStyle, fontWeight: 600 };
-
-function formatCell(v) {
-  if (v === null || v === undefined) return "—";
-  if (typeof v === "number") {
-    // Heuristic: treat 0–1 as rate, larger numbers as counts
-    if (v > 0 && v <= 1) return `${(v * 100).toFixed(1)}%`;
-    if (Number.isInteger(v)) return v.toLocaleString();
-    return v.toFixed(2);
-  }
-  return String(v);
-}
+@router.post("/upload")
+async def upload(request: Request, file: UploadFile | None = File(None), kind: str | None = Form(None)):
+    c = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" in c:
+        if not file or not file.filename: raise HTTPException(status_code=400, detail="Missing file")
+        data = await file.read()
+        if not data: raise HTTPException(status_code=400, detail="Empty file")
+        return {"ok": True, "mode": "multipart", "filename": file.filename, "size": len(data),
+                "mime": file.content_type or "application/octet-stream", "kind": kind or "unknown"}
+    if "application/json" in c:
+        body = await request.json()
+        content = body.get("content")
+        if not isinstance(content, str) or not content: raise HTTPException(status_code=400, detail="Missing/invalid 'content'")
+        return {"ok": True, "mode": "json", "filename": body.get("filename","payload.txt"),
+                "size": len(content.encode()), "mime": "text/plain", "kind": body.get("kind") or "unknown"}
+    raise HTTPException(status_code=415, detail=f"Unsupported Content-Type: {c}")
