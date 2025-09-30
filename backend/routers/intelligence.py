@@ -35,6 +35,9 @@ async def intelligence_upload(
 
     summary = None
     if parse and safe.lower().endswith(".csv"):
+        # If Shopify and brand not provided, default to store.DEFAULT_BRAND
+        if (source or "").lower() == "shopify" and not brand:
+            brand = store.DEFAULT_BRAND
         summary = store.import_csv(target, source=source, brand=brand)
 
     return {"ok": True, "filename": safe, "size": size, "path": f"/api/intelligence/files/{safe}", "parsed": bool(summary), "import": summary}
@@ -56,7 +59,6 @@ def intelligence_file_get(name: str):
         return JSONResponse({"detail":"Not Found"}, status_code=404)
     return FileResponse(str(target), filename=safe)
 
-# helpful GET for accidental GET requests to /upload
 @router.get("/upload", include_in_schema=False)
 def intelligence_upload_get_hint():
     return JSONResponse({"detail":"Use POST multipart/form-data to /api/intelligence/upload (field 'file')."}, status_code=405)
