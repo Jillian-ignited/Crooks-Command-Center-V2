@@ -1,39 +1,62 @@
+// frontend/pages/summary.js
 import { useEffect, useState } from "react";
-import { apiGet } from "../lib/api";
 
-export default function SummaryPage() {
-  const [days, setDays] = useState(30);
+const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_BASE || "";
+
+function dollars(v) {
+  const n = Number(v || 0);
+  if (isNaN(n)) return "-";
+  return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+function num(v) {
+  const n = Number(v || 0);
+  if (isNaN(n)) return "-";
+  return n.toLocaleString();
+}
+
+export default function Summary() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
 
-  async function load(d = days) {
-    setErr("");
-    try {
-      // backend/routers/summary.py exposes /summary/overview
-      const res = await apiGet("/summary/overview", { query: { days: d } });
-      setData(res);
-    } catch (e) {
-      setErr(e.message);
-      setData(null);
-    }
-  }
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/summary/overview`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const j = await res.json();
+        setData(j);
+      } catch (e) { setErr(String(e.message || e)); }
+    })();
+  }, []);
 
-  useEffect(() => { load(days); }, []);
+  const kpis = data?.kpis || data?.summary || {};
+  const notes = data?.notes || [];
 
   return (
-    <main style={{ maxWidth: 900, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui" }}>
-      <h1>Summary</h1>
+    <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: 24 }}>
+      <h1 style={{ marginTop: 0 }}>Summary</h1>
+      {err && <div style={{ margin: "12px 0", padding: 12, borderRadius: 8, background: "#2a0f12", border: "1px solid #a33" }}>{err}</div>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
+        <Card label="Revenue" value={dollars(kpis.revenue)} />
+        <Card label="Orders" value={num(kpis.orders)} />
+        <Card label="AOV" value={dollars(kpis.aov)} />
+        <Card label="Sessions" value={num(kpis.sessions)} />
+      </div>
+      <div style={{ marginTop: 18, background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Highlights</h3>
+        <ul style={{ margin: 0, paddingLeft: 16, lineHeight: 1.5 }}>
+          {(notes.length ? notes : ["No highlights yet."]).map((n, i) => <li key={i}>{String(n)}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
 
-      <form onSubmit={(e)=>{e.preventDefault(); load(days);}} style={{display:"flex",gap:8,alignItems:"center",margin:"12px 0"}}>
-        <label>Days</label>
-        <input type="number" min="1" max="365" value={days} onChange={e=>setDays(Number(e.target.value||30))}/>
-        <button type="submit">Refresh</button>
-      </form>
-
-      {err && <p style={{ color: "crimson" }}>{err}</p>}
-      <pre style={{ whiteSpace: "pre-wrap", background: "#fafafa", padding: 12, borderRadius: 8 }}>
-        {JSON.stringify(data, null, 2)}
-      </pre>
-    </main>
+function Card({ label, value }) {
+  return (
+    <div style={{ background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 16 }}>
+      <div style={{ fontSize: 13, color: "#98a4b3" }}>{label}</div>
+      <div style={{ fontSize: 24, marginTop: 6 }}>{value ?? "—"}</div>
+    </div>
   );
 }
