@@ -16,3 +16,5 @@ python-magic==0.4.27
 starlette>=0.37.2
 pydantic>=2.7.0
 openai==1.54.0
+sqlalchemy==2.0.36
+psycopg[binary]==3.2.3
