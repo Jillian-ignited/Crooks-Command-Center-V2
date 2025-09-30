@@ -15,7 +15,7 @@ class MediaFile(Base):
     category = Column(String, default="general")
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     uploaded_by = Column(String, nullable=True)
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})  # Changed from metadata
 
 class IntelligenceFile(Base):
     __tablename__ = "intelligence_files"
@@ -34,11 +34,11 @@ class ExecutiveMetric(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     brand = Column(String, nullable=False)
-    metric_type = Column(String, nullable=False)  # engagement, reach, etc.
+    metric_type = Column(String, nullable=False)
     value = Column(Float, nullable=False)
     period = Column(String, default="30d")
     recorded_at = Column(DateTime(timezone=True), server_default=func.now())
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})  # Changed from metadata
 
 class ContentBrief(Base):
     __tablename__ = "content_briefs"
@@ -58,7 +58,7 @@ class CalendarEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     event_date = Column(DateTime(timezone=True), nullable=False)
-    event_type = Column(String, default="cultural")  # cultural, campaign, deadline
+    event_type = Column(String, default="cultural")
     description = Column(Text)
     relevance = Column(String, default="medium")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
