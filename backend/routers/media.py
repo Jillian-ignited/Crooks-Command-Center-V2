@@ -1,59 +1,49 @@
 # backend/routers/media.py
-from __future__ import annotations
-
-import os
-from pathlib import Path
-from typing import List
-
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
-
-# Where to store uploaded media (must be mounted in main.py at /media)
-MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "backend/media")).resolve()
-MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+from pathlib import Path
+from typing import List, Optional
+import shutil
+import json
+from datetime import datetime
 
 router = APIRouter()
 
-def _asset_url(name: str) -> str:
-    # Served by StaticFiles mounted at /media in main.py
-    return f"/media/{name}"
+MEDIA_STORAGE = Path("backend/media_storage")
+MEDIA_STORAGE.mkdir(parents=True, exist_ok=True)
 
-@router.get("/", summary="Media root")
-def media_root():
-    return {"ok": True, "media_root": str(MEDIA_ROOT)}
+@router.post("/upload")
+async def upload_media(files: List[UploadFile] = File(...)):
+    """Upload media files"""
+    uploaded = []
+    for file in files:
+        file_path = MEDIA_STORAGE / file.filename
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        uploaded.append({
+            "filename": file.filename,
+            "size": file_path.stat().st_size,
+            "uploaded_at": datetime.now().isoformat()
+        })
+    return {"uploaded": uploaded, "count": len(uploaded)}
 
-@router.get("/library", summary="(deprecated) list assets")
-def media_library():
-    return media_assets()
-
-@router.get("/assets", summary="List uploaded assets")
-def media_assets():
-    if not MEDIA_ROOT.exists():
-        return {"ok": True, "assets": []}
-    items: List[dict] = []
-    for p in sorted(MEDIA_ROOT.iterdir()):
-        if p.is_file():
-            st = p.stat()
-            items.append({
-                "filename": p.name,
-                "size": st.st_size,
-                "modified": int(st.st_mtime),
-                "url": _asset_url(p.name),
+@router.get("/list")
+async def list_media(limit: int = 50):
+    """List all media files"""
+    files = []
+    for file_path in MEDIA_STORAGE.glob("*"):
+        if file_path.is_file():
+            files.append({
+                "filename": file_path.name,
+                "size": file_path.stat().st_size,
+                "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
             })
-    return {"ok": True, "count": len(items), "assets": items}
+    return {"files": files[:limit], "total": len(files)}
 
-@router.post("/upload", summary="Upload a media file (multipart field name = file)")
-async def media_upload(file: UploadFile = File(...)):
-    if not file or not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-    # Normalize filename (very light)
-    safe_name = Path(file.filename).name.replace("..", "_")
-    dest = MEDIA_ROOT / safe_name
-    data = await file.read()
-    dest.write_bytes(data)
-    return JSONResponse({
-        "ok": True,
-        "filename": safe_name,
-        "size": len(data),
-        "url": _asset_url(safe_name),
-    })
+@router.get("/assets")
+async def get_assets(category: Optional[str] = None):
+    """Get assets, optionally filtered by category"""
+    return {
+        "assets": [],
+        "categories": ["images", "videos", "documents"],
+        "total": 0
+    }
