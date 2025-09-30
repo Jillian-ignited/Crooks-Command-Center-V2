@@ -8,17 +8,22 @@ function num(n, opts = {}) {
   if (isNaN(v)) return "-";
   return v.toLocaleString(undefined, { maximumFractionDigits: 2, ...opts });
 }
-
 function dollars(v) {
   const n = Number(v || 0);
   if (isNaN(n)) return "-";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
-
 function pct(v) {
   const n = Number(v || 0);
   if (isNaN(n)) return "-";
   return `${n.toFixed(2)}%`;
+}
+function Arrow({ deltaPct }) {
+  if (deltaPct === undefined || deltaPct === null) return null;
+  const up = deltaPct >= 0;
+  const color = up ? "#6aff8a" : "#ff6a6a";
+  const label = `${up ? "▲" : "▼"} ${Math.abs(deltaPct).toFixed(1)}%`;
+  return <span style={{ marginLeft: 8, color, fontWeight: 600 }}>{label}</span>;
 }
 
 export default function Executive() {
@@ -30,8 +35,8 @@ export default function Executive() {
   const [error, setError] = useState("");
 
   async function fetchOverview(b) {
-    setLoading(true);
     setError("");
+    setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/executive/overview?brand=${encodeURIComponent(b || brand)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -46,10 +51,7 @@ export default function Executive() {
     }
   }
 
-  useEffect(() => {
-    fetchOverview(brand);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { fetchOverview(brand); /* eslint-disable-next-line */ }, []);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -67,25 +69,34 @@ export default function Executive() {
     return windowDays === 30 ? data.recaps.social["30d"] : data.recaps.social["7d"];
   }, [data, windowDays]);
 
-  // Lightweight recommendations based on recaps
+  // Rec rules (for tooltips)
+  const REC_RULES = [
+    { id: "low_conv", check: (r) => (r?.conversion_pct ?? 0) < 1.2, why: "Conversion < 1.2%. Benchmarks for streetwear DTC often 1.5–3%." },
+    { id: "low_aov", check: (r) => (r?.aov ?? 0) < 100, why: "AOV < $100. Bundles / threshold promos can lift AOV quickly." },
+    { id: "weak_eng", check: (_, s) => {
+        const plays = Number(s?.plays || 0);
+        const eng = plays ? (Number(s?.comments || 0) + Number(s?.saves || 0)) / plays : 0;
+        return plays > 0 && eng < 0.02;
+      }, why: "Engagement per view < 2%. First-3s hooks and creator-led variants can increase retention." },
+    { id: "no_signals", check: (r) => (Number(r?.orders||0) === 0 && Number(r?.net_sales||0) === 0), why: "No orders/sales in the window. Data might be stale or mapping incomplete." },
+  ];
+
   const recommendations = useMemo(() => {
     if (!recap || !socialRecap) return [];
-    const r = [];
-    if (recap.conversion_pct < 1.2) {
-      r.push("Conversion is under 1.2% — consider tightening paid traffic targeting and adding urgency on PDP/cart (low-lift: free-shipping threshold banner, low-stock badges).");
+    const out = [];
+    for (const rule of REC_RULES) {
+      if (rule.check(recap, socialRecap)) {
+        if (rule.id === "low_conv") out.push({ text: "Tighten paid targeting and add PDP/cart urgency (free-shipping banner, low-stock badges).", why: rule.why });
+        if (rule.id === "low_aov") out.push({ text: "Launch bundles or tiered discount (e.g., “2 for $X”, “Spend $150 get a gift”).", why: rule.why });
+        if (rule.id === "weak_eng") out.push({ text: "Iterate first-3s hooks on Reels/TikTok; test creator-led cuts & stronger CTAs.", why: rule.why });
+        if (rule.id === "no_signals") out.push({ text: "Verify current Shopify exports and ensure Orders/Sales mapping is flowing.", why: rule.why });
+      }
     }
-    if (recap.aov < 100) {
-      r.push("AOV is below $100 — test bundles or tiered discounts (e.g., ‘2 for $X’ or ‘Spend $150 get a free gift’).");
-    }
-    if (socialRecap.plays > 0 && (socialRecap.comments + socialRecap.saves) / socialRecap.plays < 0.02) {
-      r.push("Social engagement per view is soft — iterate first 3 seconds of Reels/TikTok hooks and test creator-led cuts.");
-    }
-    if (recap.orders === 0 && recap.net_sales === 0) {
-      r.push("No commerce signals in this window — verify Shopify exports are current and mapped (Orders/Sales).");
-    }
-    if (r.length === 0) r.push("KPIs look healthy — keep scaling top creatives, retest best offers with fresh product angles.");
-    return r;
+    if (!out.length) out.push({ text: "KPIs are healthy — scale top creatives and refresh offer angles.", why: "No rules flagged. Continue momentum." });
+    return out;
   }, [recap, socialRecap]);
+
+  const hashtags = socialRecap?.top_hashtags || { combined: [], tiktok: [], instagram: [] };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: 24 }}>
@@ -97,55 +108,23 @@ export default function Executive() {
             onChange={(e) => setBrand(e.target.value)}
             style={{ background: "#15171a", color: "#e9edf2", border: "1px solid #2a2d31", padding: "8px 10px", borderRadius: 8 }}
           >
-            {/* Populate from API once loaded */}
             {data?.brands?.length
-              ? data.brands.map((b) => (
-                  <option key={b.id || b.name} value={b.name}>
-                    {b.name}
-                  </option>
-                ))
+              ? data.brands.map((b) => <option key={b.id || b.name} value={b.name}>{b.name}</option>)
               : <option>Crooks & Castles</option>}
           </select>
 
           <div style={{ background: "#15171a", border: "1px solid #2a2d31", borderRadius: 999, padding: 4, display: "flex", gap: 4 }}>
-            <button
-              onClick={() => setWindowDays(7)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: "none",
-                background: windowDays === 7 ? "#6aa6ff" : "transparent",
-                color: windowDays === 7 ? "#0a0b0d" : "#e9edf2",
-                cursor: "pointer",
-              }}
-            >
-              7d
-            </button>
-            <button
-              onClick={() => setWindowDays(30)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: "none",
-                background: windowDays === 30 ? "#6aa6ff" : "transparent",
-                color: windowDays === 30 ? "#0a0b0d" : "#e9edf2",
-                cursor: "pointer",
-              }}
-            >
-              30d
-            </button>
+            <button onClick={() => setWindowDays(7)}  style={pill(windowDays === 7)}>7d</button>
+            <button onClick={() => setWindowDays(30)} style={pill(windowDays === 30)}>30d</button>
           </div>
 
           <button
-            onClick={async () => { await onRefresh(); }}
+            onClick={onRefresh}
             disabled={refreshing}
             style={{
               background: refreshing ? "#2a2d31" : "#6aa6ff",
               color: refreshing ? "#8b96a3" : "#0a0b0d",
-              border: "none",
-              padding: "8px 12px",
-              borderRadius: 8,
-              cursor: refreshing ? "default" : "pointer",
+              border: "none", padding: "8px 12px", borderRadius: 8, cursor: refreshing ? "default" : "pointer",
             }}
             title="Re-fetch latest overview"
           >
@@ -161,43 +140,52 @@ export default function Executive() {
       )}
 
       <section style={{ marginTop: 16, opacity: loading ? 0.5 : 1, transition: "opacity .2s" }}>
-        {/* KPI Cards */}
+        {/* KPI Cards with WoW */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-          <KpiCard label={`Orders (${windowDays}d)`} value={num(recap?.orders)} />
-          <KpiCard label={`Net Sales (${windowDays}d)`} value={dollars(recap?.net_sales)} />
-          <KpiCard label={`AOV (${windowDays}d)`} value={dollars(recap?.aov)} />
-          <KpiCard label={`Conversion (${windowDays}d)`} value={pct(recap?.conversion_pct)} />
-          <KpiCard label={`Sessions (${windowDays}d)`} value={num(recap?.sessions)} />
-          <KpiCard label={`Social Plays (${windowDays}d)`} value={num(socialRecap?.plays)} />
-          <KpiCard label={`Social Likes (${windowDays}d)`} value={num(socialRecap?.likes)} />
-          <KpiCard label={`Social Comments (${windowDays}d)`} value={num(socialRecap?.comments)} />
+          <KpiCard label={`Orders (${windowDays}d)`} value={num(recap?.orders)} wow={recap?.wow?.orders?.pct} />
+          <KpiCard label={`Net Sales (${windowDays}d)`} value={dollars(recap?.net_sales)} wow={recap?.wow?.net_sales?.pct} />
+          <KpiCard label={`AOV (${windowDays}d)`} value={dollars(recap?.aov)} wow={recap?.wow?.aov?.pct} />
+          <KpiCard label={`Conversion (${windowDays}d)`} value={pct(recap?.conversion_pct)} wow={recap?.wow?.conversion_pct?.pct} />
+          <KpiCard label={`Sessions (${windowDays}d)`} value={num(recap?.sessions)} wow={recap?.wow?.sessions?.pct} />
+          <KpiCard label={`Social Plays (${windowDays}d)`} value={num(socialRecap?.plays)} wow={socialRecap?.wow?.plays?.pct} />
+          <KpiCard label={`Social Likes (${windowDays}d)`} value={num(socialRecap?.likes)} wow={socialRecap?.wow?.likes?.pct} />
+          <KpiCard label={`Social Comments (${windowDays}d)`} value={num(socialRecap?.comments)} wow={socialRecap?.wow?.comments?.pct} />
         </div>
 
-        {/* Snapshot / freshness */}
+        {/* Snapshot */}
         <div style={{ marginTop: 10, fontSize: 13, color: "#98a4b3" }}>
           <span>Last data date: {recap?.last_date || "—"}</span>
           <span style={{ marginLeft: 12 }}>Refreshed: {recap?.refreshed_at || data?.snapshot?.last_import || "—"}</span>
           <span style={{ marginLeft: 12 }}>Current: {recap?.current ? "Yes" : "—"}</span>
         </div>
 
-        {/* Recommendations */}
+        {/* Recommendations with “Why?” tooltips */}
         <div style={{ marginTop: 18, padding: 16, borderRadius: 12, background: "#121418", border: "1px solid #2a2d31" }}>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>Priorities & Recommendations</h3>
           <ul style={{ margin: 0, paddingLeft: 16, lineHeight: 1.5 }}>
             {recommendations.map((t, i) => (
-              <li key={i}>{t}</li>
+              <li key={i} title={t.why} style={{ cursor: "help" }}>{t.text}</li>
             ))}
           </ul>
+          <div style={{ color: "#98a4b3", fontSize: 12, marginTop: 8 }}>Hover to see “Why?”.</div>
+        </div>
+
+        {/* Top Hashtags (7d/30d) */}
+        <div style={{ marginTop: 18, padding: 16, borderRadius: 12, background: "#121418", border: "1px solid #2a2d31" }}>
+          <h3 style={{ margin: 0, marginBottom: 8 }}>Top Hashtags ({windowDays}d)</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 12 }}>
+            <HashtagBoard title="Combined" items={hashtags.combined} showWow />
+            <HashtagBoard title="TikTok"   items={hashtags.tiktok} />
+            <HashtagBoard title="Instagram" items={hashtags.instagram} />
+          </div>
         </div>
 
         {/* Competitive intel teaser */}
         <div style={{ marginTop: 18, padding: 16, borderRadius: 12, background: "#121418", border: "1px solid #2a2d31" }}>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>Competitive Intelligence</h3>
           <p style={{ marginTop: 0 }}>
-            Compare Crooks & Castles vs. tracked brands across Orders, Sales, AOV, Conversion, and Social at{" "}
-            <a href="/competitive" style={{ color: "#6aa6ff", textDecoration: "underline" }}>
-              /competitive
-            </a>.
+            Compare Crooks & Castles vs. tracked brands at{" "}
+            <a href="/competitive" style={{ color: "#6aa6ff", textDecoration: "underline" }}>/competitive</a>.
           </p>
           <MiniBrands brands={data?.brands || []} />
         </div>
@@ -206,12 +194,64 @@ export default function Executive() {
   );
 }
 
-function KpiCard({ label, value }) {
+function pill(active) {
+  return {
+    padding: "6px 10px",
+    borderRadius: 999,
+    border: "none",
+    background: active ? "#6aa6ff" : "transparent",
+    color: active ? "#0a0b0d" : "#e9edf2",
+    cursor: "pointer",
+  };
+}
+
+function KpiCard({ label, value, wow }) {
   return (
     <div style={{ background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 16 }}>
       <div style={{ fontSize: 13, color: "#98a4b3" }}>{label}</div>
-      <div style={{ fontSize: 24, marginTop: 6 }}>{value ?? "—"}</div>
+      <div style={{ fontSize: 24, marginTop: 6, display: "flex", alignItems: "baseline" }}>
+        <span>{value ?? "—"}</span>
+        {typeof wow === "number" ? <Arrow deltaPct={wow} /> : null}
+      </div>
+      <div style={{ fontSize: 12, color: "#98a4b3", marginTop: 4 }}>WoW change</div>
     </div>
+  );
+}
+
+function HashtagBoard({ title, items, showWow = false }) {
+  if (!items || !items.length) {
+    return (
+      <div style={{ background: "#0f1115", border: "1px solid #2a2d31", borderRadius: 12, padding: 12 }}>
+        <div style={{ color: "#98a4b3", marginBottom: 6 }}>{title}</div>
+        <div style={{ color: "#98a4b3" }}>No hashtag data yet.</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ background: "#0f1115", border: "1px solid #2a2d31", borderRadius: 12, padding: 12 }}>
+      <div style={{ color: "#98a4b3", marginBottom: 6 }}>{title}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 6 }}>
+        <div style={{ fontSize: 12, color: "#98a4b3" }}>Tag</div>
+        <div style={{ fontSize: 12, color: "#98a4b3", textAlign: "right" }}>Count</div>
+        <div style={{ fontSize: 12, color: "#98a4b3", textAlign: "right" }}>{showWow ? "WoW" : ""}</div>
+        {items.map((h, i) => (
+          <FragmentRow key={h.tag + i} tag={h.tag} count={h.count} wow={showWow ? h?.wow?.pct : undefined} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FragmentRow({ tag, count, wow }) {
+  const up = (wow ?? 0) >= 0;
+  return (
+    <>
+      <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tag}</div>
+      <div style={{ textAlign: "right" }}>{num(count)}</div>
+      <div style={{ textAlign: "right", color: wow === undefined ? "#98a4b3" : up ? "#6aff8a" : "#ff6a6a" }}>
+        {wow === undefined ? "—" : `${up ? "▲" : "▼"} ${Math.abs(wow).toFixed(1)}%`}
+      </div>
+    </>
   );
 }
 
