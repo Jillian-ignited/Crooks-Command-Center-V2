@@ -93,7 +93,7 @@ async def upload_intelligence(
         
         # Generate unique filename
         file_ext = Path(file.filename).suffix.lower()
-        if file_ext not in ['.csv', '.json', '.xlsx', '.xls']:
+        if file_ext not in ['.csv', '.json', '.jsonl', '.xlsx', '.xls']:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_ext}")
         
         unique_name = f"{uuid.uuid4()}{file_ext}"
