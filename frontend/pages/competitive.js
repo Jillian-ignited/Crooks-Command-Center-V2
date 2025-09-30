@@ -18,65 +18,61 @@ function pct(v) {
   if (isNaN(n)) return "-";
   return `${n.toFixed(2)}%`;
 }
+function Arrow({ pctDelta }) {
+  if (pctDelta === undefined || pctDelta === null) return null;
+  const up = pctDelta >= 0;
+  const color = up ? "#6aff8a" : "#ff6a6a";
+  return <span style={{ color, marginLeft: 6, fontWeight: 600 }}>{up ? "▲" : "▼"} {Math.abs(pctDelta).toFixed(1)}%</span>;
+}
 
 export default function Competitive() {
+  const [days, setDays] = useState(30);
   const [brands, setBrands] = useState([]);
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [cmpA, setCmpA] = useState("Crooks & Castles");
+  const [primary, setPrimary] = useState("Crooks & Castles");
   const [cmpB, setCmpB] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
   const [sortKey, setSortKey] = useState("net_sales");
   const [sortDir, setSortDir] = useState("desc");
-  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function boot() {
+      try {
+        const bres = await fetch(`${API_BASE}/api/competitive/brands`);
+        if (!bres.ok) throw new Error(`Brands HTTP ${bres.status}`);
+        const bj = await bres.json();
+        const list = bj.brands || [];
+        setBrands(list);
+        if (list.length && !list.find((x) => x.name === primary)) {
+          setPrimary(list[0].name);
+        }
+      } catch (e) {
+        setErr(String(e.message || e));
+      }
+    }
+    boot();
+  }, []);
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
-      setError("");
+      setLoading(true); setErr("");
       try {
-        const base = await fetch(`${API_BASE}/api/executive/overview`);
-        const baseJson = await base.json();
-        if (!base.ok || !baseJson.ok) throw new Error("Failed to load brands");
-        const list = baseJson.brands || [];
-        setBrands(list);
-
-        // limit to ~30 brands for speed
-        const sample = list.slice(0, 30);
-
-        // pull 30d recaps for each brand
-        const recaps = await Promise.all(
-          sample.map(async (b) => {
-            const res = await fetch(`${API_BASE}/api/executive/overview?brand=${encodeURIComponent(b.name)}`);
-            const j = await res.json();
-            const r30 = j?.recaps?.["30d"] || {};
-            const s30 = j?.recaps?.social?.["30d"] || {};
-            return {
-              brand: b.name,
-              orders: Number(r30.orders || 0),
-              net_sales: Number(r30.net_sales || 0),
-              aov: Number(r30.aov || 0),
-              conversion_pct: Number(r30.conversion_pct || 0),
-              sessions: Number(r30.sessions || 0),
-              plays: Number(s30.plays || 0),
-              likes: Number(s30.likes || 0),
-              comments: Number(s30.comments || 0),
-              refreshed_at: r30.refreshed_at || j?.snapshot?.last_import || null,
-            };
-          })
-        );
-
-        setRows(recaps);
-        // pick a default competitor (first non-Crooks)
-        const firstOther = recaps.find((r) => r.brand !== "Crooks & Castles");
-        setCmpB(firstOther?.brand || recaps[0]?.brand || "");
+        const res = await fetch(`${API_BASE}/api/competitive/board?days=${days}&limit=30&primary=${encodeURIComponent(primary)}`);
+        if (!res.ok) throw new Error(`Board HTTP ${res.status}`);
+        const j = await res.json();
+        setRows(j.rows || []);
+        // pick default B brand
+        const other = (j.rows || []).find((r) => r.brand !== j.primary);
+        setCmpB(other?.brand || "");
       } catch (e) {
-        setError(e.message);
+        setErr(String(e.message || e));
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, []);
+  }, [days, primary]);
 
   const sorted = useMemo(() => {
     const copy = [...rows];
@@ -88,7 +84,7 @@ export default function Competitive() {
     return copy;
   }, [rows, sortKey, sortDir]);
 
-  const a = rows.find((r) => r.brand === cmpA);
+  const a = rows.find((r) => r.brand === primary);
   const b = rows.find((r) => r.brand === cmpB);
 
   function header(k, label) {
@@ -97,10 +93,7 @@ export default function Competitive() {
       <th
         onClick={() => {
           if (active) setSortDir(sortDir === "asc" ? "desc" : "asc");
-          else {
-            setSortKey(k);
-            setSortDir("desc");
-          }
+          else { setSortKey(k); setSortDir("desc"); }
         }}
         style={{ cursor: "pointer", whiteSpace: "nowrap", padding: "10px 12px", borderBottom: "1px solid #2a2d31", textAlign: "right" }}
       >
@@ -111,56 +104,48 @@ export default function Competitive() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: 24 }}>
-      <h1 style={{ marginTop: 0 }}>Competitive Intelligence</h1>
-      <p style={{ color: "#98a4b3", marginTop: -6 }}>30-day rollup across orders, sales, AOV, conversion, and social.</p>
+      <header style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <h1 style={{ margin: 0 }}>Competitive Intelligence</h1>
 
-      {error && (
-        <div style={{ margin: "12px 0", padding: 12, borderRadius: 8, background: "#2a0f12", border: "1px solid #a33" }}>
-          {error}
-        </div>
-      )}
-
-      {/* Compare block */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 8, padding: 12, background: "#121418", border: "1px solid #2a2d31", borderRadius: 12 }}>
-        <strong>Compare</strong>
         <select
-          value={cmpA}
-          onChange={(e) => setCmpA(e.target.value)}
-          style={{ background: "#15171a", color: "#e9edf2", border: "1px solid #2a2d31", padding: "8px 10px", borderRadius: 8, minWidth: 200 }}
+          value={primary}
+          onChange={(e) => setPrimary(e.target.value)}
+          style={{ background: "#15171a", color: "#e9edf2", border: "1px solid #2a2d31", padding: "8px 10px", borderRadius: 8 }}
         >
-          {brands.map((b) => (
-            <option key={`a-${b.id || b.name}`} value={b.name}>{b.name}</option>
-          ))}
+          {brands.map((b) => <option key={`a-${b.id || b.name}`} value={b.name}>{b.name}</option>)}
         </select>
+
         <span>vs</span>
+
         <select
           value={cmpB}
           onChange={(e) => setCmpB(e.target.value)}
-          style={{ background: "#15171a", color: "#e9edf2", border: "1px solid #2a2d31", padding: "8px 10px", borderRadius: 8, minWidth: 200 }}
+          style={{ background: "#15171a", color: "#e9edf2", border: "1px solid #2a2d31", padding: "8px 10px", borderRadius: 8 }}
         >
-          {brands.map((b) => (
-            <option key={`b-${b.id || b.name}`} value={b.name}>{b.name}</option>
-          ))}
+          {brands.map((b) => <option key={`b-${b.id || b.name}`} value={b.name}>{b.name}</option>)}
         </select>
 
-        <div style={{ marginLeft: "auto", color: "#98a4b3", fontSize: 13 }}>
-          {a?.refreshed_at ? `Refreshed: ${a.refreshed_at}` : ""}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, background: "#15171a", border: "1px solid #2a2d31", borderRadius: 999, padding: 4 }}>
+          <button onClick={() => setDays(7)}  style={pill(days === 7)}>7d</button>
+          <button onClick={() => setDays(30)} style={pill(days === 30)}>30d</button>
         </div>
-      </div>
+      </header>
+
+      {err && <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "#2a0f12", border: "1px solid #a33" }}>{err}</div>}
 
       {/* A vs B cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12, marginTop: 12 }}>
-        <CompareCard label="Orders (30d)" a={a?.orders} b={b?.orders} fmt={num} />
-        <CompareCard label="Net Sales (30d)" a={a?.net_sales} b={b?.net_sales} fmt={dollars} />
-        <CompareCard label="AOV (30d)" a={a?.aov} b={b?.aov} fmt={dollars} />
-        <CompareCard label="Conversion (30d)" a={a?.conversion_pct} b={b?.conversion_pct} fmt={pct} />
-        <CompareCard label="Sessions (30d)" a={a?.sessions} b={b?.sessions} fmt={num} />
-        <CompareCard label="Social Plays (30d)" a={a?.plays} b={b?.plays} fmt={num} />
-        <CompareCard label="Social Likes (30d)" a={a?.likes} b={b?.likes} fmt={num} />
-        <CompareCard label="Social Comments (30d)" a={a?.comments} b={b?.comments} fmt={num} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12, marginTop: 12 }}>
+        <CompareCard label={`Orders (${days}d)`} a={a?.orders} b={b?.orders} fmt={num} wowA={a?.wow?.orders?.pct} wowB={b?.wow?.orders?.pct} />
+        <CompareCard label={`Net Sales (${days}d)`} a={a?.net_sales} b={b?.net_sales} fmt={dollars} wowA={a?.wow?.net_sales?.pct} wowB={b?.wow?.net_sales?.pct} />
+        <CompareCard label={`AOV (${days}d)`} a={a?.aov} b={b?.aov} fmt={dollars} wowA={a?.wow?.aov?.pct} wowB={b?.wow?.aov?.pct} />
+        <CompareCard label={`Conversion (${days}d)`} a={a?.conversion_pct} b={b?.conversion_pct} fmt={pct} wowA={a?.wow?.conversion_pct?.pct} wowB={b?.wow?.conversion_pct?.pct} />
+        <CompareCard label={`Sessions (${days}d)`} a={a?.sessions} b={b?.sessions} fmt={num} wowA={a?.wow?.sessions?.pct} wowB={b?.wow?.sessions?.pct} />
+        <CompareCard label={`Social Plays (${days}d)`} a={a?.plays} b={b?.plays} fmt={num} wowA={a?.wow?.plays?.pct} wowB={b?.wow?.plays?.pct} />
+        <CompareCard label={`Social Likes (${days}d)`} a={a?.likes} b={b?.likes} fmt={num} wowA={a?.wow?.likes?.pct} wowB={b?.wow?.likes?.pct} />
+        <CompareCard label={`Social Comments (${days}d)`} a={a?.comments} b={b?.comments} fmt={num} wowA={a?.wow?.comments?.pct} wowB={b?.wow?.comments?.pct} />
       </div>
 
-      {/* Leaderboard table */}
+      {/* Leaderboard */}
       <div style={{ marginTop: 18, background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead style={{ background: "#15171a" }}>
@@ -183,14 +168,14 @@ export default function Competitive() {
               sorted.map((r) => (
                 <tr key={r.brand} style={{ borderBottom: "1px solid #2a2d31" }}>
                   <td style={{ padding: "8px 12px" }}>{r.brand}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.orders)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{dollars(r.net_sales)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{dollars(r.aov)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{pct(r.conversion_pct)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.sessions)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.plays)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.likes)}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.comments)}</td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.orders)}<Arrow pctDelta={r?.wow?.orders?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{dollars(r.net_sales)}<Arrow pctDelta={r?.wow?.net_sales?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{dollars(r.aov)}<Arrow pctDelta={r?.wow?.aov?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{pct(r.conversion_pct)}<Arrow pctDelta={r?.wow?.conversion_pct?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.sessions)}<Arrow pctDelta={r?.wow?.sessions?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.plays)}<Arrow pctDelta={r?.wow?.plays?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.likes)}<Arrow pctDelta={r?.wow?.likes?.pct} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}>{num(r.comments)}<Arrow pctDelta={r?.wow?.comments?.pct} /></td>
                 </tr>
               ))
             )}
@@ -199,11 +184,36 @@ export default function Competitive() {
       </div>
     </div>
   );
+
+  function header(k, label) {
+    const active = sortKey === k;
+    return (
+      <th
+        onClick={() => {
+          if (active) setSortDir(sortDir === "asc" ? "desc" : "asc");
+          else { setSortKey(k); setSortDir("desc"); }
+        }}
+        style={{ cursor: "pointer", whiteSpace: "nowrap", padding: "10px 12px", borderBottom: "1px solid #2a2d31", textAlign: "right" }}
+      >
+        {label} {active ? (sortDir === "asc" ? "▲" : "▼") : ""}
+      </th>
+    );
+  }
 }
 
-function CompareCard({ label, a, b, fmt }) {
-  const av = Number(a || 0);
-  const bv = Number(b || 0);
+function pill(active) {
+  return {
+    padding: "6px 10px",
+    borderRadius: 999,
+    border: "none",
+    background: active ? "#6aa6ff" : "transparent",
+    color: active ? "#0a0b0d" : "#e9edf2",
+    cursor: "pointer",
+  };
+}
+
+function CompareCard({ label, a, b, fmt, wowA, wowB }) {
+  const av = Number(a || 0), bv = Number(b || 0);
   const delta = av - bv;
   const dir = delta === 0 ? "eq" : delta > 0 ? "up" : "down";
   const color = dir === "eq" ? "#98a4b3" : dir === "up" ? "#6aff8a" : "#ff6a6a";
@@ -211,8 +221,8 @@ function CompareCard({ label, a, b, fmt }) {
     <div style={{ background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 16 }}>
       <div style={{ fontSize: 13, color: "#98a4b3" }}>{label}</div>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginTop: 6 }}>
-        <div><strong>Us:</strong> {fmt(av)}</div>
-        <div><strong>Them:</strong> {fmt(bv)}</div>
+        <div><strong>Us:</strong> {fmt(av)}<Arrow pctDelta={wowA} /></div>
+        <div><strong>Them:</strong> {fmt(bv)}<Arrow pctDelta={wowB} /></div>
         <div style={{ color }}>{delta === 0 ? "—" : (delta > 0 ? "▲ " : "▼ ") + fmt(Math.abs(delta))}</div>
       </div>
     </div>
