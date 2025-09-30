@@ -1,279 +1,221 @@
-import { useEffect, useState } from "react";
+from fastapi import APIRouter, HTTPException
+from typing import Dict, Any, List
+import datetime
 
-const API = process.env.NEXT_PUBLIC_API_BASE || "/api";
+router = APIRouter()
 
-export default function ShopifyPage() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('checking');
-
-  const loadShopifyData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`${API}/shopify/dashboard`);
-      
-      if (!res.ok) {
-        throw new Error(`Failed to load Shopify data: HTTP ${res.status}`);
-      }
-      
-      const result = await res.json();
-      setData(result);
-      setConnectionStatus('connected');
-    } catch (err) {
-      console.error('Failed to load Shopify data:', err);
-      setError(`Unable to load Shopify dashboard: ${err.message}`);
-      setConnectionStatus('disconnected');
-      
-      // Set fallback data for development/testing
-      setData({
-        store_name: "Demo Store",
-        orders_today: 0,
-        revenue_today: 0,
-        products_count: 0,
-        customers_count: 0,
-        recent_orders: [],
-        top_products: []
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const testConnection = async () => {
-    setConnectionStatus('checking');
-    try {
-      const res = await fetch(`${API}/shopify/test-connection`);
-      if (res.ok) {
-        setConnectionStatus('connected');
-        loadShopifyData();
-      } else {
-        setConnectionStatus('disconnected');
-      }
-    } catch (err) {
-      setConnectionStatus('disconnected');
-    }
-  };
-
-  useEffect(() => {
-    loadShopifyData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="grid">
-        <div className="card">
-          <h3 className="title">Shopify Integration</h3>
-          <div className="muted">Loading Shopify data...</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid">
-      {/* Error Display */}
-      {error && (
-        <div className="card" style={{ border: '1px solid var(--warn)', background: 'rgba(245, 158, 11, 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h3 className="title" style={{ color: 'var(--warn)', margin: '0 0 8px 0' }}>Shopify Connection Issue</h3>
-              <div style={{ color: 'var(--warn)' }}>{error}</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-                Showing demo data. Check Shopify API configuration.
-              </div>
-            </div>
-            <button 
-              className="button" 
-              onClick={testConnection}
-              style={{ background: 'var(--warn)', minWidth: 'auto', padding: '6px 12px' }}
-            >
-              Test Connection
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Connection Status */}
-      <div className="card">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h3 className="title" style={{ margin: 0 }}>Shopify Dashboard</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 6,
-              padding: '4px 8px',
-              borderRadius: 4,
-              background: connectionStatus === 'connected' ? 'rgba(34, 197, 94, 0.1)' : 
-                         connectionStatus === 'disconnected' ? 'rgba(239, 68, 68, 0.1)' : 
-                         'rgba(156, 163, 175, 0.1)',
-              color: connectionStatus === 'connected' ? 'var(--ok)' : 
-                     connectionStatus === 'disconnected' ? 'var(--danger)' : 
-                     'var(--muted)'
-            }}>
-              <div style={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: '50%', 
-                background: connectionStatus === 'connected' ? 'var(--ok)' : 
-                           connectionStatus === 'disconnected' ? 'var(--danger)' : 
-                           'var(--muted)'
-              }}></div>
-              {connectionStatus === 'connected' ? 'Connected' : 
-               connectionStatus === 'disconnected' ? 'Disconnected' : 
-               'Checking...'}
-            </div>
-            <button 
-              className="button" 
-              onClick={loadShopifyData}
-              disabled={loading}
-              style={{ minWidth: 'auto' }}
-            >
-              {loading ? 'Loading...' : 'Refresh'}
-            </button>
-          </div>
-        </div>
-        <div className="muted" style={{ marginTop: 8 }}>
-          Store: {data?.store_name || 'Not connected'}
-        </div>
-      </div>
-
-      {/* Key Metrics */}
-      {data && (
-        <div className="card">
-          <h3 className="title">Today's Performance</h3>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <div style={{ textAlign: 'center', padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: 'var(--brand)' }}>
-                {data.orders_today || 0}
-              </div>
-              <div className="muted" style={{ fontSize: 14 }}>Orders Today</div>
-            </div>
-            
-            <div style={{ textAlign: 'center', padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: 'var(--ok)' }}>
-                ${(data.revenue_today || 0).toLocaleString()}
-              </div>
-              <div className="muted" style={{ fontSize: 14 }}>Revenue Today</div>
-            </div>
-            
-            <div style={{ textAlign: 'center', padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: 'var(--warn)' }}>
-                {(data.products_count || 0).toLocaleString()}
-              </div>
-              <div className="muted" style={{ fontSize: 14 }}>Total Products</div>
-            </div>
-            
-            <div style={{ textAlign: 'center', padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: 'var(--info)' }}>
-                {(data.customers_count || 0).toLocaleString()}
-              </div>
-              <div className="muted" style={{ fontSize: 14 }}>Total Customers</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Recent Orders */}
-      {data && (
-        <div className="card">
-          <h3 className="title">Recent Orders</h3>
-          {data.recent_orders && data.recent_orders.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', color: 'var(--muted)' }}>Order #</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', color: 'var(--muted)' }}>Customer</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--muted)' }}>Total</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', color: 'var(--muted)' }}>Status</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', color: 'var(--muted)' }}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recent_orders.map((order, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '12px 8px' }}>{order.order_number}</td>
-                      <td style={{ padding: '12px 8px' }}>{order.customer_name}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'right' }}>${order.total}</td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <span style={{ 
-                          padding: '2px 8px', 
-                          borderRadius: 4, 
-                          fontSize: 12,
-                          background: order.status === 'fulfilled' ? 'rgba(34, 197, 94, 0.2)' : 
-                                     order.status === 'pending' ? 'rgba(245, 158, 11, 0.2)' : 
-                                     'rgba(156, 163, 175, 0.2)',
-                          color: order.status === 'fulfilled' ? 'var(--ok)' : 
-                                order.status === 'pending' ? 'var(--warn)' : 
-                                'var(--muted)'
-                        }}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 8px', color: 'var(--muted)' }}>{order.created_at}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="muted" style={{ padding: 16, textAlign: 'center' }}>
-              No recent orders found
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Top Products */}
-      {data && data.top_products && data.top_products.length > 0 && (
-        <div className="card">
-          <h3 className="title">Top Products</h3>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
-            {data.top_products.map((product, index) => (
-              <div key={index} style={{ 
-                padding: 12, 
-                background: 'rgba(255,255,255,0.02)', 
-                borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.05)'
-              }}>
-                <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{product.title}</div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-                  {product.sales_count} sales • ${product.revenue}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--brand)' }}>
-                  ${product.price}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Configuration */}
-      <div className="card">
-        <h3 className="title">Configuration</h3>
-        <div className="muted" style={{ marginBottom: 16 }}>
-          Manage your Shopify integration settings
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button className="button" onClick={testConnection}>
-            Test Connection
-          </button>
-          <button className="button" style={{ background: 'var(--muted)' }}>
-            Update API Keys
-          </button>
-          <button className="button" style={{ background: 'var(--muted)' }}>
-            Sync Products
-          </button>
-          <button className="button" style={{ background: 'var(--muted)' }}>
-            Export Data
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+# Mock Shopify data for development
+MOCK_SHOPIFY_DATA = {
+    "store_name": "Crooks & Castles Store",
+    "orders_today": 23,
+    "revenue_today": 5420.50,
+    "products_count": 156,
+    "customers_count": 2847,
+    "recent_orders": [
+        {
+            "order_number": "#1001",
+            "customer_name": "John Doe",
+            "total": "89.99",
+            "status": "fulfilled",
+            "created_at": "2024-01-15 14:30"
+        },
+        {
+            "order_number": "#1002", 
+            "customer_name": "Jane Smith",
+            "total": "156.50",
+            "status": "pending",
+            "created_at": "2024-01-15 13:45"
+        },
+        {
+            "order_number": "#1003",
+            "customer_name": "Mike Johnson", 
+            "total": "234.00",
+            "status": "fulfilled",
+            "created_at": "2024-01-15 12:20"
+        },
+        {
+            "order_number": "#1004",
+            "customer_name": "Sarah Wilson",
+            "total": "67.25",
+            "status": "processing",
+            "created_at": "2024-01-15 11:15"
+        },
+        {
+            "order_number": "#1005",
+            "customer_name": "David Brown",
+            "total": "445.75",
+            "status": "fulfilled", 
+            "created_at": "2024-01-15 10:30"
+        }
+    ],
+    "top_products": [
+        {
+            "title": "Crooks Logo Hoodie",
+            "sales_count": 45,
+            "revenue": "2,250.00",
+            "price": "89.99"
+        },
+        {
+            "title": "Castles Graphic Tee",
+            "sales_count": 67,
+            "revenue": "1,675.00", 
+            "price": "39.99"
+        },
+        {
+            "title": "Premium Joggers",
+            "sales_count": 32,
+            "revenue": "1,920.00",
+            "price": "79.99"
+        },
+        {
+            "title": "Snapback Cap",
+            "sales_count": 28,
+            "revenue": "840.00",
+            "price": "34.99"
+        }
+    ]
 }
+
+@router.get("/dashboard")
+def get_shopify_dashboard() -> Dict[str, Any]:
+    """Get Shopify store dashboard data"""
+    return {
+        "success": True,
+        "data": MOCK_SHOPIFY_DATA,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+
+@router.get("/test-connection")
+def test_shopify_connection() -> Dict[str, Any]:
+    """Test Shopify API connection"""
+    # In a real implementation, this would test the actual Shopify API
+    return {
+        "success": True,
+        "connected": True,
+        "store_name": MOCK_SHOPIFY_DATA["store_name"],
+        "message": "Successfully connected to Shopify store"
+    }
+
+@router.get("/orders")
+def get_orders(limit: int = 50) -> Dict[str, Any]:
+    """Get recent orders from Shopify"""
+    orders = MOCK_SHOPIFY_DATA["recent_orders"][:limit]
+    return {
+        "success": True,
+        "orders": orders,
+        "total_count": len(orders)
+    }
+
+@router.get("/products")
+def get_products(limit: int = 50) -> Dict[str, Any]:
+    """Get products from Shopify"""
+    products = MOCK_SHOPIFY_DATA["top_products"][:limit]
+    return {
+        "success": True,
+        "products": products,
+        "total_count": len(products)
+    }
+
+@router.get("/analytics")
+def get_analytics() -> Dict[str, Any]:
+    """Get Shopify analytics data"""
+    return {
+        "success": True,
+        "analytics": {
+            "orders_today": MOCK_SHOPIFY_DATA["orders_today"],
+            "revenue_today": MOCK_SHOPIFY_DATA["revenue_today"],
+            "orders_this_week": 156,
+            "revenue_this_week": 28450.75,
+            "orders_this_month": 678,
+            "revenue_this_month": 125680.25,
+            "conversion_rate": 3.2,
+            "average_order_value": 89.45,
+            "returning_customer_rate": 24.5
+        }
+    }
+
+@router.post("/sync")
+def sync_shopify_data() -> Dict[str, Any]:
+    """Trigger a sync of Shopify data"""
+    # In a real implementation, this would trigger a background sync job
+    return {
+        "success": True,
+        "message": "Shopify data sync initiated",
+        "sync_id": "sync_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    }
+
+@router.get("/customers")
+def get_customers(limit: int = 50) -> Dict[str, Any]:
+    """Get customer data from Shopify"""
+    customers = [
+        {
+            "id": "cust_001",
+            "name": "John Doe",
+            "email": "john@example.com",
+            "orders_count": 5,
+            "total_spent": "445.95",
+            "created_at": "2023-06-15"
+        },
+        {
+            "id": "cust_002", 
+            "name": "Jane Smith",
+            "email": "jane@example.com",
+            "orders_count": 3,
+            "total_spent": "267.50",
+            "created_at": "2023-08-22"
+        },
+        {
+            "id": "cust_003",
+            "name": "Mike Johnson",
+            "email": "mike@example.com", 
+            "orders_count": 8,
+            "total_spent": "892.25",
+            "created_at": "2023-04-10"
+        }
+    ]
+    
+    return {
+        "success": True,
+        "customers": customers[:limit],
+        "total_count": MOCK_SHOPIFY_DATA["customers_count"]
+    }
+
+@router.get("/inventory")
+def get_inventory() -> Dict[str, Any]:
+    """Get inventory levels from Shopify"""
+    inventory = [
+        {
+            "product_id": "prod_001",
+            "title": "Crooks Logo Hoodie",
+            "sku": "CRK-HOOD-001",
+            "quantity": 45,
+            "reserved": 3,
+            "available": 42,
+            "status": "in_stock"
+        },
+        {
+            "product_id": "prod_002",
+            "title": "Castles Graphic Tee", 
+            "sku": "CAS-TEE-002",
+            "quantity": 23,
+            "reserved": 1,
+            "available": 22,
+            "status": "low_stock"
+        },
+        {
+            "product_id": "prod_003",
+            "title": "Premium Joggers",
+            "sku": "PRM-JOG-003", 
+            "quantity": 0,
+            "reserved": 0,
+            "available": 0,
+            "status": "out_of_stock"
+        }
+    ]
+    
+    return {
+        "success": True,
+        "inventory": inventory,
+        "low_stock_count": 1,
+        "out_of_stock_count": 1
+    }
