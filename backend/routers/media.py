@@ -1,24 +1,27 @@
 # backend/routers/media.py
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from sqlalchemy.orm import Session
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 import shutil
-import json
+import uuid
 from datetime import datetime
+
+from backend.database import get_db
+from backend.models import MediaFile
 
 router = APIRouter()
 
-MEDIA_STORAGE = Path("backend/media_storage")
-MEDIA_STORAGE.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR = Path("backend/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload")
 async def upload_media(
     file: Optional[UploadFile] = File(None),
-    files: Optional[List[UploadFile]] = File(None)
+    files: Optional[List[UploadFile]] = File(None),
+    db: Session = Depends(get_db)
 ):
-    """Upload media files - accepts single file or multiple files"""
-    
-    # Handle both single file and multiple files
+    """Upload media files and save to database"""
     upload_files = []
     if files:
         upload_files = files
@@ -30,35 +33,73 @@ async def upload_media(
     uploaded = []
     for upload_file in upload_files:
         if upload_file.filename:
-            file_path = MEDIA_STORAGE / upload_file.filename
+            # Generate unique filename
+            file_ext = Path(upload_file.filename).suffix
+            unique_name = f"{uuid.uuid4()}{file_ext}"
+            file_path = UPLOAD_DIR / unique_name
+            
+            # Save file
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(upload_file.file, buffer)
+            
+            # Save to database
+            db_file = MediaFile(
+                filename=unique_name,
+                original_filename=upload_file.filename,
+                file_path=str(file_path),
+                file_size=file_path.stat().st_size,
+                mime_type=upload_file.content_type,
+                uploaded_at=datetime.now()
+            )
+            db.add(db_file)
+            db.commit()
+            db.refresh(db_file)
+            
             uploaded.append({
+                "id": db_file.id,
                 "filename": upload_file.filename,
-                "size": file_path.stat().st_size,
-                "uploaded_at": datetime.now().isoformat()
+                "size": db_file.file_size,
+                "uploaded_at": db_file.uploaded_at.isoformat()
             })
     
     return {"uploaded": uploaded, "count": len(uploaded), "status": "success"}
 
 @router.get("/list")
-async def list_media(limit: int = 50):
-    """List all media files"""
-    files = []
-    for file_path in MEDIA_STORAGE.glob("*"):
-        if file_path.is_file():
-            files.append({
-                "filename": file_path.name,
-                "size": file_path.stat().st_size,
-                "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
-            })
-    return {"files": files[:limit], "total": len(files)}
+async def list_media(limit: int = 50, db: Session = Depends(get_db)):
+    """List all media files from database"""
+    files = db.query(MediaFile).order_by(MediaFile.uploaded_at.desc()).limit(limit).all()
+    
+    return {
+        "files": [
+            {
+                "id": f.id,
+                "filename": f.original_filename,
+                "size": f.file_size,
+                "uploaded_at": f.uploaded_at.isoformat(),
+                "mime_type": f.mime_type
+            } for f in files
+        ],
+        "total": db.query(MediaFile).count()
+    }
 
 @router.get("/assets")
-async def get_assets(category: Optional[str] = None):
-    """Get assets, optionally filtered by category"""
+async def get_assets(category: Optional[str] = None, db: Session = Depends(get_db)):
+    """Get assets from database"""
+    query = db.query(MediaFile)
+    if category:
+        query = query.filter(MediaFile.category == category)
+    
+    assets = query.all()
+    
     return {
-        "assets": [],
+        "assets": [
+            {
+                "id": a.id,
+                "filename": a.original_filename,
+                "category": a.category,
+                "size": a.file_size
+            } for a in assets
+        ],
         "categories": ["images", "videos", "documents"],
-        "total": 0
+        "total": len(assets)
     }
