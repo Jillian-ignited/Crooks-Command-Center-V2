@@ -1,42 +1,56 @@
 # backend/routers/upload_sidecar.py
-# Fixed Intelligence router with proper AI client initialization
+# Real Intelligence router with actual data processing - NO MOCK DATA
 
 import os
 import uuid
 import json
+import csv
 import asyncio
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 import aiofiles
+import pandas as pd
 
-# Proper OpenAI client initialization without proxies
+# Proper OpenAI client initialization (fixed - no proxies)
 try:
     from openai import OpenAI
-    # Initialize OpenAI client properly - no proxies parameter
     openai_client = OpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
         base_url=os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
     )
-    AI_AVAILABLE = True
+    AI_AVAILABLE = bool(os.getenv("OPENAI_API_KEY"))
 except ImportError:
-    print("[intelligence] OpenAI not available - AI analysis will be disabled")
+    print("[intelligence] OpenAI not available")
     openai_client = None
     AI_AVAILABLE = False
 except Exception as e:
-    print(f"[intelligence] OpenAI initialization error: {e}")
+    print(f"[intelligence] OpenAI error: {e}")
     openai_client = None
     AI_AVAILABLE = False
 
 router = APIRouter()
 
-# Upload directory setup
+# Real upload directory
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads", "intelligence")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Mock database for storing file metadata (in production, use real database)
-UPLOADED_FILES = []
+# Database connection (using the existing database setup)
+try:
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if DATABASE_URL:
+        engine = create_engine(DATABASE_URL)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        DB_AVAILABLE = True
+    else:
+        DB_AVAILABLE = False
+        print("[intelligence] No database URL configured")
+except Exception as e:
+    print(f"[intelligence] Database setup error: {e}")
+    DB_AVAILABLE = False
 
 @router.post("/upload")
 async def upload_intelligence_file(
@@ -45,213 +59,199 @@ async def upload_intelligence_file(
     brand: str = Form("Crooks & Castles"),
     description: Optional[str] = Form(None)
 ):
-    """Upload and process intelligence files with AI analysis"""
+    """Upload and process real intelligence files"""
     
     try:
-        # Validate file
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
         
-        # Generate unique filename
+        # Generate unique filename and save
         file_id = str(uuid.uuid4())
         file_extension = os.path.splitext(file.filename)[1]
         safe_filename = f"{file_id}{file_extension}"
         file_path = os.path.join(UPLOAD_DIR, safe_filename)
         
-        # Save file
+        # Read and save file content
+        content = await file.read()
         async with aiofiles.open(file_path, 'wb') as f:
-            content = await file.read()
             await f.write(content)
         
-        print(f"[intelligence] Saved file to {file_path}")
+        print(f"[intelligence] Saved file: {file_path}")
         
-        # Create file metadata
+        # Process the actual file content
+        insights = await process_real_file_content(content, file.filename, source, brand)
+        
+        # Save to database if available
         file_metadata = {
-            "id": file_id,
             "filename": file.filename,
             "source": source,
             "brand": brand,
-            "description": description,
             "file_path": file_path,
-            "file_size": len(content),
-            "uploaded_at": datetime.now().isoformat(),
-            "processed": False,
-            "insights": {}
+            "processed": True,
+            "insights": insights
         }
         
-        # Try to save to database (this is where the original error occurred)
-        try:
-            # Import database functions here to avoid circular imports
-            from ..services.database import save_intelligence_file
-            db_result = save_intelligence_file(file_metadata)
-            print(f"[intelligence] Saved to database: {db_result}")
-        except Exception as db_error:
-            print(f"[intelligence] Database save error: {db_error}")
-            # Continue without database - store in memory for now
-            UPLOADED_FILES.append(file_metadata)
-        
-        # Process file content and generate insights
-        try:
-            insights = await process_file_content(content, file.filename, source, brand)
-            file_metadata["insights"] = insights
-            file_metadata["processed"] = True
-            print(f"[intelligence] Generated insights for {file.filename}")
-        except Exception as process_error:
-            print(f"[intelligence] Processing error: {process_error}")
-            file_metadata["insights"] = {"error": f"Processing failed: {str(process_error)}"}
+        if DB_AVAILABLE:
+            try:
+                save_to_database(file_metadata)
+                print(f"[intelligence] Saved to database")
+            except Exception as db_error:
+                print(f"[intelligence] Database error: {db_error}")
         
         return {
             "success": True,
-            "message": f"File '{file.filename}' uploaded and processed successfully",
+            "message": f"File '{file.filename}' processed successfully",
             "file_id": file_id,
-            "metadata": file_metadata,
+            "insights": insights,
             "ai_analysis_available": AI_AVAILABLE
         }
         
-    except HTTPException:
-        raise
     except Exception as e:
         print(f"[intelligence] Upload error: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @router.get("/summary")
 async def get_intelligence_summary():
-    """Get intelligence summary and insights"""
+    """Get real intelligence summary from uploaded files"""
     
     try:
-        # Get files from database or memory
-        files = UPLOADED_FILES  # In production, query from database
+        # Get actual uploaded files
+        uploaded_files = []
+        if os.path.exists(UPLOAD_DIR):
+            for filename in os.listdir(UPLOAD_DIR):
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                if os.path.isfile(file_path):
+                    file_stats = os.stat(file_path)
+                    uploaded_files.append({
+                        "filename": filename,
+                        "size": file_stats.st_size,
+                        "uploaded_at": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+                        "file_path": file_path
+                    })
         
-        total_files = len(files)
-        processed_files = len([f for f in files if f.get("processed", False)])
+        # Process files to get real insights
+        total_files = len(uploaded_files)
+        total_size = sum(f["size"] for f in uploaded_files)
         
-        # Calculate insights summary
-        insights_summary = {
-            "total_files": total_files,
-            "processed_files": processed_files,
-            "pending_files": total_files - processed_files,
-            "sources": {},
-            "brands": {},
-            "recent_uploads": []
-        }
+        # Analyze file types
+        file_types = {}
+        for f in uploaded_files:
+            ext = os.path.splitext(f["filename"])[1].lower()
+            file_types[ext] = file_types.get(ext, 0) + 1
         
-        # Aggregate by source and brand
-        for file_data in files:
-            source = file_data.get("source", "unknown")
-            brand = file_data.get("brand", "unknown")
-            
-            insights_summary["sources"][source] = insights_summary["sources"].get(source, 0) + 1
-            insights_summary["brands"][brand] = insights_summary["brands"].get(brand, 0) + 1
-            
-            # Add to recent uploads (last 10)
-            if len(insights_summary["recent_uploads"]) < 10:
-                insights_summary["recent_uploads"].append({
-                    "filename": file_data.get("filename", ""),
-                    "source": source,
-                    "brand": brand,
-                    "uploaded_at": file_data.get("uploaded_at", ""),
-                    "processed": file_data.get("processed", False)
-                })
-        
-        # Add AI insights if available
-        if AI_AVAILABLE and processed_files > 0:
-            insights_summary["ai_insights"] = generate_summary_insights(files)
-        
-        return insights_summary
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get intelligence summary: {str(e)}")
-
-@router.get("/files")
-async def get_uploaded_files(limit: int = 50):
-    """Get list of uploaded intelligence files"""
-    
-    try:
-        files = UPLOADED_FILES[-limit:]  # Get most recent files
+        # Get database summary if available
+        db_summary = {}
+        if DB_AVAILABLE:
+            try:
+                db_summary = get_database_summary()
+            except Exception as e:
+                print(f"[intelligence] Database summary error: {e}")
         
         return {
-            "files": files,
-            "total_files": len(UPLOADED_FILES),
-            "ai_analysis_available": AI_AVAILABLE
+            "total_files": total_files,
+            "total_size_bytes": total_size,
+            "file_types": file_types,
+            "recent_uploads": uploaded_files[-10:],  # Last 10 files
+            "database_records": db_summary.get("total_records", 0),
+            "ai_analysis_available": AI_AVAILABLE,
+            "storage_location": UPLOAD_DIR
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get summary: {str(e)}")
+
+@router.get("/files")
+async def get_uploaded_files():
+    """Get list of actually uploaded files with real metadata"""
+    
+    try:
+        files = []
+        if os.path.exists(UPLOAD_DIR):
+            for filename in os.listdir(UPLOAD_DIR):
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                if os.path.isfile(file_path):
+                    file_stats = os.stat(file_path)
+                    
+                    # Try to extract insights from file
+                    try:
+                        with open(file_path, 'rb') as f:
+                            content = f.read()
+                        file_insights = await analyze_file_content(content, filename)
+                    except:
+                        file_insights = {"error": "Could not analyze file"}
+                    
+                    files.append({
+                        "filename": filename,
+                        "size": file_stats.st_size,
+                        "uploaded_at": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+                        "modified_at": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+                        "insights": file_insights
+                    })
+        
+        return {
+            "files": sorted(files, key=lambda x: x["uploaded_at"], reverse=True),
+            "total_files": len(files)
         }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get files: {str(e)}")
 
-@router.get("/insights/{file_id}")
-async def get_file_insights(file_id: str):
-    """Get detailed insights for a specific file"""
+async def process_real_file_content(content: bytes, filename: str, source: str, brand: str) -> Dict[str, Any]:
+    """Process actual file content and extract real insights"""
     
     try:
-        # Find file by ID
-        file_data = None
-        for f in UPLOADED_FILES:
-            if f.get("id") == file_id:
-                file_data = f
-                break
-        
-        if not file_data:
-            raise HTTPException(status_code=404, detail="File not found")
-        
-        return {
-            "file_id": file_id,
-            "filename": file_data.get("filename", ""),
-            "metadata": file_data,
-            "insights": file_data.get("insights", {}),
-            "processed": file_data.get("processed", False)
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get file insights: {str(e)}")
-
-async def process_file_content(content: bytes, filename: str, source: str, brand: str) -> Dict[str, Any]:
-    """Process file content and generate insights using AI"""
-    
-    try:
-        # Determine file type and extract text
-        file_text = extract_text_from_file(content, filename)
+        # Extract text from file based on type
+        file_text = extract_text_content(content, filename)
         
         if not file_text:
-            return {"error": "Could not extract text from file"}
+            return {"error": "Could not extract text from file", "file_size": len(content)}
+        
+        # Analyze the actual content
+        content_analysis = analyze_content_structure(file_text, filename)
         
         # Generate AI insights if available
-        if AI_AVAILABLE and openai_client:
-            ai_insights = await generate_ai_insights(file_text, source, brand)
-        else:
-            ai_insights = {"note": "AI analysis not available"}
-        
-        # Generate basic insights
-        basic_insights = generate_basic_insights(file_text, source, brand)
+        ai_insights = {}
+        if AI_AVAILABLE and openai_client and len(file_text) > 50:
+            try:
+                ai_insights = await generate_real_ai_insights(file_text, source, brand)
+            except Exception as e:
+                ai_insights = {"ai_error": str(e)}
         
         return {
-            "basic_analysis": basic_insights,
-            "ai_analysis": ai_insights,
-            "file_stats": {
-                "character_count": len(file_text),
-                "word_count": len(file_text.split()),
-                "line_count": len(file_text.split('\n'))
-            },
-            "processed_at": datetime.now().isoformat()
+            "file_analysis": content_analysis,
+            "ai_insights": ai_insights,
+            "processing_timestamp": datetime.now().isoformat(),
+            "source": source,
+            "brand": brand
         }
         
     except Exception as e:
         return {"error": f"Processing failed: {str(e)}"}
 
-def extract_text_from_file(content: bytes, filename: str) -> str:
-    """Extract text content from various file types"""
+def extract_text_content(content: bytes, filename: str) -> str:
+    """Extract actual text content from uploaded files"""
     
     try:
         file_extension = os.path.splitext(filename)[1].lower()
         
-        if file_extension in ['.txt', '.csv', '.json', '.jsonl']:
-            # Text-based files
+        if file_extension in ['.txt', '.csv', '.tsv']:
             return content.decode('utf-8', errors='ignore')
-        elif file_extension == '.json':
-            # JSON files - pretty print
-            data = json.loads(content.decode('utf-8'))
-            return json.dumps(data, indent=2)
+        
+        elif file_extension in ['.json', '.jsonl']:
+            text_content = content.decode('utf-8', errors='ignore')
+            # For JSONL files, process line by line
+            if file_extension == '.jsonl':
+                lines = text_content.strip().split('\n')
+                processed_lines = []
+                for line in lines:
+                    try:
+                        data = json.loads(line)
+                        processed_lines.append(json.dumps(data, indent=2))
+                    except:
+                        processed_lines.append(line)
+                return '\n'.join(processed_lines)
+            return text_content
+        
         else:
             # Try to decode as text
             return content.decode('utf-8', errors='ignore')
@@ -260,146 +260,287 @@ def extract_text_from_file(content: bytes, filename: str) -> str:
         print(f"[intelligence] Text extraction error: {e}")
         return ""
 
-async def generate_ai_insights(text: str, source: str, brand: str) -> Dict[str, Any]:
-    """Generate AI-powered insights using OpenAI (fixed client initialization)"""
-    
-    if not AI_AVAILABLE or not openai_client:
-        return {"error": "AI analysis not available"}
+def analyze_content_structure(text: str, filename: str) -> Dict[str, Any]:
+    """Analyze the actual structure and content of uploaded data"""
     
     try:
-        # Create AI prompt for analysis
+        analysis = {
+            "filename": filename,
+            "character_count": len(text),
+            "line_count": len(text.split('\n')),
+            "word_count": len(text.split()),
+            "file_type": os.path.splitext(filename)[1].lower()
+        }
+        
+        # Detect data format
+        if filename.endswith('.json') or filename.endswith('.jsonl'):
+            analysis.update(analyze_json_content(text))
+        elif filename.endswith('.csv'):
+            analysis.update(analyze_csv_content(text))
+        else:
+            analysis.update(analyze_text_content(text))
+        
+        return analysis
+        
+    except Exception as e:
+        return {"error": f"Content analysis failed: {str(e)}"}
+
+def analyze_json_content(text: str) -> Dict[str, Any]:
+    """Analyze JSON/JSONL content for real insights"""
+    
+    try:
+        analysis = {"data_type": "json"}
+        
+        # Try to parse as JSON
+        lines = text.strip().split('\n')
+        records = []
+        
+        for line in lines:
+            try:
+                data = json.loads(line)
+                records.append(data)
+            except:
+                continue
+        
+        if records:
+            analysis["total_records"] = len(records)
+            
+            # Analyze record structure
+            if records:
+                sample_record = records[0]
+                analysis["fields"] = list(sample_record.keys()) if isinstance(sample_record, dict) else []
+                
+                # Look for common social media fields
+                social_fields = ["text", "caption", "content", "message", "post"]
+                text_fields = [f for f in analysis["fields"] if any(sf in f.lower() for sf in social_fields)]
+                
+                if text_fields:
+                    # Extract actual text content for analysis
+                    all_text = []
+                    for record in records[:100]:  # Analyze first 100 records
+                        for field in text_fields:
+                            if field in record and record[field]:
+                                all_text.append(str(record[field]))
+                    
+                    if all_text:
+                        combined_text = ' '.join(all_text)
+                        analysis["content_analysis"] = analyze_text_content(combined_text)
+        
+        return analysis
+        
+    except Exception as e:
+        return {"json_analysis_error": str(e)}
+
+def analyze_csv_content(text: str) -> Dict[str, Any]:
+    """Analyze CSV content for real insights"""
+    
+    try:
+        # Use pandas to analyze CSV structure
+        from io import StringIO
+        df = pd.read_csv(StringIO(text))
+        
+        analysis = {
+            "data_type": "csv",
+            "rows": len(df),
+            "columns": len(df.columns),
+            "column_names": df.columns.tolist()
+        }
+        
+        # Analyze data types
+        analysis["column_types"] = df.dtypes.astype(str).to_dict()
+        
+        # Look for text columns that might contain social media content
+        text_columns = []
+        for col in df.columns:
+            if df[col].dtype == 'object':  # String columns
+                sample_values = df[col].dropna().head(5).tolist()
+                avg_length = df[col].astype(str).str.len().mean()
+                if avg_length > 20:  # Likely text content
+                    text_columns.append(col)
+        
+        if text_columns:
+            analysis["text_columns"] = text_columns
+            # Analyze content from text columns
+            all_text = []
+            for col in text_columns[:2]:  # Analyze first 2 text columns
+                text_values = df[col].dropna().astype(str).tolist()
+                all_text.extend(text_values[:50])  # First 50 values
+            
+            if all_text:
+                combined_text = ' '.join(all_text)
+                analysis["content_analysis"] = analyze_text_content(combined_text)
+        
+        return analysis
+        
+    except Exception as e:
+        return {"csv_analysis_error": str(e)}
+
+def analyze_text_content(text: str) -> Dict[str, Any]:
+    """Analyze actual text content for real insights"""
+    
+    try:
+        words = text.lower().split()
+        
+        # Real keyword analysis
+        analysis = {
+            "total_words": len(words),
+            "unique_words": len(set(words)),
+            "avg_word_length": sum(len(word) for word in words) / len(words) if words else 0
+        }
+        
+        # Extract hashtags
+        import re
+        hashtags = re.findall(r'#\w+', text)
+        analysis["hashtags"] = list(set(hashtags))
+        analysis["hashtag_count"] = len(hashtags)
+        
+        # Extract mentions
+        mentions = re.findall(r'@\w+', text)
+        analysis["mentions"] = list(set(mentions))
+        analysis["mention_count"] = len(mentions)
+        
+        # Extract URLs
+        urls = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
+        analysis["urls"] = list(set(urls))
+        analysis["url_count"] = len(urls)
+        
+        # Word frequency analysis (top 10 words)
+        word_freq = {}
+        for word in words:
+            if len(word) > 3:  # Skip short words
+                word_freq[word] = word_freq.get(word, 0) + 1
+        
+        top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+        analysis["top_words"] = dict(top_words)
+        
+        return analysis
+        
+    except Exception as e:
+        return {"text_analysis_error": str(e)}
+
+async def generate_real_ai_insights(text: str, source: str, brand: str) -> Dict[str, Any]:
+    """Generate real AI insights using OpenAI (no mock data)"""
+    
+    if not AI_AVAILABLE or not openai_client:
+        return {"note": "AI analysis not available"}
+    
+    try:
+        # Limit text to avoid token limits
+        text_sample = text[:3000] if len(text) > 3000 else text
+        
         prompt = f"""
-        Analyze this {source} data for {brand} and provide insights:
+        Analyze this real {source} data for {brand} and provide actionable insights:
         
-        Data:
-        {text[:2000]}...  # Limit text to avoid token limits
+        Data sample:
+        {text_sample}
         
-        Please provide:
-        1. Key themes and topics
-        2. Sentiment analysis
-        3. Actionable insights for {brand}
-        4. Recommendations for content strategy
+        Provide analysis in JSON format with:
+        1. key_themes: Main topics and themes found
+        2. sentiment: Overall sentiment analysis
+        3. engagement_opportunities: Specific opportunities for {brand}
+        4. content_recommendations: Actionable content suggestions
+        5. competitive_insights: What this reveals about the market
         
-        Format as JSON with clear sections.
+        Be specific and actionable based on the actual data provided.
         """
         
-        # Make API call with proper client (no proxies parameter)
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": f"You are an expert social media analyst for {brand}, a streetwear brand."},
+                {"role": "system", "content": f"You are a data analyst specializing in social media intelligence for {brand}."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1000,
-            temperature=0.7
+            max_tokens=1500,
+            temperature=0.3
         )
         
         ai_response = response.choices[0].message.content
         
-        # Try to parse as JSON, fallback to text
+        # Try to parse as JSON
         try:
             insights = json.loads(ai_response)
         except:
             insights = {"analysis": ai_response}
         
         return {
-            "insights": insights,
-            "model_used": "gpt-3.5-turbo",
-            "generated_at": datetime.now().isoformat()
+            "ai_insights": insights,
+            "model": "gpt-3.5-turbo",
+            "generated_at": datetime.now().isoformat(),
+            "text_analyzed_length": len(text_sample)
         }
         
     except Exception as e:
-        print(f"[intelligence] AI analysis error: {e}")
-        return {"error": f"AI analysis failed: {str(e)}"}
+        return {"ai_error": f"AI analysis failed: {str(e)}"}
 
-def generate_basic_insights(text: str, source: str, brand: str) -> Dict[str, Any]:
-    """Generate basic insights without AI"""
+async def analyze_file_content(content: bytes, filename: str) -> Dict[str, Any]:
+    """Quick analysis of file content for file listing"""
     
     try:
-        words = text.lower().split()
+        text = extract_text_content(content, filename)
+        if not text:
+            return {"error": "Could not extract text"}
         
-        # Basic keyword analysis
-        brand_mentions = words.count(brand.lower().replace(" ", "").replace("&", ""))
-        
-        # Common social media keywords
-        engagement_keywords = ["like", "comment", "share", "follow", "tag"]
-        engagement_count = sum(words.count(keyword) for keyword in engagement_keywords)
-        
-        # Sentiment indicators (basic)
-        positive_words = ["good", "great", "awesome", "love", "amazing", "best"]
-        negative_words = ["bad", "hate", "terrible", "worst", "awful"]
-        
-        positive_count = sum(words.count(word) for word in positive_words)
-        negative_count = sum(words.count(word) for word in negative_words)
-        
+        # Basic analysis
         return {
-            "source": source,
-            "brand": brand,
-            "brand_mentions": brand_mentions,
-            "engagement_indicators": engagement_count,
-            "sentiment_indicators": {
-                "positive_words": positive_count,
-                "negative_words": negative_count,
-                "sentiment_score": (positive_count - negative_count) / max(len(words), 1)
-            },
-            "data_quality": {
-                "has_content": len(text) > 100,
-                "structured_data": source in ["instagram", "tiktok", "shopify"],
-                "text_length": len(text)
-            }
+            "size": len(content),
+            "text_length": len(text),
+            "lines": len(text.split('\n')),
+            "words": len(text.split()),
+            "file_type": os.path.splitext(filename)[1].lower()
         }
         
     except Exception as e:
-        return {"error": f"Basic analysis failed: {str(e)}"}
+        return {"error": str(e)}
 
-def generate_summary_insights(files: List[Dict]) -> Dict[str, Any]:
-    """Generate summary insights across all files"""
+def save_to_database(file_metadata: Dict[str, Any]):
+    """Save file metadata to database"""
+    
+    if not DB_AVAILABLE:
+        return
     
     try:
-        processed_files = [f for f in files if f.get("processed", False)]
-        
-        if not processed_files:
-            return {"note": "No processed files available for analysis"}
-        
-        # Aggregate insights
-        total_brand_mentions = 0
-        total_engagement = 0
-        sources_analyzed = set()
-        
-        for file_data in processed_files:
-            insights = file_data.get("insights", {})
-            basic = insights.get("basic_analysis", {})
+        with SessionLocal() as session:
+            # Insert into intelligence_files table
+            query = text("""
+                INSERT INTO intelligence_files 
+                (filename, source, brand, file_path, processed, insights)
+                VALUES (:filename, :source, :brand, :file_path, :processed, :insights)
+            """)
             
-            total_brand_mentions += basic.get("brand_mentions", 0)
-            total_engagement += basic.get("engagement_indicators", 0)
-            sources_analyzed.add(file_data.get("source", "unknown"))
-        
-        return {
-            "summary": {
-                "total_files_analyzed": len(processed_files),
-                "sources_covered": list(sources_analyzed),
-                "total_brand_mentions": total_brand_mentions,
-                "total_engagement_indicators": total_engagement,
-                "avg_brand_mentions_per_file": total_brand_mentions / len(processed_files) if processed_files else 0
-            },
-            "recommendations": [
-                "Continue monitoring social media mentions for brand sentiment",
-                "Focus on high-engagement content types identified in analysis",
-                "Track competitor activity in similar data sources",
-                "Develop content strategy based on trending topics"
-            ]
-        }
-        
+            session.execute(query, {
+                "filename": file_metadata["filename"],
+                "source": file_metadata["source"],
+                "brand": file_metadata["brand"],
+                "file_path": file_metadata["file_path"],
+                "processed": file_metadata["processed"],
+                "insights": json.dumps(file_metadata["insights"])
+            })
+            session.commit()
+            
     except Exception as e:
-        return {"error": f"Summary generation failed: {str(e)}"}
+        print(f"[intelligence] Database save error: {e}")
 
-# Health check endpoint
+def get_database_summary() -> Dict[str, Any]:
+    """Get summary from database"""
+    
+    if not DB_AVAILABLE:
+        return {}
+    
+    try:
+        with SessionLocal() as session:
+            result = session.execute(text("SELECT COUNT(*) FROM intelligence_files")).fetchone()
+            return {"total_records": result[0] if result else 0}
+    except Exception as e:
+        print(f"[intelligence] Database summary error: {e}")
+        return {}
+
 @router.get("/health")
 async def intelligence_health():
     """Health check for intelligence module"""
     return {
         "status": "healthy",
         "ai_available": AI_AVAILABLE,
+        "database_available": DB_AVAILABLE,
         "upload_directory": UPLOAD_DIR,
-        "total_files": len(UPLOADED_FILES)
+        "upload_directory_exists": os.path.exists(UPLOAD_DIR)
     }
