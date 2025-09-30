@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Query
 from fastapi.responses import JSONResponse, FileResponse
-
 from backend.services import intelligence_store as store
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -13,17 +12,17 @@ INTEL_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter()
 
-@router.get("/brands", name="brands")
-def brands():
-    return {"ok": True, "items": store.list_brands()}
-
 @router.get("/summary", name="summary")
 def summary():
-    ov = store.executive_overview()
-    return {"ok": True, **ov}
+    return {"ok": True, **store.executive_overview()}
 
 @router.post("/upload", name="intelligence_upload")
-async def intelligence_upload(file: UploadFile = File(...), parse: bool = Query(True)):
+async def intelligence_upload(
+    file: UploadFile = File(...),
+    parse: bool = Query(True),
+    source: str | None = Query(None, description="e.g., 'shopify'"),
+    brand: str | None = Query(None, description="Brand name for benchmarks"),
+):
     safe = os.path.basename(file.filename) or "upload.bin"
     target = INTEL_DIR / safe
 
@@ -34,20 +33,11 @@ async def intelligence_upload(file: UploadFile = File(...), parse: bool = Query(
             if not chunk: break
             out.write(chunk); size += len(chunk)
 
-    # If it's a CSV, parse it into the store
     summary = None
     if parse and safe.lower().endswith(".csv"):
-        summary = store.import_csv(target)
+        summary = store.import_csv(target, source=source, brand=brand)
 
     return {"ok": True, "filename": safe, "size": size, "path": f"/api/intelligence/files/{safe}", "parsed": bool(summary), "import": summary}
-
-@router.post("/upload/", include_in_schema=False)
-async def intelligence_upload_alias(file: UploadFile = File(...), parse: bool = Query(True)):
-    return await intelligence_upload(file, parse)
-
-@router.get("/upload", include_in_schema=False)
-def intelligence_upload_get_hint():
-    return JSONResponse({"detail":"Use POST multipart/form-data to /api/intelligence/upload (field 'file')."}, status_code=405)
 
 @router.get("/files", name="intelligence_files")
 def intelligence_files():
@@ -65,3 +55,8 @@ def intelligence_file_get(name: str):
     if not target.is_file():
         return JSONResponse({"detail":"Not Found"}, status_code=404)
     return FileResponse(str(target), filename=safe)
+
+# helpful GET for accidental GET requests to /upload
+@router.get("/upload", include_in_schema=False)
+def intelligence_upload_get_hint():
+    return JSONResponse({"detail":"Use POST multipart/form-data to /api/intelligence/upload (field 'file')."}, status_code=405)
