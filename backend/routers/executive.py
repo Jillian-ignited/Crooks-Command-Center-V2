@@ -1,14 +1,13 @@
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List, Optional
+from fastapi import APIRouter
+from typing import Dict, Any
 import datetime
 
 router = APIRouter()
 
 @router.get("/overview")
-def get_executive_overview(days: int = 30) -> Dict[str, Any]:
+async def get_executive_overview(days: int = 30, brand: str = "Crooks & Castles") -> Dict[str, Any]:
     """Get executive overview data in the exact format the frontend expects"""
     
-    # This is the exact data structure the frontend expects
     return {
         "shopify_metrics": {
             "total_sales": 425000,
@@ -74,22 +73,6 @@ def get_executive_overview(days: int = 30) -> Dict[str, Any]:
                 "impact": "growth",
                 "timeline": "4-6 weeks",
                 "expected_lift": "10-15% increase in social-driven sales"
-            },
-            {
-                "title": "Competitive Pricing Strategy",
-                "description": "Your AOV is strong but monitor competitor pricing. Consider premium positioning to maintain margins while staying competitive.",
-                "priority": "medium", 
-                "impact": "margin",
-                "timeline": "2-3 weeks",
-                "expected_lift": "5-8% margin improvement"
-            },
-            {
-                "title": "Expand Market Share",
-                "description": "You're performing well in the top 10. Focus on differentiating from competitors ranked 5-9 to move up in market position.",
-                "priority": "low",
-                "impact": "brand",
-                "timeline": "8-12 weeks", 
-                "expected_lift": "Improved brand recognition and market position"
             }
         ],
         "alerts": [
@@ -113,87 +96,8 @@ def get_executive_overview(days: int = 30) -> Dict[str, Any]:
         "generated_at": datetime.datetime.now().isoformat()
     }
 
-@router.get("/hashtags")
-def get_hashtags(platform: str = "combined", period: str = "7d") -> Dict[str, Any]:
-    """Get top hashtag performance"""
-    hashtags_data = {
-        "combined": [
-            {"tag": "#crooksandcastles", "count": 15420, "engagement": 89500},
-            {"tag": "#streetwear", "count": 8930, "engagement": 45200},
-            {"tag": "#crooks", "count": 6780, "engagement": 32100},
-            {"tag": "#streetstyle", "count": 5640, "engagement": 28900},
-            {"tag": "#fashion", "count": 4520, "engagement": 22100}
-        ],
-        "tiktok": [
-            {"tag": "#crooksandcastles", "count": 8920, "engagement": 125000},
-            {"tag": "#streetwear", "count": 5430, "engagement": 78000},
-            {"tag": "#ootd", "count": 3210, "engagement": 45000},
-            {"tag": "#style", "count": 2890, "engagement": 38000},
-            {"tag": "#fashion", "count": 2340, "engagement": 32000}
-        ],
-        "instagram": [
-            {"tag": "#crooksandcastles", "count": 6500, "engagement": 54000},
-            {"tag": "#streetwear", "count": 3500, "engagement": 29000},
-            {"tag": "#crooks", "count": 3470, "engagement": 28500},
-            {"tag": "#streetstyle", "count": 2350, "engagement": 19800},
-            {"tag": "#fashion", "count": 2180, "engagement": 18200}
-        ]
-    }
-    
-    if platform not in hashtags_data:
-        platform = "combined"
-    
-    return {
-        "success": True,
-        "platform": platform,
-        "period": period,
-        "hashtags": hashtags_data[platform],
-        "total_count": len(hashtags_data[platform]),
-        "last_updated": datetime.datetime.now().isoformat()
-    }
-
-@router.get("/priorities")
-def get_priorities() -> Dict[str, Any]:
-    """Get executive priorities and recommendations"""
-    priorities = [
-        {
-            "id": "priority_001",
-            "title": "Improve Conversion Rate",
-            "description": "Current conversion rate is above average but has 15-25% improvement potential",
-            "priority": "high",
-            "impact": "revenue",
-            "timeline": "2 weeks",
-            "owner": "E-commerce Team"
-        },
-        {
-            "id": "priority_002", 
-            "title": "Leverage Social Media Success",
-            "description": "Social engagement is 47% above competitors - capitalize with social commerce",
-            "priority": "medium",
-            "impact": "growth",
-            "timeline": "4 weeks",
-            "owner": "Social Team"
-        },
-        {
-            "id": "priority_003",
-            "title": "Competitive Pricing Analysis",
-            "description": "Monitor competitor pricing while maintaining premium positioning",
-            "priority": "medium", 
-            "impact": "margin",
-            "timeline": "3 weeks",
-            "owner": "Strategy Team"
-        }
-    ]
-    
-    return {
-        "success": True,
-        "priorities": priorities,
-        "total_count": len(priorities),
-        "high_priority_count": len([p for p in priorities if p["priority"] == "high"])
-    }
-
 @router.post("/refresh")
-def refresh_executive_data() -> Dict[str, Any]:
+async def refresh_executive_data() -> Dict[str, Any]:
     """Trigger a refresh of executive dashboard data"""
     return {
         "success": True,
