@@ -3,6 +3,7 @@ import os
 import json
 from openai import OpenAI
 
+# Simple client initialization without extra parameters
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def analyze_social_data(data: list, source_type: str = "social_media") -> dict:
