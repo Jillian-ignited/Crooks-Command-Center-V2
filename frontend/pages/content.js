@@ -1,291 +1,248 @@
-import React, { useState } from 'react';
+// frontend/pages/content.js
+import { useState, useEffect } from "react";
 
-const ContentCreation = () => {
-  // Brief creation state
-  const [briefData, setBriefData] = useState({
-    brand: '',
-    objective: '',
-    audience: '',
-    tone: '',
-    channels: ''
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
+
+export default function Content() {
+  const [intelligence, setIntelligence] = useState(null);
+  const [brief, setBrief] = useState({
+    brand: "Crooks & Castles",
+    objective: "",
+    audience: "",
+    tone: "",
+    channels: []
   });
-  const [briefResult, setBriefResult] = useState('');
-  const [briefLoading, setBriefLoading] = useState(false);
-  const [briefError, setBriefError] = useState('');
-
-  // Ideas generation state
-  const [ideasData, setIdeasData] = useState({
-    brand: '',
-    theme: '',
-    count: ''
+  const [ideaRequest, setIdeaRequest] = useState({
+    brand: "Crooks & Castles",
+    theme: "",
+    count: 5
   });
-  const [ideasResult, setIdeasResult] = useState('');
-  const [ideasLoading, setIdeasLoading] = useState(false);
-  const [ideasError, setIdeasError] = useState('');
+  const [generatedIdeas, setGeneratedIdeas] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleBriefInputChange = (field, value) => {
-    setBriefData(prev => ({ ...prev, [field]: value }));
-  };
+  useEffect(() => {
+    loadIntelligence();
+  }, []);
 
-  const handleIdeasInputChange = (field, value) => {
-    setIdeasData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const createBrief = async () => {
-    setBriefLoading(true);
-    setBriefError('');
-    setBriefResult('');
-
+  async function loadIntelligence() {
     try {
-      const response = await fetch('/api/content/brief', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(briefData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const res = await fetch(`${API_BASE}/api/intelligence/summary`);
+      const data = await res.json();
+      setIntelligence(data);
+      
+      // Auto-populate theme from trending topics
+      if (data.insights?.trending_topics && Array.isArray(data.insights.trending_topics)) {
+        const topTopic = data.insights.trending_topics[0];
+        setIdeaRequest(prev => ({
+          ...prev,
+          theme: typeof topTopic === 'string' ? topTopic : topTopic.name || ""
+        }));
       }
-
-      const data = await response.json();
-      setBriefResult(JSON.stringify(data, null, 2));
-    } catch (error) {
-      setBriefError(`Error creating brief: ${error.message}`);
-      console.error('Brief creation error:', error);
-    } finally {
-      setBriefLoading(false);
+    } catch (err) {
+      console.error('Failed to load intelligence:', err);
     }
-  };
+  }
 
-  const generateIdeas = async () => {
-    setIdeasLoading(true);
-    setIdeasError('');
-    setIdeasResult('');
-
+  async function generateIdeas(e) {
+    e.preventDefault();
+    setLoading(true);
     try {
-      const response = await fetch('/api/content/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(ideasData)
+      const res = await fetch(`${API_BASE}/api/content/ideas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ideaRequest)
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setIdeasResult(JSON.stringify(data, null, 2));
-    } catch (error) {
-      setIdeasError(`Error generating ideas: ${error.message}`);
-      console.error('Ideas generation error:', error);
+      const data = await res.json();
+      setGeneratedIdeas(data);
+    } catch (err) {
+      console.error('Failed to generate ideas:', err);
     } finally {
-      setIdeasLoading(false);
+      setLoading(false);
     }
-  };
+  }
+
+  async function createBrief(e) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/content/brief`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(brief)
+      });
+      const data = await res.json();
+      alert("Brief created successfully!");
+    } catch (err) {
+      console.error('Failed to create brief:', err);
+      alert("Failed to create brief");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <main style={{ maxWidth: 1000, margin: '40px auto', padding: 20 }}>
-      <h1 style={{ marginBottom: 24 }}>Content Creation</h1>
+    <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
+      <h1>Content Creation</h1>
 
-      {/* Create Brief Section */}
-      <section style={sectionStyle}>
-        <h2 style={{ marginTop: 0, marginBottom: 16 }}>Create Brief</h2>
-        
-        <div style={formGroupStyle}>
-          <input
-            type="text"
-            placeholder="Brand (e.g., Crooks & Castles)"
-            value={briefData.brand}
-            onChange={(e) => handleBriefInputChange('brand', e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Objective (e.g., Drive sell-through)"
-            value={briefData.objective}
-            onChange={(e) => handleBriefInputChange('objective', e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Audience (e.g., Gen Z streetwear)"
-            value={briefData.audience}
-            onChange={(e) => handleBriefInputChange('audience', e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Tone (e.g., authentic)"
-            value={briefData.tone}
-            onChange={(e) => handleBriefInputChange('tone', e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Channels CSV (IG, TikTok, Email)"
-            value={briefData.channels}
-            onChange={(e) => handleBriefInputChange('channels', e.target.value)}
-            style={inputStyle}
-          />
+      {/* AI Suggestions from Intelligence */}
+      {intelligence?.insights?.recommendations && (
+        <div style={{ 
+          background: "#1a1a1a", 
+          padding: "1.5rem", 
+          borderRadius: "12px", 
+          marginBottom: "2rem",
+          border: "2px solid #4ade80"
+        }}>
+          <h3 style={{ margin: "0 0 1rem 0", color: "#4ade80" }}>💡 AI Content Suggestions</h3>
+          <ul style={{ margin: 0, paddingLeft: "1.5rem" }}>
+            {Array.isArray(intelligence.insights.recommendations) ? (
+              intelligence.insights.recommendations.slice(0, 5).map((rec, i) => (
+                <li key={i} style={{ marginBottom: "0.5rem" }}>{rec}</li>
+              ))
+            ) : (
+              <li>{intelligence.insights.recommendations}</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+        {/* Generate Ideas */}
+        <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px" }}>
+          <h2 style={{ margin: "0 0 1rem 0" }}>Generate Ideas</h2>
           
-          <button
-            onClick={createBrief}
-            disabled={briefLoading}
-            style={{
-              ...buttonStyle,
-              ...(briefLoading ? disabledButtonStyle : {})
-            }}
-          >
-            {briefLoading ? 'Creating Brief...' : 'Create Brief'}
-          </button>
+          {intelligence?.insights?.trending_topics && (
+            <div style={{ 
+              background: "#2a2a2a", 
+              padding: "0.75rem", 
+              borderRadius: "8px", 
+              marginBottom: "1rem",
+              fontSize: "0.9rem"
+            }}>
+              <strong>Trending now:</strong> {" "}
+              {Array.isArray(intelligence.insights.trending_topics) ? (
+                intelligence.insights.trending_topics.slice(0, 3).map((t, i) => 
+                  typeof t === 'string' ? t : t.name
+                ).join(", ")
+              ) : intelligence.insights.trending_topics}
+            </div>
+          )}
+
+          <form onSubmit={generateIdeas} style={{ display: "grid", gap: "1rem" }}>
+            <label>
+              Brand
+              <input 
+                value={ideaRequest.brand} 
+                onChange={(e) => setIdeaRequest({...ideaRequest, brand: e.target.value})}
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </label>
+            
+            <label>
+              Theme {intelligence?.insights?.trending_topics && (
+                <span style={{ fontSize: "0.85rem", color: "#4ade80" }}>(auto-filled from AI)</span>
+              )}
+              <input 
+                value={ideaRequest.theme} 
+                onChange={(e) => setIdeaRequest({...ideaRequest, theme: e.target.value})}
+                placeholder="e.g., streetwear, urban fashion"
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </label>
+            
+            <label>
+              Number of Ideas
+              <input 
+                type="number"
+                value={ideaRequest.count} 
+                onChange={(e) => setIdeaRequest({...ideaRequest, count: parseInt(e.target.value)})}
+                min="1"
+                max="10"
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </label>
+            
+            <button type="submit" disabled={loading} style={{ padding: "10px", cursor: "pointer" }}>
+              {loading ? "Generating..." : "Generate Ideas"}
+            </button>
+          </form>
+
+          {generatedIdeas && (
+            <div style={{ marginTop: "1.5rem" }}>
+              <h3>Generated Ideas</h3>
+              <div style={{ display: "grid", gap: "1rem" }}>
+                {generatedIdeas.ideas?.map((idea, i) => (
+                  <div key={i} style={{ background: "#2a2a2a", padding: "1rem", borderRadius: "8px" }}>
+                    <strong>{idea.title}</strong>
+                    <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.9rem", color: "#aaa" }}>
+                      {idea.description}
+                    </p>
+                    <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.5rem" }}>
+                      Channels: {idea.channels?.join(", ")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {briefError && (
-          <div style={errorStyle}>
-            {briefError}
-          </div>
-        )}
-
-        {briefResult && (
-          <div style={resultStyle}>
-            <h3>Brief Result:</h3>
-            <pre style={preStyle}>{briefResult}</pre>
-          </div>
-        )}
-      </section>
-
-      {/* Generate Ideas Section */}
-      <section style={sectionStyle}>
-        <h2 style={{ marginTop: 0, marginBottom: 16 }}>Generate Ideas</h2>
-        
-        <div style={formGroupStyle}>
-          <input
-            type="text"
-            placeholder="Brand"
-            value={ideasData.brand}
-            onChange={(e) => handleIdeasInputChange('brand', e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Theme (e.g., Armor + Cred)"
-            value={ideasData.theme}
-            onChange={(e) => handleIdeasInputChange('theme', e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Count (e.g., 10)"
-            value={ideasData.count}
-            onChange={(e) => handleIdeasInputChange('count', e.target.value)}
-            style={inputStyle}
-          />
+        {/* Create Brief */}
+        <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px" }}>
+          <h2 style={{ margin: "0 0 1rem 0" }}>Create Brief</h2>
           
-          <button
-            onClick={generateIdeas}
-            disabled={ideasLoading}
-            style={{
-              ...buttonStyle,
-              ...(ideasLoading ? disabledButtonStyle : {})
-            }}
-          >
-            {ideasLoading ? 'Generating...' : 'Generate'}
-          </button>
+          <form onSubmit={createBrief} style={{ display: "grid", gap: "1rem" }}>
+            <label>
+              Brand
+              <input 
+                value={brief.brand} 
+                onChange={(e) => setBrief({...brief, brand: e.target.value})}
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </label>
+            
+            <label>
+              Objective
+              <textarea 
+                value={brief.objective} 
+                onChange={(e) => setBrief({...brief, objective: e.target.value})}
+                rows={3}
+                placeholder="What do you want to achieve?"
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </label>
+            
+            <label>
+              Target Audience
+              <input 
+                value={brief.audience} 
+                onChange={(e) => setBrief({...brief, audience: e.target.value})}
+                placeholder="e.g., 18-34 urban fashion enthusiasts"
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              />
+            </label>
+            
+            <label>
+              Tone
+              <select 
+                value={brief.tone} 
+                onChange={(e) => setBrief({...brief, tone: e.target.value})}
+                style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              >
+                <option value="">Select tone...</option>
+                <option value="edgy">Edgy</option>
+                <option value="authentic">Authentic</option>
+                <option value="aspirational">Aspirational</option>
+                <option value="playful">Playful</option>
+              </select>
+            </label>
+            
+            <button type="submit" disabled={loading} style={{ padding: "10px", cursor: "pointer" }}>
+              {loading ? "Creating..." : "Create Brief"}
+            </button>
+          </form>
         </div>
-
-        {ideasError && (
-          <div style={errorStyle}>
-            {ideasError}
-          </div>
-        )}
-
-        {ideasResult && (
-          <div style={resultStyle}>
-            <h3>Generated Ideas:</h3>
-            <pre style={preStyle}>{ideasResult}</pre>
-          </div>
-        )}
-      </section>
-    </main>
+      </div>
+    </div>
   );
-};
-
-const sectionStyle = {
-  background: '#fff',
-  border: '1px solid #eee',
-  borderRadius: 12,
-  padding: 24,
-  marginBottom: 24,
-  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-};
-
-const formGroupStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 12
-};
-
-const inputStyle = {
-  padding: '12px 16px',
-  border: '1px solid #ddd',
-  borderRadius: 8,
-  fontSize: 14,
-  outline: 'none',
-  transition: 'border-color 0.2s',
-  ':focus': {
-    borderColor: '#007bff'
-  }
-};
-
-const buttonStyle = {
-  padding: '12px 24px',
-  background: '#007bff',
-  color: 'white',
-  border: 'none',
-  borderRadius: 8,
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: 'pointer',
-  transition: 'background-color 0.2s',
-  ':hover': {
-    backgroundColor: '#0056b3'
-  }
-};
-
-const disabledButtonStyle = {
-  backgroundColor: '#6c757d',
-  cursor: 'not-allowed'
-};
-
-const errorStyle = {
-  background: '#fee',
-  border: '1px solid #f99',
-  padding: 12,
-  borderRadius: 8,
-  marginTop: 16,
-  color: '#c33'
-};
-
-const resultStyle = {
-  marginTop: 16,
-  padding: 16,
-  background: '#f8f9fa',
-  border: '1px solid #e9ecef',
-  borderRadius: 8
-};
-
-const preStyle = {
-  background: '#fff',
-  padding: 12,
-  borderRadius: 4,
-  border: '1px solid #ddd',
-  fontSize: 12,
-  overflow: 'auto',
-  maxHeight: 300
-};
-
-export default ContentCreation;
+}
