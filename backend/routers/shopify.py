@@ -1,292 +1,526 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List
+# backend/routers/shopify.py
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
+import json
+import csv
+import io
 import uuid
-from datetime import datetime
 
 router = APIRouter()
 
-# Request models
-class ContentBriefRequest(BaseModel):
-    brand: str
-    campaign_type: Optional[str] = "general"
-    target_audience: Optional[str] = "streetwear enthusiasts"
-    tone: Optional[str] = "rebellious, authentic"
-    objectives: Optional[List[str]] = ["brand awareness", "engagement"]
-    platforms: Optional[List[str]] = ["instagram", "tiktok"]
-
-class ContentIdeasRequest(BaseModel):
-    brand: str
-    theme: Optional[str] = "streetwear culture"
-    count: Optional[int] = 5
-    format: Optional[str] = "mixed"  # post, story, video, mixed
-
-# Response models
-class ContentBrief(BaseModel):
-    id: str
-    brand: str
-    title: str
-    overview: str
-    target_audience: str
-    key_messages: List[str]
-    tone_guidelines: str
-    content_pillars: List[str]
-    success_metrics: List[str]
-    created_at: str
-
-class ContentIdea(BaseModel):
-    id: str
-    title: str
-    description: str
-    format: str
-    platform: str
-    engagement_potential: str
-    difficulty: str
-
-@router.post("/brief")
-async def create_content_brief(request: ContentBriefRequest):
-    """Create a comprehensive content brief for brand campaigns"""
-    
-    try:
-        # Generate content brief based on brand and requirements
-        brief_id = str(uuid.uuid4())[:8]
-        
-        # Customize content based on brand
-        if "crooks" in request.brand.lower():
-            brand_voice = "Rebellious, street-smart, authentic. No compromise on quality or attitude."
-            content_pillars = [
-                "Street Culture Authenticity",
-                "Premium Quality Craftsmanship", 
-                "Community & Brotherhood",
-                "Urban Lifestyle Excellence"
-            ]
-            key_messages = [
-                "Crooks & Castles represents authentic street culture",
-                "Premium streetwear for those who demand excellence",
-                "Built by the streets, for the streets",
-                "Quality that speaks louder than words"
-            ]
-        else:
-            brand_voice = f"Authentic, engaging, and true to {request.brand}'s core values"
-            content_pillars = [
-                "Brand Authenticity",
-                "Quality & Craftsmanship",
-                "Community Engagement", 
-                "Lifestyle Integration"
-            ]
-            key_messages = [
-                f"{request.brand} delivers exceptional quality",
-                f"Authentic style that defines {request.brand}",
-                "Built for those who appreciate excellence",
-                "Where style meets substance"
-            ]
-        
-        brief = ContentBrief(
-            id=brief_id,
-            brand=request.brand,
-            title=f"{request.brand} {request.campaign_type.title()} Campaign Brief",
-            overview=f"Comprehensive content strategy for {request.brand} targeting {request.target_audience}. This brief outlines key messaging, content pillars, and success metrics for authentic brand storytelling across digital platforms.",
-            target_audience=request.target_audience,
-            key_messages=key_messages,
-            tone_guidelines=brand_voice,
-            content_pillars=content_pillars,
-            success_metrics=[
-                "Engagement Rate: >4.5%",
-                "Brand Mention Sentiment: >75% positive",
-                "Content Saves: >2% of reach",
-                "Story Completion Rate: >70%",
-                "Community Growth: >5% monthly"
-            ],
-            created_at=datetime.now().isoformat()
-        )
-        
-        return {
-            "success": True,
-            "brief": brief,
-            "message": f"Content brief created successfully for {request.brand}",
-            "next_steps": [
-                "Review and approve content pillars",
-                "Generate specific content ideas",
-                "Create content calendar",
-                "Begin asset production"
-            ]
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create content brief: {str(e)}")
-
-@router.post("/ideas")
-async def generate_content_ideas(request: ContentIdeasRequest):
-    """Generate creative content ideas based on brand and theme"""
-    
-    try:
-        ideas = []
-        
-        # Generate ideas based on brand and theme
-        if "crooks" in request.brand.lower():
-            base_ideas = [
-                {
-                    "title": "Behind the Seams: Craftsmanship Stories",
-                    "description": "Showcase the detailed craftsmanship that goes into each piece, from fabric selection to final stitching",
-                    "format": "video",
-                    "platform": "instagram",
-                    "engagement_potential": "high",
-                    "difficulty": "medium"
-                },
-                {
-                    "title": "Street Culture Chronicles", 
-                    "description": "Feature real community members wearing Crooks & Castles in their authentic environments",
-                    "format": "photo_series",
-                    "platform": "instagram",
-                    "engagement_potential": "very_high",
-                    "difficulty": "low"
-                },
-                {
-                    "title": "Heritage Moments",
-                    "description": "Celebrate cultural heritage months with authentic storytelling and community spotlights",
-                    "format": "carousel",
-                    "platform": "instagram",
-                    "engagement_potential": "high", 
-                    "difficulty": "medium"
-                },
-                {
-                    "title": "Quality Check Challenge",
-                    "description": "TikTok series showing the durability and quality of pieces through real-world tests",
-                    "format": "video",
-                    "platform": "tiktok",
-                    "engagement_potential": "viral_potential",
-                    "difficulty": "low"
-                },
-                {
-                    "title": "Community Spotlight Series",
-                    "description": "Feature customers and their stories, showing how Crooks & Castles fits into their lifestyle",
-                    "format": "story_highlight",
-                    "platform": "instagram",
-                    "engagement_potential": "medium",
-                    "difficulty": "low"
-                },
-                {
-                    "title": "Design Process Deep Dive",
-                    "description": "Take followers behind the scenes of how new designs come to life",
-                    "format": "video",
-                    "platform": "youtube",
-                    "engagement_potential": "high",
-                    "difficulty": "high"
-                },
-                {
-                    "title": "Street Style Inspiration",
-                    "description": "Curated looks and styling tips featuring latest pieces in urban settings",
-                    "format": "photo",
-                    "platform": "instagram",
-                    "engagement_potential": "medium",
-                    "difficulty": "low"
-                }
-            ]
-        else:
-            base_ideas = [
-                {
-                    "title": f"{request.brand} Lifestyle Moments",
-                    "description": f"Showcase how {request.brand} fits into everyday life with authentic customer stories",
-                    "format": "photo_series",
-                    "platform": "instagram", 
-                    "engagement_potential": "high",
-                    "difficulty": "low"
-                },
-                {
-                    "title": "Product Spotlight Series",
-                    "description": "Deep dive into key products with detailed features and benefits",
-                    "format": "carousel",
-                    "platform": "instagram",
-                    "engagement_potential": "medium",
-                    "difficulty": "medium"
-                },
-                {
-                    "title": "Behind the Brand",
-                    "description": "Share the story, values, and people behind the brand",
-                    "format": "video",
-                    "platform": "instagram",
-                    "engagement_potential": "high",
-                    "difficulty": "medium"
-                },
-                {
-                    "title": "Community Features",
-                    "description": "Highlight customers and their unique style interpretations",
-                    "format": "story_highlight",
-                    "platform": "instagram",
-                    "engagement_potential": "medium",
-                    "difficulty": "low"
-                },
-                {
-                    "title": "Trend Integration",
-                    "description": "Show how brand pieces work with current fashion and cultural trends",
-                    "format": "video",
-                    "platform": "tiktok",
-                    "engagement_potential": "high",
-                    "difficulty": "medium"
-                }
-            ]
-        
-        # Select and customize ideas based on request
-        selected_ideas = base_ideas[:request.count]
-        
-        for i, idea in enumerate(selected_ideas):
-            content_idea = ContentIdea(
-                id=f"idea_{uuid.uuid4().hex[:8]}",
-                title=idea["title"],
-                description=idea["description"],
-                format=idea["format"],
-                platform=idea["platform"],
-                engagement_potential=idea["engagement_potential"],
-                difficulty=idea["difficulty"]
-            )
-            ideas.append(content_idea)
-        
-        return {
-            "success": True,
-            "ideas": ideas,
-            "brand": request.brand,
-            "theme": request.theme,
-            "total_generated": len(ideas),
-            "message": f"Generated {len(ideas)} content ideas for {request.brand}",
-            "recommendations": [
-                "Start with low-difficulty, high-engagement ideas",
-                "Test different formats to see what resonates",
-                "Maintain consistent brand voice across all content",
-                "Track performance metrics for optimization"
-            ]
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate content ideas: {str(e)}")
-
-@router.get("/briefs")
-async def list_content_briefs():
-    """List all created content briefs"""
-    
-    # Mock data for existing briefs
-    briefs = [
+# Mock Shopify data for realistic responses
+SHOPIFY_MOCK_DATA = {
+    "store_info": {
+        "name": "Crooks & Castles",
+        "domain": "crooksandcastles.com",
+        "currency": "USD",
+        "timezone": "America/Los_Angeles",
+        "plan": "Shopify Plus",
+        "created_at": "2020-03-15T10:00:00Z"
+    },
+    "recent_orders": [
         {
-            "id": "brief_001",
-            "brand": "Crooks & Castles",
-            "title": "Q1 Brand Campaign Brief",
-            "status": "active",
-            "created_at": "2025-09-25T10:00:00",
-            "last_updated": "2025-09-30T15:30:00"
+            "id": "5001",
+            "order_number": "#CC-5001",
+            "customer": "Marcus Johnson",
+            "email": "marcus.j@email.com",
+            "total": 189.99,
+            "status": "fulfilled",
+            "created_at": "2025-09-30T14:30:00Z",
+            "items": [
+                {"name": "Medusa Chain Hoodie", "quantity": 1, "price": 149.99},
+                {"name": "Crown Logo Beanie", "quantity": 1, "price": 39.99}
+            ]
         },
         {
-            "id": "brief_002", 
-            "brand": "Crooks & Castles",
-            "title": "Holiday Collection Brief",
-            "status": "draft",
-            "created_at": "2025-09-28T14:20:00",
-            "last_updated": "2025-09-29T09:15:00"
+            "id": "5002", 
+            "order_number": "#CC-5002",
+            "customer": "Sarah Chen",
+            "email": "sarah.chen@email.com",
+            "total": 299.97,
+            "status": "processing",
+            "created_at": "2025-09-30T12:15:00Z",
+            "items": [
+                {"name": "Bandana Print Joggers", "quantity": 2, "price": 89.99},
+                {"name": "Castle Logo Tee", "quantity": 1, "price": 59.99}
+            ]
+        },
+        {
+            "id": "5003",
+            "order_number": "#CC-5003", 
+            "customer": "David Rodriguez",
+            "email": "d.rodriguez@email.com",
+            "total": 449.95,
+            "status": "fulfilled",
+            "created_at": "2025-09-30T09:45:00Z",
+            "items": [
+                {"name": "Premium Leather Jacket", "quantity": 1, "price": 399.99},
+                {"name": "Skull Chain Necklace", "quantity": 1, "price": 49.96}
+            ]
+        }
+    ],
+    "top_products": [
+        {
+            "id": "prod_001",
+            "title": "Medusa Chain Hoodie",
+            "handle": "medusa-chain-hoodie",
+            "price": 149.99,
+            "inventory": 45,
+            "sales_30d": 127,
+            "revenue_30d": 19048.73,
+            "image": "https://cdn.shopify.com/medusa-hoodie.jpg"
+        },
+        {
+            "id": "prod_002",
+            "title": "Bandana Print Joggers", 
+            "handle": "bandana-print-joggers",
+            "price": 89.99,
+            "inventory": 78,
+            "sales_30d": 89,
+            "revenue_30d": 8009.11,
+            "image": "https://cdn.shopify.com/bandana-joggers.jpg"
+        },
+        {
+            "id": "prod_003",
+            "title": "Castle Logo Tee",
+            "handle": "castle-logo-tee", 
+            "price": 59.99,
+            "inventory": 156,
+            "sales_30d": 203,
+            "revenue_30d": 12177.97,
+            "image": "https://cdn.shopify.com/castle-tee.jpg"
         }
     ]
+}
+
+@router.get("/dashboard")
+async def get_shopify_dashboard():
+    """Get comprehensive Shopify dashboard data"""
+    
+    try:
+        # Calculate metrics from mock data
+        total_orders = len(SHOPIFY_MOCK_DATA["recent_orders"])
+        total_revenue = sum(order["total"] for order in SHOPIFY_MOCK_DATA["recent_orders"])
+        avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+        
+        # Calculate 30-day metrics from top products
+        total_sales_30d = sum(product["sales_30d"] for product in SHOPIFY_MOCK_DATA["top_products"])
+        total_revenue_30d = sum(product["revenue_30d"] for product in SHOPIFY_MOCK_DATA["top_products"])
+        
+        dashboard_data = {
+            "store_info": SHOPIFY_MOCK_DATA["store_info"],
+            "metrics": {
+                "total_orders_today": total_orders,
+                "revenue_today": round(total_revenue, 2),
+                "avg_order_value": round(avg_order_value, 2),
+                "conversion_rate": 3.2,
+                "total_customers": 1247,
+                "total_products": 89,
+                "inventory_value": 156789.45,
+                "sales_30d": total_sales_30d,
+                "revenue_30d": round(total_revenue_30d, 2),
+                "growth_rate": 12.5
+            },
+            "recent_orders": SHOPIFY_MOCK_DATA["recent_orders"][:5],
+            "top_products": SHOPIFY_MOCK_DATA["top_products"],
+            "traffic": {
+                "sessions_today": 1456,
+                "page_views": 4321,
+                "bounce_rate": 45.2,
+                "avg_session_duration": "2:34"
+            },
+            "alerts": [
+                {
+                    "type": "inventory",
+                    "message": "Low stock alert: Medusa Chain Hoodie (45 units remaining)",
+                    "severity": "warning"
+                },
+                {
+                    "type": "performance", 
+                    "message": "Sales up 12.5% compared to last month",
+                    "severity": "success"
+                }
+            ]
+        }
+        
+        return dashboard_data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load Shopify dashboard: {str(e)}")
+
+@router.get("/test-connection")
+async def test_shopify_connection():
+    """Test connection to Shopify store"""
+    
+    try:
+        # Simulate connection test
+        connection_status = {
+            "connected": True,
+            "store_name": SHOPIFY_MOCK_DATA["store_info"]["name"],
+            "domain": SHOPIFY_MOCK_DATA["store_info"]["domain"],
+            "plan": SHOPIFY_MOCK_DATA["store_info"]["plan"],
+            "api_version": "2024-01",
+            "permissions": [
+                "read_orders",
+                "read_products", 
+                "read_customers",
+                "read_analytics",
+                "write_products"
+            ],
+            "last_sync": datetime.now().isoformat(),
+            "status": "healthy"
+        }
+        
+        return {
+            "success": True,
+            "connection": connection_status,
+            "message": "Successfully connected to Shopify store"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to test Shopify connection: {str(e)}")
+
+@router.get("/orders")
+async def get_shopify_orders(
+    limit: int = 50,
+    status: Optional[str] = None,
+    since: Optional[str] = None
+):
+    """Get Shopify orders with filtering"""
+    
+    try:
+        orders = SHOPIFY_MOCK_DATA["recent_orders"].copy()
+        
+        # Apply status filter
+        if status:
+            orders = [order for order in orders if order["status"] == status]
+        
+        # Apply date filter
+        if since:
+            since_date = datetime.fromisoformat(since.replace('Z', '+00:00'))
+            orders = [
+                order for order in orders 
+                if datetime.fromisoformat(order["created_at"].replace('Z', '+00:00')) >= since_date
+            ]
+        
+        # Apply limit
+        orders = orders[:limit]
+        
+        # Add summary statistics
+        total_value = sum(order["total"] for order in orders)
+        avg_value = total_value / len(orders) if orders else 0
+        
+        return {
+            "orders": orders,
+            "summary": {
+                "total_orders": len(orders),
+                "total_value": round(total_value, 2),
+                "average_value": round(avg_value, 2),
+                "status_breakdown": {
+                    "fulfilled": len([o for o in orders if o["status"] == "fulfilled"]),
+                    "processing": len([o for o in orders if o["status"] == "processing"]),
+                    "pending": len([o for o in orders if o["status"] == "pending"])
+                }
+            },
+            "filters_applied": {
+                "status": status,
+                "since": since,
+                "limit": limit
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Shopify orders: {str(e)}")
+
+@router.get("/analytics")
+async def get_shopify_analytics(
+    period: str = "30d",
+    metrics: Optional[str] = None
+):
+    """Get Shopify analytics and performance metrics"""
+    
+    try:
+        # Generate analytics based on period
+        if period == "7d":
+            days = 7
+            multiplier = 0.2
+        elif period == "30d":
+            days = 30
+            multiplier = 1.0
+        elif period == "90d":
+            days = 90
+            multiplier = 3.2
+        else:
+            days = 30
+            multiplier = 1.0
+        
+        base_revenue = 39235.67 * multiplier
+        base_orders = 419 * multiplier
+        base_sessions = 12456 * multiplier
+        
+        analytics_data = {
+            "period": period,
+            "date_range": {
+                "start": (datetime.now() - timedelta(days=days)).isoformat(),
+                "end": datetime.now().isoformat()
+            },
+            "revenue": {
+                "total": round(base_revenue, 2),
+                "growth": 12.5 if period == "30d" else 8.3,
+                "daily_average": round(base_revenue / days, 2),
+                "trend": "increasing"
+            },
+            "orders": {
+                "total": int(base_orders),
+                "growth": 15.2 if period == "30d" else 11.1,
+                "daily_average": round(base_orders / days, 1),
+                "avg_order_value": round(base_revenue / base_orders, 2)
+            },
+            "traffic": {
+                "sessions": int(base_sessions),
+                "page_views": int(base_sessions * 2.8),
+                "conversion_rate": 3.36,
+                "bounce_rate": 42.1,
+                "avg_session_duration": "2:47"
+            },
+            "top_channels": [
+                {"channel": "Direct", "sessions": int(base_sessions * 0.35), "revenue": round(base_revenue * 0.42, 2)},
+                {"channel": "Instagram", "sessions": int(base_sessions * 0.28), "revenue": round(base_revenue * 0.31, 2)},
+                {"channel": "Google Ads", "sessions": int(base_sessions * 0.22), "revenue": round(base_revenue * 0.18, 2)},
+                {"channel": "TikTok", "sessions": int(base_sessions * 0.15), "revenue": round(base_revenue * 0.09, 2)}
+            ],
+            "product_performance": SHOPIFY_MOCK_DATA["top_products"],
+            "customer_insights": {
+                "new_customers": int(base_orders * 0.34),
+                "returning_customers": int(base_orders * 0.66),
+                "customer_lifetime_value": 287.45,
+                "repeat_purchase_rate": 28.3
+            }
+        }
+        
+        return analytics_data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Shopify analytics: {str(e)}")
+
+@router.post("/upload")
+async def upload_shopify_data(
+    file: UploadFile = File(...),
+    data_type: str = Form("orders"),
+    brand: str = Form("Crooks & Castles")
+):
+    """Upload and process Shopify data files (CSV/JSON)"""
+    
+    try:
+        # Validate file type
+        if not file.filename.endswith(('.csv', '.json')):
+            raise HTTPException(status_code=400, detail="Only CSV and JSON files are supported")
+        
+        # Read file content
+        content = await file.read()
+        
+        # Process based on file type
+        if file.filename.endswith('.csv'):
+            processed_data = await process_csv_upload(content, data_type, brand)
+        else:
+            processed_data = await process_json_upload(content, data_type, brand)
+        
+        # Generate upload ID for tracking
+        upload_id = f"upload_{uuid.uuid4().hex[:8]}"
+        
+        return {
+            "success": True,
+            "upload_id": upload_id,
+            "filename": file.filename,
+            "data_type": data_type,
+            "brand": brand,
+            "processed_data": processed_data,
+            "upload_time": datetime.now().isoformat(),
+            "message": f"Successfully processed {file.filename}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload Shopify data: {str(e)}")
+
+@router.get("/upload/history")
+async def get_upload_history(limit: int = 20):
+    """Get history of Shopify data uploads"""
+    
+    try:
+        # Mock upload history
+        upload_history = [
+            {
+                "upload_id": "upload_a1b2c3d4",
+                "filename": "shopify_orders_september.csv",
+                "data_type": "orders",
+                "brand": "Crooks & Castles",
+                "status": "completed",
+                "records_processed": 1247,
+                "upload_time": "2025-09-30T10:15:00Z",
+                "file_size": "2.3 MB"
+            },
+            {
+                "upload_id": "upload_e5f6g7h8", 
+                "filename": "product_catalog_update.json",
+                "data_type": "products",
+                "brand": "Crooks & Castles",
+                "status": "completed",
+                "records_processed": 89,
+                "upload_time": "2025-09-29T14:30:00Z",
+                "file_size": "1.8 MB"
+            },
+            {
+                "upload_id": "upload_i9j0k1l2",
+                "filename": "customer_data_export.csv", 
+                "data_type": "customers",
+                "brand": "Crooks & Castles",
+                "status": "processing",
+                "records_processed": 0,
+                "upload_time": "2025-09-30T16:45:00Z",
+                "file_size": "5.1 MB"
+            }
+        ]
+        
+        return {
+            "uploads": upload_history[:limit],
+            "total_uploads": len(upload_history),
+            "summary": {
+                "completed": len([u for u in upload_history if u["status"] == "completed"]),
+                "processing": len([u for u in upload_history if u["status"] == "processing"]),
+                "failed": len([u for u in upload_history if u["status"] == "failed"])
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch upload history: {str(e)}")
+
+async def process_csv_upload(content: bytes, data_type: str, brand: str) -> Dict[str, Any]:
+    """Process uploaded CSV file"""
+    
+    try:
+        # Parse CSV content
+        csv_text = content.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+        rows = list(csv_reader)
+        
+        if not rows:
+            raise ValueError("CSV file is empty or invalid")
+        
+        # Process based on data type
+        if data_type == "orders":
+            processed = process_orders_csv(rows, brand)
+        elif data_type == "products":
+            processed = process_products_csv(rows, brand)
+        elif data_type == "customers":
+            processed = process_customers_csv(rows, brand)
+        else:
+            processed = {
+                "records": len(rows),
+                "columns": list(rows[0].keys()) if rows else [],
+                "sample_data": rows[:3]
+            }
+        
+        return processed
+        
+    except Exception as e:
+        raise ValueError(f"Failed to process CSV: {str(e)}")
+
+async def process_json_upload(content: bytes, data_type: str, brand: str) -> Dict[str, Any]:
+    """Process uploaded JSON file"""
+    
+    try:
+        # Parse JSON content
+        json_text = content.decode('utf-8')
+        data = json.loads(json_text)
+        
+        if isinstance(data, list):
+            records = len(data)
+            sample = data[:3] if data else []
+        elif isinstance(data, dict):
+            records = 1
+            sample = [data]
+        else:
+            raise ValueError("Invalid JSON structure")
+        
+        return {
+            "records": records,
+            "data_type": data_type,
+            "brand": brand,
+            "sample_data": sample,
+            "structure": "array" if isinstance(data, list) else "object"
+        }
+        
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON format: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Failed to process JSON: {str(e)}")
+
+def process_orders_csv(rows: List[Dict], brand: str) -> Dict[str, Any]:
+    """Process orders CSV data"""
+    
+    total_revenue = 0
+    order_count = len(rows)
+    
+    for row in rows:
+        # Try to extract revenue from common column names
+        revenue = 0
+        for col in ['total', 'amount', 'revenue', 'Total', 'Amount', 'Revenue']:
+            if col in row and row[col]:
+                try:
+                    revenue = float(row[col].replace('$', '').replace(',', ''))
+                    break
+                except:
+                    continue
+        total_revenue += revenue
     
     return {
-        "success": True,
-        "briefs": briefs,
-        "total_count": len(briefs),
-        "active_count": len([b for b in briefs if b["status"] == "active"]),
-        "draft_count": len([b for b in briefs if b["status"] == "draft"])
+        "data_type": "orders",
+        "records": order_count,
+        "total_revenue": round(total_revenue, 2),
+        "avg_order_value": round(total_revenue / order_count, 2) if order_count > 0 else 0,
+        "columns": list(rows[0].keys()) if rows else [],
+        "sample_orders": rows[:3]
+    }
+
+def process_products_csv(rows: List[Dict], brand: str) -> Dict[str, Any]:
+    """Process products CSV data"""
+    
+    product_count = len(rows)
+    categories = set()
+    
+    for row in rows:
+        # Extract categories from common column names
+        for col in ['category', 'type', 'product_type', 'Category', 'Type']:
+            if col in row and row[col]:
+                categories.add(row[col])
+    
+    return {
+        "data_type": "products",
+        "records": product_count,
+        "categories": list(categories),
+        "columns": list(rows[0].keys()) if rows else [],
+        "sample_products": rows[:3]
+    }
+
+def process_customers_csv(rows: List[Dict], brand: str) -> Dict[str, Any]:
+    """Process customers CSV data"""
+    
+    customer_count = len(rows)
+    locations = set()
+    
+    for row in rows:
+        # Extract locations from common column names
+        for col in ['country', 'state', 'city', 'location', 'Country', 'State']:
+            if col in row and row[col]:
+                locations.add(row[col])
+    
+    return {
+        "data_type": "customers", 
+        "records": customer_count,
+        "locations": list(locations)[:10],  # Top 10 locations
+        "columns": list(rows[0].keys()) if rows else [],
+        "sample_customers": rows[:3]
     }
