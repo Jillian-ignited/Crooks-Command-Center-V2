@@ -23,7 +23,7 @@ async def intelligence_upload(
     source: str | None = Query(None, description="e.g., 'shopify'"),
     brand: str | None = Query(None, description="Brand name for benchmarks"),
 ):
-    safe = os.path.basename(file.filename) or "upload.bin"
+    safe = os.path.basename(file.filename) or "upload.csv"
     target = INTEL_DIR / safe
 
     size = 0
@@ -35,9 +35,6 @@ async def intelligence_upload(
 
     summary = None
     if parse and safe.lower().endswith(".csv"):
-        # If Shopify and brand not provided, default to store.DEFAULT_BRAND
-        if (source or "").lower() == "shopify" and not brand:
-            brand = store.DEFAULT_BRAND
         summary = store.import_csv(target, source=source, brand=brand)
 
     return {"ok": True, "filename": safe, "size": size, "path": f"/api/intelligence/files/{safe}", "parsed": bool(summary), "import": summary}
