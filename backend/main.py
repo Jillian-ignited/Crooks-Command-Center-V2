@@ -86,6 +86,7 @@ _mount("media",          "/media",          ["backend.routers.media"])
 _mount("shopify",        "/shopify",        ["backend.routers.shopify"])
 _mount("summary",        "/summary",        ["backend.routers.summary"])
 _mount("upload_sidecar", "/sidecar",        ["backend.routers.upload_sidecar", "backend.routers.sidecar"])
+_mount("competitive", "/competitive", ["backend.routers.competitive"])
 
 # --- Debug probes under /api ---
 @app.get("/api/__routes")
