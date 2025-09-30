@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Query
 from fastapi.responses import JSONResponse, FileResponse
 from backend.services import intelligence_store as store
+from backend.services import apify_importer
 
 ROOT = Path(__file__).resolve().parents[2]
 INTEL_DIR = ROOT / "backend" / "storage" / "intelligence"
@@ -20,10 +21,11 @@ def summary():
 async def intelligence_upload(
     file: UploadFile = File(...),
     parse: bool = Query(True),
-    source: str | None = Query(None, description="e.g., 'shopify'"),
-    brand: str | None = Query(None, description="Brand name for benchmarks"),
+    source: str | None = Query(None, description="e.g., 'shopify' or 'apify'"),
+    brand: str | None = Query(None, description="Brand name (defaults for Shopify to Crooks & Castles)"),
+    platform: str | None = Query(None, description="For apify: 'tiktok' | 'instagram' (optional, auto-detected)")
 ):
-    safe = os.path.basename(file.filename) or "upload.csv"
+    safe = os.path.basename(file.filename) or "upload.bin"
     target = INTEL_DIR / safe
 
     size = 0
@@ -34,8 +36,14 @@ async def intelligence_upload(
             out.write(chunk); size += len(chunk)
 
     summary = None
-    if parse and safe.lower().endswith(".csv"):
-        summary = store.import_csv(target, source=source, brand=brand)
+    if parse:
+        low = safe.lower()
+        if low.endswith(".csv"):
+            summary = store.import_csv(target, source=source, brand=brand)
+        elif low.endswith(".json") or low.endswith(".jsonl") or (source or "").lower() == "apify":
+            # default brand fallback to your store default
+            resolved_brand = brand or store.DEFAULT_BRAND
+            summary = apify_importer.import_file(target, platform=platform, brand=resolved_brand)
 
     return {"ok": True, "filename": safe, "size": size, "path": f"/api/intelligence/files/{safe}", "parsed": bool(summary), "import": summary}
 
