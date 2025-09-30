@@ -49,7 +49,8 @@ async def upload_media(
                 file_path=str(file_path),
                 file_size=file_path.stat().st_size,
                 mime_type=upload_file.content_type,
-                uploaded_at=datetime.now()
+                uploaded_at=datetime.now(),
+                meta_data={}
             )
             db.add(db_file)
             db.commit()
