@@ -124,7 +124,15 @@ def static_debug():
     info["samples"]["css"]    = [p for p in files if p.startswith("_next/static/css/")][:5]
     info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
     return JSONResponse(info)
-
+@app.get("/api/__init_db")
+def force_init_db():
+    """Manually initialize database tables"""
+    try:
+        from backend.database import init_db
+        init_db()
+        return {"success": True, "message": "Database tables created"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 # --- Explicit Next.js mounts (avoid 404s on hashed assets) ---
 if NEXT_DIR.is_dir():
     app.mount("/_next", StaticFiles(directory=str(NEXT_DIR), html=False), name="next")
