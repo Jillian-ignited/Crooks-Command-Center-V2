@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DB   = ROOT / "storage" / "intelligence.db"
 DB.parent.mkdir(parents=True, exist_ok=True)
 
-# Default brand for Shopify data (can be overridden via env)
+# Default brand for Shopify data
 DEFAULT_BRAND = os.getenv("DEFAULT_BRAND", "Crooks & Castles")
 
 def _cx() -> sqlite3.Connection:
@@ -70,7 +70,29 @@ def list_benchmarks() -> List[Dict[str,Any]]:
     with _cx() as cx:
         return [dict(r) for r in cx.execute("SELECT * FROM benchmarks ORDER BY metric, subject, as_of").fetchall()]
 
-# ---------- Helpers ----------
+# ---------- public helpers (used by shopify_importer) ----------
+def ensure_brand(name: str, category: str = "", notes: str = ""):
+    if not name:
+        return
+    with _cx() as cx:
+        cx.execute(
+            "INSERT INTO brands(name,category,notes) VALUES(?,?,?) "
+            "ON CONFLICT(name) DO UPDATE SET category=excluded.category, notes=excluded.notes",
+            (name, category, notes)
+        )
+
+def insert_benchmarks(rows: Iterable[Dict[str,Any]]) -> int:
+    count = 0
+    with _cx() as cx:
+        for bm in rows:
+            cx.execute(
+                "INSERT INTO benchmarks(metric,subject,value,as_of) VALUES(?,?,?,?)",
+                (bm["metric"], bm["subject"], bm["value"], bm["as_of"])
+            )
+            count += 1
+    return count
+
+# ---------- generic importer (unchanged behavior) ----------
 def _norm(s: str) -> str:
     return (s or "").strip().lower()
 
@@ -87,27 +109,6 @@ def _parse_date_maybe(s: str) -> Optional[str]:
     except Exception:
         return None
 
-def _upsert_brand(name: str, category: str = "", notes: str = ""):
-    if not name: return
-    with _cx() as cx:
-        cx.execute(
-            "INSERT INTO brands(name,category,notes) VALUES(?,?,?) "
-            "ON CONFLICT(name) DO UPDATE SET category=excluded.category, notes=excluded.notes",
-            (name, category, notes)
-        )
-
-def _insert_benchmarks(rows: Iterable[Dict[str,Any]]) -> int:
-    count = 0
-    with _cx() as cx:
-        for bm in rows:
-            cx.execute(
-                "INSERT INTO benchmarks(metric,subject,value,as_of) VALUES(?,?,?,?)",
-                (bm["metric"], bm["subject"], bm["value"], bm["as_of"])
-            )
-            count += 1
-    return count
-
-# ---------- Importers ----------
 def _import_generic(csv_path: Path) -> Dict[str,Any]:
     brands, competitors, benchmarks = {}, {}, []
     with csv_path.open("r", encoding="utf-8-sig") as f:
@@ -151,72 +152,34 @@ def _import_generic(csv_path: Path) -> Dict[str,Any]:
                 "ON CONFLICT(name) DO UPDATE SET notes=excluded.notes",
                 (v["name"], v.get("notes",""))
             )
-    inserted = _insert_benchmarks(benchmarks)
+
+    inserted = insert_benchmarks(benchmarks)
     return {
         "brands": list(brands.keys()),
         "competitors": list(competitors.keys()),
         "benchmark_count": inserted
     }
 
-def _import_shopify_orders_over_time(csv_path: Path, brand: Optional[str]) -> Dict[str,Any]:
-    # Resolve brand: prefer provided, then DEFAULT_BRAND, then filename guess.
-    resolved_brand = (brand or DEFAULT_BRAND or "").strip() or csv_path.stem.split(" - ")[0].strip() or "Brand"
-    _upsert_brand(resolved_brand)
-
-    benchmarks = []
-    with csv_path.open("r", encoding="utf-8-sig") as f:
-        rdr = csv.DictReader(f)
-        hdrs = [h.strip() for h in rdr.fieldnames or []]
-        col_date = next((h for h in hdrs if _norm(h) in ("date", "day")), None)
-        col_orders = next((h for h in hdrs if "order" in _norm(h)), None)
-        col_gross  = next((h for h in hdrs if "gross" in _norm(h) and "sale" in _norm(h)), None)
-        col_net    = next((h for h in hdrs if "net" in _norm(h) and "sale" in _norm(h)), None)
-        col_discount = next((h for h in hdrs if "discount" in _norm(h)), None)
-
-        for row in rdr:
-            when = _parse_date_maybe((row.get(col_date) or "").strip()) if col_date else None
-            if not when:
-                try:
-                    when = dt.datetime.strptime((row.get(col_date) or "").strip(), "%b %d, %Y").date().isoformat()
-                except Exception:
-                    when = dt.date.today().isoformat()
-
-            def val(col: Optional[str]) -> Optional[str]:
-                if not col: return None
-                return (row.get(col) or "").replace(",", "").strip()
-
-            if col_orders:
-                v = val(col_orders);  if v: benchmarks.append({"metric": "Orders (Shopify)", "subject": resolved_brand, "value": v, "as_of": when})
-            if col_gross:
-                v = val(col_gross);   if v: benchmarks.append({"metric": "Gross sales (Shopify)", "subject": resolved_brand, "value": v, "as_of": when})
-            if col_net:
-                v = val(col_net);     if v: benchmarks.append({"metric": "Net sales (Shopify)", "subject": resolved_brand, "value": v, "as_of": when})
-            if col_discount:
-                v = val(col_discount); if v: benchmarks.append({"metric": "Discounts (Shopify)", "subject": resolved_brand, "value": v, "as_of": when})
-
-    inserted = _insert_benchmarks(benchmarks)
-    return {
-        "brands": [resolved_brand],
-        "competitors": [],
-        "benchmark_count": inserted
-    }
-
+# ---------- top-level dispatcher ----------
 def import_csv(csv_path: Path, source: Optional[str] = None, brand: Optional[str] = None) -> Dict[str,Any]:
+    """
+    Dispatch CSV import by source. If 'shopify', use dedicated importer
+    and default brand to Crooks & Castles unless overridden.
+    """
     init()
     name = csv_path.name.lower()
 
-    # Force default brand for Shopify when none is provided
+    # Shopify path
     if (source or "").lower() == "shopify":
-        brand = brand or DEFAULT_BRAND
-
-    if source and source.lower() == "shopify":
-        if "orders over time" in name:
-            summary = _import_shopify_orders_over_time(csv_path, brand)
-        else:
-            summary = _import_generic(csv_path)
+        from . import shopify_importer
+        resolved_brand = (brand or DEFAULT_BRAND).strip() or DEFAULT_BRAND
+        summary = shopify_importer.import_csv(csv_path, resolved_brand)
     else:
-        if "orders over time" in name:
-            summary = _import_shopify_orders_over_time(csv_path, brand)
+        # Auto-detect Shopify by filename keywords (so you can omit ?source=shopify)
+        if any(k in name for k in ["orders over time", "total sales over time", "conversion rate over time", "total sales by product"]):
+            from . import shopify_importer
+            resolved_brand = (brand or DEFAULT_BRAND).strip() or DEFAULT_BRAND
+            summary = shopify_importer.import_csv(csv_path, resolved_brand)
         else:
             summary = _import_generic(csv_path)
 
