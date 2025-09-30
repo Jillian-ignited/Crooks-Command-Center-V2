@@ -1,111 +1,255 @@
-// frontend/pages/executive.js
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from 'react';
 
-export default function Executive() {
+const ExecutiveOverview = () => {
   const [data, setData] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  async function load() {
-    setBusy(true); setErr(null);
+  const fetchOverviewData = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const res = await fetch("/api/executive/overview");
-      const json = await res.json();
-      if (!res.ok || json.ok === false) throw new Error("Failed to load overview");
-      setData(json);
-    } catch (e) {
-      setErr(e?.message || "Error");
+      const response = await fetch('/api/executive/overview');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.ok) {
+        throw new Error(result.message || 'Failed to load overview data');
+      }
+      
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+      console.error('Executive overview error:', err);
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchOverviewData();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchOverviewData();
+  };
+
+  if (loading) {
+    return (
+      <main style={mainStyle}>
+        <h1>Executive Overview</h1>
+        <div style={loadingStyle}>
+          <p>Loading...</p>
+        </div>
+      </main>
+    );
   }
 
-  useEffect(() => { load(); }, []);
-
   return (
-    <div className="min-h-screen bg-[#0a0b0d] text-[#e9edf2] p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Executive Overview</h1>
-        <button
-          onClick={load}
-          className="bg-[#6aa6ff] text-black font-medium rounded-xl px-4 py-2 hover:opacity-90"
-        >
-          {busy ? "Refreshing…" : "Refresh"}
+    <main style={mainStyle}>
+      <div style={headerStyle}>
+        <h1>Executive Overview</h1>
+        <button onClick={handleRefresh} style={refreshButtonStyle}>
+          Refresh
         </button>
       </div>
 
-      {err && (
-        <div className="bg-[#140e0e] border border-[#3a1f1f] text-[#ff7a7a] rounded-xl p-4 mb-4">
-          {err}
+      {error && (
+        <div style={errorStyle}>
+          <strong>Error:</strong> {error}
         </div>
       )}
 
-      {!data ? (
-        <div className="bg-[#0f1217] rounded-xl p-6 border border-[#1c2230]">Loading…</div>
-      ) : (
+      {data && (
         <>
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            <Card title="Brands" value={data.cards?.brands ?? 0} />
-            <Card title="Competitors" value={data.cards?.competitors ?? 0} />
-            <Card title="Benchmarks" value={data.cards?.benchmarks ?? 0} />
-          </div>
-
-          {/* Brands & Competitors */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <ListBox title="Brands" items={(data.brands ?? []).map(b => b.name)} />
-            <ListBox title="Competitors" items={(data.competitors ?? []).map(c => c.name)} />
-          </div>
-
-          {/* Benchmarks table */}
-          <div className="rounded-2xl border border-[#1c2230] overflow-auto">
-            <table className="min-w-[640px] w-full">
-              <thead className="bg-[#0f1217] text-[#a1a8b3]">
-                <tr>
-                  <th className="text-left p-3">Metric</th>
-                  <th className="text-left p-3">Subject</th>
-                  <th className="text-left p-3">Value</th>
-                  <th className="text-left p-3">As Of</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.benchmarks ?? []).map((r, i) => (
-                  <tr key={i} className="border-t border-[#1c2230]">
-                    <td className="p-3">{r.metric}</td>
-                    <td className="p-3">{r.subject}</td>
-                    <td className="p-3">{r.value}</td>
-                    <td className="p-3">{r.as_of}</td>
-                  </tr>
+          {/* Brands Section */}
+          <section style={sectionStyle}>
+            <h2>Brands</h2>
+            <div style={metricStyle}>
+              <span style={numberStyle}>{data.brands?.count || 0}</span>
+            </div>
+            {data.brands?.list && (
+              <ul style={listStyle}>
+                {data.brands.list.map((brand, index) => (
+                  <li key={index}>{brand}</li>
                 ))}
-                {(data.benchmarks ?? []).length === 0 && (
-                  <tr><td className="p-4 text-[#a1a8b3]" colSpan={4}>No benchmarks yet. Import a CSV via /intelligence.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              </ul>
+            )}
+          </section>
+
+          {/* Competitors Section */}
+          <section style={sectionStyle}>
+            <h2>Competitors</h2>
+            <div style={metricStyle}>
+              <span style={numberStyle}>{data.competitors?.count || 0}</span>
+            </div>
+            {data.competitors?.list && (
+              <ul style={listStyle}>
+                {data.competitors.list.map((competitor, index) => (
+                  <li key={index}>{competitor}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Benchmarks Section */}
+          <section style={sectionStyle}>
+            <h2>Benchmarks</h2>
+            <div style={metricStyle}>
+              <span style={numberStyle}>{data.benchmarks?.count || 0}</span>
+            </div>
+            
+            {data.benchmarks?.metrics && data.benchmarks.metrics.length > 0 ? (
+              <div style={benchmarksGridStyle}>
+                {data.benchmarks.metrics.map((metric, index) => (
+                  <div key={index} style={benchmarkCardStyle}>
+                    <div style={benchmarkMetricStyle}>{metric.metric}</div>
+                    <div style={benchmarkValueStyle}>{metric.value}</div>
+                    <div style={{
+                      ...benchmarkTrendStyle,
+                      color: metric.trend === 'up' ? '#28a745' : 
+                             metric.trend === 'down' ? '#dc3545' : '#6c757d'
+                    }}>
+                      {metric.trend === 'up' ? '↗' : 
+                       metric.trend === 'down' ? '↘' : '→'} {metric.trend}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={noDataStyle}>No benchmarks yet. Import a CSV via Intelligence.</p>
+            )}
+          </section>
+
+          {/* Last Updated */}
+          {data.last_updated && (
+            <div style={timestampStyle}>
+              Last updated: {new Date(data.last_updated).toLocaleString()}
+            </div>
+          )}
         </>
       )}
-    </div>
+    </main>
   );
-}
+};
 
-function Card({ title, value }) {
-  return (
-    <div className="bg-[#0f1217] rounded-2xl p-5">
-      <div className="text-sm text-[#a1a8b3]">{title}</div>
-      <div className="text-2xl">{value}</div>
-    </div>
-  );
-}
+const mainStyle = {
+  maxWidth: 1000,
+  margin: '40px auto',
+  padding: 20
+};
 
-function ListBox({ title, items }) {
-  return (
-    <div className="bg-[#0f1217] rounded-2xl p-5 border border-[#1c2230]">
-      <div className="text-sm text-[#a1a8b3] mb-2">{title}</div>
-      <ul className="space-y-1">
-        {items.map((t, i) => <li key={i}>{t}</li>)}
-        {items.length === 0 && <li className="text-[#a1a8b3]">None</li>}
-      </ul>
-    </div>
-  );
-}
+const headerStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 24
+};
+
+const refreshButtonStyle = {
+  padding: '8px 16px',
+  background: '#007bff',
+  color: 'white',
+  border: 'none',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: 14,
+  fontWeight: 500
+};
+
+const loadingStyle = {
+  textAlign: 'center',
+  padding: 40,
+  color: '#666'
+};
+
+const errorStyle = {
+  background: '#fee',
+  border: '1px solid #f99',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 20,
+  color: '#c33'
+};
+
+const sectionStyle = {
+  background: '#fff',
+  border: '1px solid #eee',
+  borderRadius: 12,
+  padding: 20,
+  marginBottom: 20,
+  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+};
+
+const metricStyle = {
+  marginBottom: 16
+};
+
+const numberStyle = {
+  fontSize: 32,
+  fontWeight: 'bold',
+  color: '#333'
+};
+
+const listStyle = {
+  margin: 0,
+  paddingLeft: 20,
+  color: '#666'
+};
+
+const benchmarksGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+  gap: 16,
+  marginTop: 16
+};
+
+const benchmarkCardStyle = {
+  background: '#f8f9fa',
+  padding: 16,
+  borderRadius: 8,
+  border: '1px solid #e9ecef'
+};
+
+const benchmarkMetricStyle = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: '#495057',
+  marginBottom: 8
+};
+
+const benchmarkValueStyle = {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#212529',
+  marginBottom: 4
+};
+
+const benchmarkTrendStyle = {
+  fontSize: 12,
+  fontWeight: 500,
+  textTransform: 'capitalize'
+};
+
+const noDataStyle = {
+  color: '#666',
+  fontStyle: 'italic',
+  marginTop: 16
+};
+
+const timestampStyle = {
+  textAlign: 'center',
+  color: '#666',
+  fontSize: 12,
+  marginTop: 20,
+  padding: 10,
+  background: '#f8f9fa',
+  borderRadius: 4
+};
+
+export default ExecutiveOverview;
