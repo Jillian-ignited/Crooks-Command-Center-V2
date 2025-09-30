@@ -1,41 +1,33 @@
 # backend/routers/executive.py
 from __future__ import annotations
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from backend.services import intelligence_store as store
 
 router = APIRouter()
 
 @router.get("/", name="executive_root")
 def executive_root():
-    return {"ok": True, "message": "Executive API ready"}
+    return {"ok": True, "message": "Executive API"}
 
 @router.get("/overview", name="executive_overview")
-def executive_overview():
-    data = store.executive_overview()
-    # add a quick summary for cards
-    total_brands = len({b["name"] for b in data["brands"]})
-    total_comp   = len({c["name"] for c in data["competitors"]})
-    total_bench  = len(data["benchmarks"])
-    return {
-        "ok": True,
-        "cards": {
-            "brands": total_brands,
-            "competitors": total_comp,
-            "benchmarks": total_bench
-        },
-        **data
-    }
+def executive_overview(brand: str | None = Query(None, description="Brand filter (defaults to Crooks & Castles)")):
+    data = store.executive_overview(brand=brand or store.DEFAULT_BRAND)
+    return {"ok": True, **data}
 
 @router.get("/kpis", name="executive_kpis")
-def executive_kpis():
-    # stub KPIs; you can compute from benchmarks if desired
-    return {"ok": True, "kpis":[
-        {"name":"Benchmark Entries","value": len(store.list_benchmarks())},
-        {"name":"Brands Tracked","value": len(store.list_brands())},
-        {"name":"Competitors Tracked","value": len(store.list_competitors())}
-    ]}
-
-@router.get("/reports", name="executive_reports")
-def executive_reports():
-    # placeholder; could compile a PDF or HTML later
-    return {"ok": True, "reports": []}
+def executive_kpis(brand: str | None = Query(None)):
+    ov = store.executive_overview(brand=brand or store.DEFAULT_BRAND)
+    rec = ov["recaps"]["7d"]  # default KPIs from 7d (frontend can also request 30d)
+    return {
+        "ok": True,
+        "brand": brand or store.DEFAULT_BRAND,
+        "kpis": [
+            {"name": "Orders (7d)", "value": rec["orders"]},
+            {"name": "Net Sales (7d)", "value": rec["net_sales"]},
+            {"name": "AOV (7d)", "value": rec["aov"]},
+            {"name": "Conversion % (7d)", "value": rec["conversion_pct"]},
+            {"name": "Sessions (7d)", "value": rec["sessions"]},
+        ],
+        "refreshed_at": rec["refreshed_at"],
+        "current": rec["current"],
+    }
