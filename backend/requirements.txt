@@ -15,7 +15,7 @@ aiofiles==23.2.1
 python-magic==0.4.27
 starlette>=0.37.2
 pydantic>=2.7.0
-
-
 openai>=1.0.0
-
+sqlalchemy>=2.0.0
+celery>=5.3.0
+redis>=4.5.0
