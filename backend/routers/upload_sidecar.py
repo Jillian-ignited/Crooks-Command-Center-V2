@@ -707,3 +707,97 @@ async def intelligence_health():
         "upload_directory_exists": os.path.exists(UPLOAD_DIR),
         "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
     }
+
+
+@router.get("/debug-openai")
+async def debug_openai_client():
+    """Debug OpenAI client initialization to find the proxies error"""
+    
+    debug_info = {
+        "openai_api_key_set": bool(os.getenv("OPENAI_API_KEY")),
+        "openai_api_base": os.getenv("OPENAI_API_BASE", "not_set"),
+        "current_ai_available": AI_AVAILABLE,
+        "test_results": []
+    }
+    
+    # Test 1: Check current OpenAI client
+    if AI_AVAILABLE and openai_client:
+        debug_info["test_results"].append({
+            "test": "current_client_status",
+            "status": "success",
+            "message": "Current OpenAI client is available and initialized"
+        })
+    else:
+        debug_info["test_results"].append({
+            "test": "current_client_status",
+            "status": "error", 
+            "message": f"Current OpenAI client not available. AI_AVAILABLE: {AI_AVAILABLE}"
+        })
+    
+    # Test 2: Try creating a new OpenAI client (correct way)
+    try:
+        from openai import OpenAI
+        test_client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY", "test-key"),
+            base_url=os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+        )
+        debug_info["test_results"].append({
+            "test": "create_new_client_correct",
+            "status": "success",
+            "message": "New OpenAI client created successfully (correct method)"
+        })
+    except Exception as e:
+        debug_info["test_results"].append({
+            "test": "create_new_client_correct",
+            "status": "error",
+            "message": f"New OpenAI client creation failed: {str(e)}"
+        })
+    
+    # Test 3: Try the old way with proxies (should fail)
+    try:
+        from openai import OpenAI
+        test_client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY", "test-key"),
+            proxies=None  # This should cause the error we're seeing
+        )
+        debug_info["test_results"].append({
+            "test": "create_client_with_proxies",
+            "status": "unexpected_success",
+            "message": "OpenAI client with proxies worked (this shouldn't happen)"
+        })
+    except Exception as e:
+        debug_info["test_results"].append({
+            "test": "create_client_with_proxies", 
+            "status": "expected_error",
+            "message": f"Expected error with proxies: {str(e)}"
+        })
+    
+    # Test 4: Check OpenAI version
+    try:
+        import openai
+        debug_info["openai_version"] = openai.__version__
+    except Exception as e:
+        debug_info["openai_version"] = f"unknown: {str(e)}"
+    
+    # Test 5: Try a simple API call to see where the error occurs
+    if AI_AVAILABLE and openai_client:
+        try:
+            # This should trigger the proxies error if it exists
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5
+            )
+            debug_info["test_results"].append({
+                "test": "api_call_test",
+                "status": "success",
+                "message": "API call successful - no proxies error"
+            })
+        except Exception as e:
+            debug_info["test_results"].append({
+                "test": "api_call_test",
+                "status": "error",
+                "message": f"API call failed: {str(e)}"
+            })
+    
+    return debug_info
