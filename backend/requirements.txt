@@ -2,9 +2,9 @@ fastapi==0.111.0
 uvicorn[standard]==0.30.0
 python-multipart==0.0.9
 gunicorn==21.2.0
-Pillow>=10.4.0
+Pillow==10.0.0
 pandas==2.2.2
-numpy==1.26.0
+numpy==1.24.3
 openpyxl==3.1.2
 xlsxwriter==3.1.2
 textblob==0.17.1
@@ -15,8 +15,7 @@ aiofiles==23.2.1
 python-magic==0.4.27
 starlette>=0.37.2
 pydantic>=2.7.0
-openai==1.51.0
-sqlalchemy==2.0.36
-psycopg[binary]==3.2.3
-celery==5.3.4
-redis==5.0.1
+
+
+openai>=1.0.0
+
