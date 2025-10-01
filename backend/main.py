@@ -1,4 +1,4 @@
-# backend/main.py
+ki# backend/main.py
 from __future__ import annotations
 
 import importlib
@@ -177,4 +177,4 @@ async def _log_routes():
     for r in app.routes:
         if isinstance(r, APIRoute):
             print(f"{','.join(sorted(r.methods)):15} {r.path}")
-    print("=== DEBUG PROBES READY
+    print("=== DEBUG PROBES READY)
