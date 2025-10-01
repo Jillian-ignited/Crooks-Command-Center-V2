@@ -709,7 +709,7 @@ async def intelligence_health():
     }
 
 
-@router.get("/debug_openai")
+@router.get("/debugtest")
 async def debug_openai_client():
     """Debug OpenAI client initialization to find the proxies error"""
     
