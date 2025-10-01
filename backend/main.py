@@ -13,21 +13,22 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 
+from backend.database import init_db
+
 APP_VERSION = "frontend-static-v5"
 
-# --- Paths (static export from Next lives here) ---
 STATIC_ROOT = Path("backend/static/site").resolve()
-NEXT_DIR    = STATIC_ROOT / "_next"
+NEXT_DIR = STATIC_ROOT / "_next"
 NEXT_STATIC = NEXT_DIR / "static"
 
-# Optional storage roots used by some routers; make sure they exist if needed
 STORAGE_ROOT = Path("backend/storage").resolve()
-for p in [STATIC_ROOT, STORAGE_ROOT]:
+UPLOAD_ROOT = Path("backend/uploads").resolve()
+
+for p in [STATIC_ROOT, STORAGE_ROOT, UPLOAD_ROOT]:
     try:
         if not p.exists():
             p.mkdir(parents=True, exist_ok=True)
         elif p.exists() and p.is_file():
-            # If a file is in the way, rename it and create the directory
             p.rename(p.with_suffix(p.suffix + ".bak"))
             p.mkdir(parents=True, exist_ok=True)
     except Exception as e:
@@ -35,7 +36,17 @@ for p in [STATIC_ROOT, STORAGE_ROOT]:
 
 app = FastAPI(title="Crooks Command Center", version=APP_VERSION)
 
-# --- CORS ---
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    try:
+        init_db()
+        print("[main] Database initialized successfully")
+    except Exception as e:
+        print(f"[main] ERROR: Failed to initialize database: {e}")
+        import traceback
+        traceback.print_exc()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -44,7 +55,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Health / identity ---
 @app.get("/health")
 @app.get("/api/health")
 def health():
@@ -54,7 +64,16 @@ def health():
 def whoami():
     return f"main.py={APP_VERSION}"
 
-# --- Helper to import routers tolerantly ---
+@app.get("/api/__init_db")
+def force_init_db():
+    """Manually initialize database tables"""
+    try:
+        init_db()
+        return {"success": True, "message": "Database tables created"}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
 def _try_import(paths: List[str]) -> Tuple[Optional[ModuleType], Optional[str], Optional[Exception]]:
     last_err: Optional[Exception] = None
     for p in paths:
@@ -75,20 +94,18 @@ def _mount(name: str, prefix: str, candidates: List[str]):
     app.include_router(mod.router, prefix=f"/api{prefix}", tags=[name])
     print(f"[main] Mounted '{name}' (from {used}) at /api{prefix}")
 
-# --- Routers (make sure these files exist) ---
-_mount("agency",         "/agency",         ["backend.routers.agency"])
-_mount("calendar",       "/calendar",       ["backend.routers.calendar"])
-_mount("content",        "/content",        ["backend.routers.content_creation", "backend.routers.content"])
-_mount("executive",      "/executive",      ["backend.routers.executive"])
-_mount("ingest",         "/ingest",         ["backend.routers.ingest", "backend.routers.ingest_ENHANCED_MULTI_FORMAT"])
-_mount("intelligence",   "/intelligence",   ["backend.routers.intelligence"])
-_mount("media",          "/media",          ["backend.routers.media"])
-_mount("shopify",        "/shopify",        ["backend.routers.shopify"])
-_mount("summary",        "/summary",        ["backend.routers.summary"])
-_mount("upload_sidecar", "/sidecar",        ["backend.routers.upload_sidecar", "backend.routers.sidecar"])
+_mount("agency", "/agency", ["backend.routers.agency"])
+_mount("calendar", "/calendar", ["backend.routers.calendar"])
+_mount("content", "/content", ["backend.routers.content_creation", "backend.routers.content"])
+_mount("executive", "/executive", ["backend.routers.executive"])
+_mount("ingest", "/ingest", ["backend.routers.ingest", "backend.routers.ingest_ENHANCED_MULTI_FORMAT"])
+_mount("intelligence", "/intelligence", ["backend.routers.intelligence"])
+_mount("media", "/media", ["backend.routers.media"])
+_mount("shopify", "/shopify", ["backend.routers.shopify"])
+_mount("summary", "/summary", ["backend.routers.summary"])
+_mount("upload_sidecar", "/sidecar", ["backend.routers.upload_sidecar", "backend.routers.sidecar"])
 _mount("competitive", "/competitive", ["backend.routers.competitive"])
 
-# --- Debug probes under /api ---
 @app.get("/api/__routes")
 def list_routes():
     rows = []
@@ -109,8 +126,8 @@ def static_ping():
 @app.get("/api/__static_debug")
 def static_debug():
     info = {
-        "root":   {"path": str(STATIC_ROOT), "exists": STATIC_ROOT.is_dir()},
-        "next":   {"path": str(NEXT_DIR),    "exists": NEXT_DIR.is_dir()},
+        "root": {"path": str(STATIC_ROOT), "exists": STATIC_ROOT.is_dir()},
+        "next": {"path": str(NEXT_DIR), "exists": NEXT_DIR.is_dir()},
         "static": {"path": str(NEXT_STATIC), "exists": NEXT_STATIC.is_dir()},
         "samples": {"index_html": False, "css": [], "chunks": [], "has_health": False},
     }
@@ -121,19 +138,10 @@ def static_debug():
                 files.append(os.path.relpath(os.path.join(r, f), STATIC_ROOT))
     info["samples"]["index_html"] = any(p == "index.html" for p in files)
     info["samples"]["has_health"] = any(p == "health.txt" for p in files)
-    info["samples"]["css"]    = [p for p in files if p.startswith("_next/static/css/")][:5]
+    info["samples"]["css"] = [p for p in files if p.startswith("_next/static/css/")][:5]
     info["samples"]["chunks"] = [p for p in files if p.startswith("_next/static/chunks/")][:5]
     return JSONResponse(info)
-@app.get("/api/__init_db")
-def force_init_db():
-    """Manually initialize database tables"""
-    try:
-        from backend.database import init_db
-        init_db()
-        return {"success": True, "message": "Database tables created"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-# --- Explicit Next.js mounts (avoid 404s on hashed assets) ---
+
 if NEXT_DIR.is_dir():
     app.mount("/_next", StaticFiles(directory=str(NEXT_DIR), html=False), name="next")
     print(f"[main] Mounted '/_next' from {NEXT_DIR}")
@@ -146,17 +154,14 @@ if NEXT_STATIC.is_dir():
 else:
     print(f"[main] WARN: Missing Next static dir: {NEXT_STATIC}")
 
-# --- Serve SPA at root LAST ---
 app.mount("/", StaticFiles(directory=str(STATIC_ROOT), html=True), name="site")
 
-# --- Friendly JSON 404 for /api/* only (so SPA can own the rest) ---
 @app.middleware("http")
 async def api_not_found_to_json(request: Request, call_next):
     try:
         response = await call_next(request)
         return response
     except Exception:
-        # Let exception handlers deal with it
         raise
 
 @app.exception_handler(404)
@@ -164,14 +169,12 @@ async def api_404_handler(request: Request, exc):
     path = request.url.path
     if path.startswith("/api/"):
         return JSONResponse({"detail": "Not Found", "path": path}, status_code=404)
-    # For non-API paths, let StaticFiles handle (SPA)
-    return await app.router.default_app(scope=request.scope, receive=request.receive, send=request._send)  # type: ignore
+    return await app.router.default_app(scope=request.scope, receive=request.receive, send=request._send)
 
-# --- Startup log ---
 @app.on_event("startup")
 async def _log_routes():
     print("=== ROUTES MOUNTED ===")
     for r in app.routes:
         if isinstance(r, APIRoute):
             print(f"{','.join(sorted(r.methods)):15} {r.path}")
-    print("=== DEBUG PROBES READY === /api/__whoami /api/__routes /api/__static_ping /api/__static_debug ===")
+    print("=== DEBUG PROBES READY
