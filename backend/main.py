@@ -1,15 +1,41 @@
 # backend/main.py
+from __future__ import annotations
+
+import os
+import logging
+from pathlib import Path
+from datetime import datetime
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
-from pathlib import Path
 
-# --- DB bootstrap (same as your current) ---
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, JSON
-from datetime import datetime
-import os
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+log = logging.getLogger("app")
+if not log.handlers:
+    h = logging.StreamHandler()
+    h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s"))
+    log.addHandler(h)
+    log.setLevel(logging.INFO)
+
+# -----------------------------------------------------------------------------
+# Database
+# -----------------------------------------------------------------------------
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
+
+# Render sometimes provides postgres://; psycopg wants postgresql+psycopg://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+
+engine = create_engine(DATABASE_URL, future=True)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 Base = declarative_base()
 
@@ -23,16 +49,13 @@ class ShopifyUpload(Base):
     processing_result = Column(JSON)
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
+# Create tables (no-op if already exist)
+Base.metadata.create_all(bind=engine)
 
-engine = create_engine(DATABASE_URL, future=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# --- App ---
+# -----------------------------------------------------------------------------
+# FastAPI app & CORS
+# -----------------------------------------------------------------------------
 app = FastAPI(title="Crooks Command Center V2")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,36 +63,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create tables (no-op if already exist)
-Base.metadata.create_all(bind=engine)
+# -----------------------------------------------------------------------------
+# Routers (safe includes so missing files don’t crash the app)
+# -----------------------------------------------------------------------------
+def safe_include(module_path: str, prefix: str = "/api", router_attr: str = "router"):
+    try:
+        module = __import__(module_path, fromlist=[router_attr])
+        router = getattr(module, router_attr)
+        app.include_router(router, prefix=prefix)
+        log.info("Mounted %s at %s", module_path, prefix)
+    except Exception as e:
+        log.warning("Skipped %s: %s", module_path, e)
 
-# --- Include your routers here when ready ---
-# from backend.routers import shopify, intelligence, ingest, summary, competitive, media
-# app.include_router(ingest.router, prefix="/api")
-# app.include_router(intelligence.router, prefix="/api")
-# app.include_router(media.router, prefix="/api")
-# app.include_router(shopify.router, prefix="/api")
-# app.include_router(summary.router, prefix="/api")
-# app.include_router(competitive.router, prefix="/api")
+# Add the ones you have; harmless if a file is missing
+safe_include("backend.routers.shopify")
+safe_include("backend.routers.intelligence")
+safe_include("backend.routers.ingest_ENHANCED_MULTI_FORMAT")
+safe_include("backend.routers.media")
+safe_include("backend.routers.summary")
+safe_include("backend.routers.competitive")
+safe_include("backend.routers.calendar")
+safe_include("backend.routers.agency")
+safe_include("backend.routers.content_creation")
+safe_include("backend.routers.executive")
+safe_include("backend.routers.upload_sidecar")
 
-# Health
-@app.get("/api/health")
-def health():
-    return {"ok": True}
-
-# --- Serve the built Next.js app ---
-# Your build copies: frontend/out/* -> backend/static/site/
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static" / "site"
-
+# -----------------------------------------------------------------------------
+# Static frontend (Next.js export copied to backend/static/site)
+# -----------------------------------------------------------------------------
+STATIC_DIR = Path(__file__).resolve().parent / "static" / "site"
 if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
-    # IMPORTANT: mount AFTER API routes so /api/* still works
+    # Mount AFTER API routes so /api/* isn’t shadowed
     app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="site")
+    log.info("Serving static site from %s", STATIC_DIR)
 else:
-    # Helpful placeholder if static bundle missing
     @app.get("/")
     def root_placeholder():
         return {
             "status": "ok",
             "hint": "Static site not found. Ensure build copies Next 'out/*' to backend/static/site."
         }
+
+# -----------------------------------------------------------------------------
+# Health
+# -----------------------------------------------------------------------------
+@app.get("/api/health")
+def health():
+    return {"ok": True}
