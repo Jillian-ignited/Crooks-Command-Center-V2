@@ -1,9 +1,9 @@
 {
   "name": "crooks-command-center-frontend",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "private": true,
   "scripts": {
-    "build": "next build && next export -o out",
+    "build": "next build",
     "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
     "build:static": "npm run build && npm run copy:static",
     "dev": "next dev -p 3000",
