@@ -1,18 +1,11 @@
 # .github/coderabbit.yml
+
 reviews:
-  auto_review: true        # Automatically reviews every PR
-  inline_comments: true    # Adds human-like comments directly on lines of code
-  summary: true            # Posts a summary with key issues & improvements
-  request_changes: false   # If true, will block merge until fixes are made
-  coverage:
-    include:
-      - "src/**"           # Review only source files
-      - "app/**"
-    exclude:
-      - "tests/**"
-      - "docs/**"
-      - "scripts/**"
-settings:
-  tone: "direct"           # Options: friendly, neutral, direct
-  strictness: "medium"     # Options: low, medium, high
-  languages: ["python", "javascript", "typescript", "html", "css"] 
+  auto_review: true          # Run reviews automatically on all PRs
+  inline_comments: true      # Leave comments directly on lines of code
+  summary: true              # Provide a summary review at the end
+  request_changes: false     # Don’t block merges (set true if you want stricter enforcement)
+  review_status: true        # Show review status in PR checks
+
+branches:
+  include: ["*"]             # Review all branches (not just main)
