@@ -1,16 +1,15 @@
 # backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
+from pathlib import Path
 
-# DB bootstrap (creates tables if missing)
+# --- DB bootstrap (same as your current) ---
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-import os
-
-# --- Models (only the table we need for now) ---
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, JSON
 from datetime import datetime
+import os
 
 Base = declarative_base()
 
@@ -24,7 +23,6 @@ class ShopifyUpload(Base):
     processing_result = Column(JSON)
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-# --- DB engine/session (reads your Render DATABASE_URL) ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
@@ -42,10 +40,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auto-create tables at boot (safe no-op after first run)
+# Create tables (no-op if already exist)
 Base.metadata.create_all(bind=engine)
 
-# --- Include your existing routers here (keep your imports as-is) ---
+# --- Include your routers here when ready ---
 # from backend.routers import shopify, intelligence, ingest, summary, competitive, media
 # app.include_router(ingest.router, prefix="/api")
 # app.include_router(intelligence.router, prefix="/api")
@@ -58,3 +56,20 @@ Base.metadata.create_all(bind=engine)
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+# --- Serve the built Next.js app ---
+# Your build copies: frontend/out/* -> backend/static/site/
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static" / "site"
+
+if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
+    # IMPORTANT: mount AFTER API routes so /api/* still works
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="site")
+else:
+    # Helpful placeholder if static bundle missing
+    @app.get("/")
+    def root_placeholder():
+        return {
+            "status": "ok",
+            "hint": "Static site not found. Ensure build copies Next 'out/*' to backend/static/site."
+        }
