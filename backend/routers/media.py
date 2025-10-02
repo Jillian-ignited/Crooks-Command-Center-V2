@@ -121,3 +121,4 @@ async def get_assets(category: Optional[str] = None, db: Session = Depends(get_d
         "total": len(assets)
     }
 
+
