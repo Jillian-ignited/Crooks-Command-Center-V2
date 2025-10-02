@@ -1,6 +1,6 @@
 # backend/routers/summary.py
-"""
-Summary Overview Router - Now using REAL data from content and media uploads
+""" Summary Overview Router - Now using REAL data from content and media uploads
+
 Replaces all mock data with actual database records
 """
 
@@ -350,3 +350,4 @@ def _generate_action_items(content_metrics: Dict, shopify_metrics: Dict) -> List
         })
     
     return action_items
+
