@@ -1,13 +1,16 @@
-from sqlalchemy import create_engine, text
+# backend/migrate_shopify_uploads.py
 import os
+from sqlalchemy import create_engine, text
 
-# Grab your Render DATABASE_URL (already in your env vars)
 DATABASE_URL = os.getenv("DATABASE_URL")
-
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set. Check your Render env vars.")
 
-engine = create_engine(DATABASE_URL)
+# Normalize scheme for SQLAlchemy + psycopg (Render sometimes uses 'postgres://')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+
+engine = create_engine(DATABASE_URL, future=True)
 
 with engine.connect() as conn:
     conn.execute(text("""
