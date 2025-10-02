@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 import logging
 import importlib
-import pkgutil
 from types import ModuleType
 from pathlib import Path
 from datetime import datetime
@@ -16,22 +15,22 @@ from starlette.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# ----------------------------- Logging ----------------------------------------
+# --- Logging ---
 log = logging.getLogger("app")
 if not log.handlers:
     h = logging.StreamHandler()
     h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s"))
     log.addHandler(h)
-log.setLevel(logging.INFO)
+    log.setLevel(logging.INFO)
 
-# ----------------------------- Database ---------------------------------------
+# --- Database ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
 # Allow Render's postgres:// value
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
 engine = create_engine(DATABASE_URL, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -52,60 +51,41 @@ class ShopifyUpload(Base):
 # Create tables (idempotent)
 Base.metadata.create_all(bind=engine)
 
-# ------------------------------- App ------------------------------------------
+# --- App ---
 app = FastAPI(title="Crooks Command Center V2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------------- Auto-mount Routers ---------------------------------
-def mount_all_routers(package: str = "backend.routers", prefix: str = "/api") -> None:
-    """
-    Auto-discovers every module under backend/routers and mounts it
-    if it exposes a `router` (APIRouter). Missing/typoed files won't crash boot.
-    """
-    try:
-        pkg = importlib.import_module(package)
-    except Exception as e:
-        log.error("Cannot import %s: %s", package, e)
-        return
+# --- Routers ---
+from backend.routers import agency, calendar, competitive, content_creation, database_setup, executive, ingest, intelligence, media, shopify, summary
 
-    for _finder, name, _ispkg in pkgutil.iter_modules(pkg.__path__):
-        if name.startswith("_"):
-            continue
-        full_name = f"{package}.{name}"
-        try:
-            mod: ModuleType = importlib.import_module(full_name)
-            router = getattr(mod, "router", None)
-            if router is not None:
-                app.include_router(router, prefix=prefix)
-                log.info("Mounted %s at %s", full_name, prefix)
-            else:
-                log.debug("No `router` in %s; skipped", full_name)
-        except Exception as e:
-            log.warning("Skipped %s: %s", full_name, e)
+app.include_router(agency.router, prefix="/api/agency", tags=["agency"])
+app.include_router(calendar.router, prefix="/api/calendar", tags=["calendar"])
+app.include_router(competitive.router, prefix="/api/competitive", tags=["competitive"])
+app.include_router(content_creation.router, prefix="/api/content", tags=["content"])
+app.include_router(database_setup.router, prefix="/api/db", tags=["database"])
+app.include_router(executive.router, prefix="/api/executive", tags=["executive"])
+app.include_router(ingest.router, prefix="/api/ingest", tags=["ingest"])
+app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intelligence"])
+app.include_router(media.router, prefix="/api/media", tags=["media"])
+app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
+app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
 
-mount_all_routers()
 
-# --------------------------- Static Frontend ----------------------------------
-# Next.js export (frontend/out) is copied to backend/static/site during build
-STATIC_DIR = Path(__file__).resolve().parent / "static" / "site"
-if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
-    # Mount AFTER API so /api/* is not shadowed
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="site")
-    log.info("Serving static site from %s", STATIC_DIR)
+# --- Static Files ---
+static_files_path = Path(__file__).parent / "static" / "site"
+if static_files_path.exists():
+    app.mount("/", StaticFiles(directory=static_files_path, html=True), name="static")
+    log.info(f"Serving static site from {static_files_path}")
 else:
-    @app.get("/")
-    def root_placeholder():
-        return {
-            "status": "ok",
-            "hint": "Static site not found. Ensure build copies Next 'out/*' to backend/static/site."
-        }
+    log.warning(f"Static site directory not found at {static_files_path}")
 
-# ------------------------------ Health ----------------------------------------
+
 @app.get("/api/health")
-def health():
-    return {"ok": True}
+def health_check():
+    return {"status": "healthy"}
