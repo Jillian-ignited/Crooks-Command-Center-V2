@@ -3,13 +3,18 @@ services:
     name: crooks-command-center-v2
     env: python
     plan: starter
+    autoDeploy: true
+
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-      pip install sqlalchemy psycopg2-binary
+      # Add psycopg driver if not already in requirements.txt
+      pip install psycopg
+
     startCommand: |
-      # Run migration before starting the app
-      python backend/migrate_shopify_uploads.py && uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+      python backend/migrate_shopify_uploads.py && \
+      uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -17,5 +22,5 @@ services:
           property: connectionString
 
 databases:
-  - name: crooks-command-center-db
+  - name: crooks-command-center-db         # 👈 match the name above (delete if DB already exists in Render)
     plan: starter
