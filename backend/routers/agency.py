@@ -229,3 +229,4 @@ def _identify_cost_optimizations(project_data: Dict) -> List[Dict[str, Any]]:
         
     return optimizations
 
+
