@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import os
 import logging
+import importlib
+import pkgutil
+from types import ModuleType
 from pathlib import Path
 from datetime import datetime
 
@@ -13,24 +16,20 @@ from starlette.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# -----------------------------------------------------------------------------
-# Logging
-# -----------------------------------------------------------------------------
+# ----------------------------- Logging ----------------------------------------
 log = logging.getLogger("app")
 if not log.handlers:
     h = logging.StreamHandler()
     h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s"))
     log.addHandler(h)
-    log.setLevel(logging.INFO)
+log.setLevel(logging.INFO)
 
-# -----------------------------------------------------------------------------
-# Database
-# -----------------------------------------------------------------------------
+# ----------------------------- Database ---------------------------------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
-# Render sometimes provides postgres://; psycopg wants postgresql+psycopg://
+# Allow Render's postgres:// value
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
 
@@ -39,6 +38,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 Base = declarative_base()
 
+# Minimal model so the table exists for uploads (safe no-op if already defined elsewhere)
 class ShopifyUpload(Base):
     __tablename__ = "shopify_uploads"
     id = Column(Integer, primary_key=True)
@@ -49,12 +49,10 @@ class ShopifyUpload(Base):
     processing_result = Column(JSON)
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-# Create tables (no-op if already exist)
+# Create tables (idempotent)
 Base.metadata.create_all(bind=engine)
 
-# -----------------------------------------------------------------------------
-# FastAPI app & CORS
-# -----------------------------------------------------------------------------
+# ------------------------------- App ------------------------------------------
 app = FastAPI(title="Crooks Command Center V2")
 app.add_middleware(
     CORSMiddleware,
@@ -63,37 +61,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------------------------------------------------------------
-# Routers (safe includes so missing files don’t crash the app)
-# -----------------------------------------------------------------------------
-def safe_include(module_path: str, prefix: str = "/api", router_attr: str = "router"):
+# ------------------------- Auto-mount Routers ---------------------------------
+def mount_all_routers(package: str = "backend.routers", prefix: str = "/api") -> None:
+    """
+    Auto-discovers every module under backend/routers and mounts it
+    if it exposes a `router` (APIRouter). Missing/typoed files won't crash boot.
+    """
     try:
-        module = __import__(module_path, fromlist=[router_attr])
-        router = getattr(module, router_attr)
-        app.include_router(router, prefix=prefix)
-        log.info("Mounted %s at %s", module_path, prefix)
+        pkg = importlib.import_module(package)
     except Exception as e:
-        log.warning("Skipped %s: %s", module_path, e)
+        log.error("Cannot import %s: %s", package, e)
+        return
 
-# Add the ones you have; harmless if a file is missing
-safe_include("backend.routers.shopify")
-safe_include("backend.routers.intelligence")
-safe_include("backend.routers.ingest_ENHANCED_MULTI_FORMAT")
-safe_include("backend.routers.media")
-safe_include("backend.routers.summary")
-safe_include("backend.routers.competitive")
-safe_include("backend.routers.calendar")
-safe_include("backend.routers.agency")
-safe_include("backend.routers.content_creation")
-safe_include("backend.routers.executive")
-safe_include("backend.routers.upload_sidecar")
+    for _finder, name, _ispkg in pkgutil.iter_modules(pkg.__path__):
+        if name.startswith("_"):
+            continue
+        full_name = f"{package}.{name}"
+        try:
+            mod: ModuleType = importlib.import_module(full_name)
+            router = getattr(mod, "router", None)
+            if router is not None:
+                app.include_router(router, prefix=prefix)
+                log.info("Mounted %s at %s", full_name, prefix)
+            else:
+                log.debug("No `router` in %s; skipped", full_name)
+        except Exception as e:
+            log.warning("Skipped %s: %s", full_name, e)
 
-# -----------------------------------------------------------------------------
-# Static frontend (Next.js export copied to backend/static/site)
-# -----------------------------------------------------------------------------
+mount_all_routers()
+
+# --------------------------- Static Frontend ----------------------------------
+# Next.js export (frontend/out) is copied to backend/static/site during build
 STATIC_DIR = Path(__file__).resolve().parent / "static" / "site"
 if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
-    # Mount AFTER API routes so /api/* isn’t shadowed
+    # Mount AFTER API so /api/* is not shadowed
     app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="site")
     log.info("Serving static site from %s", STATIC_DIR)
 else:
@@ -104,9 +105,7 @@ else:
             "hint": "Static site not found. Ensure build copies Next 'out/*' to backend/static/site."
         }
 
-# -----------------------------------------------------------------------------
-# Health
-# -----------------------------------------------------------------------------
+# ------------------------------ Health ----------------------------------------
 @app.get("/api/health")
 def health():
     return {"ok": True}
