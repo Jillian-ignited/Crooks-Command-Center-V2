@@ -1,27 +1,21 @@
-
-
 services:
   - type: web
     name: crooks-command-center-v2
     env: python
+    plan: starter
     buildCommand: |
-      # Install dependencies
+      pip install --upgrade pip
       pip install -r requirements.txt
-      
-      # Install database setup dependencies
       pip install sqlalchemy psycopg2-binary
-      
-      # Run database setup to create missing tables
-      echo "🛠️  Creating missing database tables..."
-      cd backend/setup && python create_database_tables.py && cd ../..
-      
-      echo "✅ Build completed with database setup!"
-    
-    startCommand: "cd backend && python main.py"
-    
-    # Your existing environment variables
+    startCommand: |
+      # Run migration before starting the app
+      python backend/migrate_shopify_uploads.py && uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: your-database-name
+          name: crooks-command-center-db   # 👈 replace with your actual Render DB name
           property: connectionString
+
+databases:
+  - name: crooks-command-center-db
+    plan: starter
