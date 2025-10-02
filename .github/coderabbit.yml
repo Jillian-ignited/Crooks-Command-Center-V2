@@ -1,0 +1,5 @@
+reviews:
+  auto_review: true     # Runs on every PR automatically
+  inline_comments: true # Adds comments like a human reviewer
+  summary: true         # Posts a summary review
+  request_changes: true # Marks PR as requiring changes if issues found
