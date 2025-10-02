@@ -1,7 +1,7 @@
 # backend/routers/competitive.py
-""" Enhanced Competitive Analysis Router - Preserves brand intelligence + adds real data
+""" Complete Competitive Analysis Router - Full frontend compatibility
 
-Combines existing brand positioning with real intelligence uploads for comprehensive analysis
+Preserves brand intelligence + adds real data + all frontend endpoints
 """
 
 from fastapi import APIRouter
@@ -79,34 +79,34 @@ CORE_BRAND_INTELLIGENCE = {
 
 COMPETITOR_BRANDS = {
     "high_threat": [
-        {"name": "Hellstar", "notes": "Competes for youth/Gen Z hype, heavy rap co-signs, viral graphics. Threat in digital + influencer space."},
-        {"name": "Memory Lane", "notes": "Pulls Gen Z into Y2K nostalgia with graphic-heavy tees/hoodies. Threat in DTC + mall retail."},
-        {"name": "Smoke Rise", "notes": "Mass mall/streetwear at price-driven level. Threat in urban mall doors + off-price crossover."},
-        {"name": "Reason Clothing", "notes": "Graphic-led, online + mall presence. Threat in same consumer tier (accessible streetwear)."},
-        {"name": "Purple Brand", "notes": "Denim + streetwear hybrid, strong in department stores/luxury malls. Threat in premium denim + wholesale channels."},
-        {"name": "Amiri", "notes": "Luxury LA streetwear with celebrity influence. Threat aspirationally (Crooks customers “trade up” to Amiri)."}
+        {"name": "Hellstar", "notes": "Competes for youth/Gen Z hype, heavy rap co-signs, viral graphics. Threat in digital + influencer space.", "threat_level": "high"},
+        {"name": "Memory Lane", "notes": "Pulls Gen Z into Y2K nostalgia with graphic-heavy tees/hoodies. Threat in DTC + mall retail.", "threat_level": "high"},
+        {"name": "Smoke Rise", "notes": "Mass mall/streetwear at price-driven level. Threat in urban mall doors + off-price crossover.", "threat_level": "high"},
+        {"name": "Reason Clothing", "notes": "Graphic-led, online + mall presence. Threat in same consumer tier (accessible streetwear).", "threat_level": "high"},
+        {"name": "Purple Brand", "notes": "Denim + streetwear hybrid, strong in department stores/luxury malls. Threat in premium denim + wholesale channels.", "threat_level": "high"},
+        {"name": "Amiri", "notes": "Luxury LA streetwear with celebrity influence. Threat aspirationally (Crooks customers trade up to Amiri).", "threat_level": "high"}
     ],
     "medium_threat": [
-        {"name": "Aimé Leon Dore (ALD)", "notes": "Competes in credibility and boutique culture storytelling, but aesthetic is more retro-luxe than Crooks’ grit. Threat in cultural positioning."},
-        {"name": "Kith", "notes": "Collab-driven and aspirational, but less “armor.” Threat in premium lifestyle collabs + global visibility."},
-        {"name": "Supreme", "notes": "Still iconic, but corporate era erodes authenticity. Threat in global brand recognition and resale hype."},
-        {"name": "Fear of God (Essentials)", "notes": "Minimalist luxe basics. Threat in comfort/lifestyle category, not codes."},
-        {"name": "Off-White", "notes": "High-fashion crossover, but fading without Virgil. Threat in luxury status appeal."},
-        {"name": "BAPE", "notes": "Commercialized, but still has global name. Threat in international markets and legacy positioning."},
-        {"name": "Palace", "notes": "UK skate/street credibility. Threat in European streetwear."},
-        {"name": "Godspeed", "notes": "Newer, niche but rising. Threat in youth discovery channels (TikTok, IG, resale)."}
+        {"name": "Aimé Leon Dore (ALD)", "notes": "Competes in credibility and boutique culture storytelling, but aesthetic is more retro-luxe than Crooks' grit. Threat in cultural positioning.", "threat_level": "medium"},
+        {"name": "Kith", "notes": "Collab-driven and aspirational, but less armor. Threat in premium lifestyle collabs + global visibility.", "threat_level": "medium"},
+        {"name": "Supreme", "notes": "Still iconic, but corporate era erodes authenticity. Threat in global brand recognition and resale hype.", "threat_level": "medium"},
+        {"name": "Fear of God (Essentials)", "notes": "Minimalist luxe basics. Threat in comfort/lifestyle category, not codes.", "threat_level": "medium"},
+        {"name": "Off-White", "notes": "High-fashion crossover, but fading without Virgil. Threat in luxury status appeal.", "threat_level": "medium"},
+        {"name": "BAPE", "notes": "Commercialized, but still has global name. Threat in international markets and legacy positioning.", "threat_level": "medium"},
+        {"name": "Palace", "notes": "UK skate/street credibility. Threat in European streetwear.", "threat_level": "medium"},
+        {"name": "Godspeed", "notes": "Newer, niche but rising. Threat in youth discovery channels (TikTok, IG, resale).", "threat_level": "medium"}
     ],
     "low_threat": [
-        {"name": "LRG", "notes": "Heritage, but nostalgia-only."},
-        {"name": "Ecko Unlimited", "notes": "Off-price, no cultural pull left."},
-        {"name": "Sean John / Rocawear", "notes": "Dormant, minimal activity."},
-        {"name": "Von Dutch", "notes": "Trend revival, narrow niche."},
-        {"name": "Ed Hardy", "notes": "Tattoo-driven Y2K revival, but not a fortress brand."},
-        {"name": "Affliction", "notes": "Rock/club niche, irrelevant for Crooks customer."},
-        {"name": "Nike Sportswear / Jordan / Adidas Originals", "notes": "Borrow street cred via collabs; not true competitor in codes."},
-        {"name": "Puma / New Balance Lifestyle", "notes": "Sneaker-first, minor overlap."},
-        {"name": "H&M / Zara / BoohooMAN / Shein", "notes": "Compete on price, not brand."},
-        {"name": "PacSun / Zumiez Private Label", "notes": "Trend-only, low cultural threat."}
+        {"name": "LRG", "notes": "Heritage, but nostalgia-only.", "threat_level": "low"},
+        {"name": "Ecko Unlimited", "notes": "Off-price, no cultural pull left.", "threat_level": "low"},
+        {"name": "Sean John / Rocawear", "notes": "Dormant, minimal activity.", "threat_level": "low"},
+        {"name": "Von Dutch", "notes": "Trend revival, narrow niche.", "threat_level": "low"},
+        {"name": "Ed Hardy", "notes": "Tattoo-driven Y2K revival, but not a fortress brand.", "threat_level": "low"},
+        {"name": "Affliction", "notes": "Rock/club niche, irrelevant for Crooks customer.", "threat_level": "low"},
+        {"name": "Nike Sportswear / Jordan / Adidas Originals", "notes": "Borrow street cred via collabs; not true competitor in codes.", "threat_level": "low"},
+        {"name": "Puma / New Balance Lifestyle", "notes": "Sneaker-first, minor overlap.", "threat_level": "low"},
+        {"name": "H&M / Zara / BoohooMAN / Shein", "notes": "Compete on price, not brand.", "threat_level": "low"},
+        {"name": "PacSun / Zumiez Private Label", "notes": "Trend-only, low cultural threat.", "threat_level": "low"}
     ]
 }
 
@@ -124,7 +124,8 @@ async def get_competitive_analysis() -> Dict[str, Any]:
         "data_from_uploads": competitive_data,
         "intelligence_score": _calculate_intelligence_score(competitive_data),
         "strategic_recommendations": _generate_strategic_recommendations(competitive_data),
-        "brand_comparisons": _generate_brand_comparisons(competitive_data) # New
+        "brand_comparisons": _generate_brand_comparisons(competitive_data),
+        "total_brands_analyzed": 24  # 6 high + 8 medium + 10 low threat brands
     }
     
     return combined_analysis
@@ -133,6 +134,79 @@ async def get_competitive_analysis() -> Dict[str, Any]:
 async def get_brand_positioning() -> Dict[str, Any]:
     """Get the core brand positioning and competitive advantages"""
     return CORE_BRAND_INTELLIGENCE
+
+@router.get("/compare")
+async def compare_brands(brand1: Optional[str] = None, brand2: Optional[str] = None) -> Dict[str, Any]:
+    """Compare specific brands from the competitive landscape"""
+    
+    # Get all brands from our competitive landscape
+    all_brands = []
+    for threat_level, brands in COMPETITOR_BRANDS.items():
+        all_brands.extend([brand["name"] for brand in brands])
+    
+    if not brand1 or not brand2:
+        return {
+            "available_brands": ["Crooks & Castles"] + all_brands,
+            "message": "Specify brand1 and brand2 parameters to compare",
+            "example": f"/compare?brand1=Crooks & Castles&brand2={all_brands[0] if all_brands else 'Supreme'}"
+        }
+    
+    # Find brand data
+    brand1_data = _get_brand_data(brand1)
+    brand2_data = _get_brand_data(brand2)
+    
+    comparison = {
+        "brand_1": brand1_data,
+        "brand_2": brand2_data,
+        "comparison_summary": _generate_comparison_summary(brand1_data, brand2_data),
+        "competitive_advantages": _identify_competitive_advantages(brand1_data, brand2_data),
+        "generated_at": datetime.datetime.now().isoformat()
+    }
+    
+    return comparison
+
+@router.get("/mentions")
+async def get_competitive_mentions() -> Dict[str, Any]:
+    """Get competitive brand mentions and analysis"""
+    
+    # Get real data from intelligence uploads
+    competitive_data = DataService.get_competitive_insights()
+    insights = competitive_data.get("insights", [])
+    
+    # Generate mentions from our competitive landscape
+    mentions = []
+    for threat_level, brands in COMPETITOR_BRANDS.items():
+        for brand in brands:
+            mentions.append({
+                "brand": brand["name"],
+                "threat_level": threat_level,
+                "notes": brand["notes"],
+                "mention_type": "competitive_analysis",
+                "timestamp": datetime.datetime.now().isoformat()
+            })
+    
+    # Add any mentions from uploaded intelligence
+    for insight in insights:
+        if isinstance(insight, dict) and insight.get("brand"):
+            mentions.append({
+                "brand": insight["brand"],
+                "threat_level": "unknown",
+                "notes": insight.get("description", ""),
+                "mention_type": "intelligence_upload",
+                "timestamp": insight.get("timestamp", datetime.datetime.now().isoformat())
+            })
+    
+    return {
+        "total_mentions": len(mentions),
+        "mentions": mentions,
+        "mention_analysis": {
+            "by_threat_level": _group_mentions_by_threat(mentions),
+            "by_brand": _group_mentions_by_brand(mentions),
+            "trending_topics": _extract_trending_topics(mentions)
+        },
+        "last_updated": datetime.datetime.now().isoformat(),
+        "data_source": "competitive_intelligence"
+    }
 
 def _calculate_intelligence_score(competitive_data: Dict) -> Dict[str, Any]:
     """Calculate an intelligence score based on the amount of data available"""
@@ -160,20 +234,29 @@ def _generate_strategic_recommendations(competitive_data: Dict) -> list:
     
     recommendations = []
     
+    # High threat brand recommendations
+    recommendations.append({
+        "area": "High Threat Competitors",
+        "recommendation": "Monitor and differentiate against 6 high-threat brands including Hellstar, Memory Lane, and Amiri.",
+        "priority": "High",
+        "action": "Develop counter-strategies for each high-threat competitor"
+    })
+    
+    # Medium threat brand recommendations
+    recommendations.append({
+        "area": "Medium Threat Competitors", 
+        "recommendation": "Track 8 medium-threat brands for market positioning opportunities.",
+        "priority": "Medium",
+        "action": "Identify gaps in medium-threat competitor offerings"
+    })
+    
     # If no competitive data, recommend uploading some
     if competitive_data["brands_analyzed"] == 0:
         recommendations.append({
             "area": "Competitive Intelligence",
-            "recommendation": "No competitor data found. Upload competitive intelligence to identify market opportunities and threats.",
-            "priority": "High"
-        })
-    
-    # If there are insights, recommend actions
-    if competitive_data["insights"]:
-        recommendations.append({
-            "area": "Market Opportunities",
-            "recommendation": "Analyze competitive insights to identify market gaps and opportunities for growth.",
-            "priority": "Medium"
+            "recommendation": "Upload competitive intelligence to enhance the 24-brand analysis framework.",
+            "priority": "Medium",
+            "action": "Gather and upload competitor research data"
         })
         
     return recommendations
@@ -181,74 +264,160 @@ def _generate_strategic_recommendations(competitive_data: Dict) -> list:
 def _generate_brand_comparisons(competitive_data: Dict) -> Dict[str, Any]:
     """Generate brand comparisons based on competitive data"""
     
-    # Get a list of competitor brands from the uploaded data
-    competitor_brands = [insight["brand"] for insight in competitive_data["insights"] if "brand" in insight]
-    
-    # For now, we'll create a placeholder comparison. 
-    # In a real scenario, you'd pull metrics for each competitor.
-    comparisons = {}
-    for brand in competitor_brands:
-        comparisons[brand] = {
-            "market_position": "strong" if "supreme" in brand.lower() else "medium",
-            "differentiation": ["hype", "scarcity"] if "supreme" in brand.lower() else ["mainstream", "accessible"],
-            "estimated_revenue": 1000000 if "supreme" in brand.lower() else 500000
-        }
-        
-    return {
+    comparisons = {
         "crooks_and_castles": {
             "market_position": CORE_BRAND_INTELLIGENCE["brand_identity"]["market_position"],
             "differentiation": CORE_BRAND_INTELLIGENCE["brand_pillars"]["differentiation"],
-            "estimated_revenue": DataService.get_shopify_metrics()["total_sales"]
-        },
-        "competitors": comparisons
+            "threat_level": "baseline",
+            "competitive_advantages": len(CORE_BRAND_INTELLIGENCE["competitive_advantages"])
+        }
     }
+    
+    # Add comparisons for each threat level
+    for threat_level, brands in COMPETITOR_BRANDS.items():
+        for brand in brands:
+            comparisons[brand["name"].lower().replace(" ", "_")] = {
+                "market_position": "strong" if threat_level == "high_threat" else "medium" if threat_level == "medium_threat" else "weak",
+                "threat_level": threat_level,
+                "notes": brand["notes"]
+            }
+        
+    return comparisons
 
-# --- Helper functions to extract insights from text (can be expanded) ---
+def _get_brand_data(brand_name: str) -> Dict[str, Any]:
+    """Get data for a specific brand"""
+    
+    if brand_name.lower() == "crooks & castles":
+        return {
+            "name": "Crooks & Castles",
+            "market_position": CORE_BRAND_INTELLIGENCE["brand_identity"]["market_position"],
+            "differentiation": CORE_BRAND_INTELLIGENCE["brand_pillars"]["differentiation"],
+            "competitive_advantages": CORE_BRAND_INTELLIGENCE["competitive_advantages"],
+            "threat_level": "baseline",
+            "heritage": "20+ years",
+            "strengths": ["Heritage", "Hip-hop culture", "Premium quality", "Celebrity endorsements", "Distinctive design"]
+        }
+    
+    # Find brand in competitive landscape
+    for threat_level, brands in COMPETITOR_BRANDS.items():
+        for brand in brands:
+            if brand["name"].lower() == brand_name.lower():
+                return {
+                    "name": brand["name"],
+                    "threat_level": threat_level,
+                    "notes": brand["notes"],
+                    "market_position": "strong" if threat_level == "high_threat" else "medium" if threat_level == "medium_threat" else "weak",
+                    "strengths": _extract_strengths_from_notes(brand["notes"]),
+                    "weaknesses": _extract_weaknesses_from_notes(brand["notes"])
+                }
+    
+    return {"name": brand_name, "data": "not_found"}
+
+def _generate_comparison_summary(brand1_data: Dict, brand2_data: Dict) -> str:
+    """Generate a comparison summary between two brands"""
+    
+    if brand1_data.get("name") == "Crooks & Castles":
+        return f"Crooks & Castles (heritage streetwear pioneer) vs {brand2_data.get('name')} ({brand2_data.get('threat_level', 'unknown')} threat level)"
+    elif brand2_data.get("name") == "Crooks & Castles":
+        return f"{brand1_data.get('name')} ({brand1_data.get('threat_level', 'unknown')} threat level) vs Crooks & Castles (heritage streetwear pioneer)"
+    else:
+        return f"{brand1_data.get('name')} vs {brand2_data.get('name')} competitive comparison"
+
+def _identify_competitive_advantages(brand1_data: Dict, brand2_data: Dict) -> List[str]:
+    """Identify competitive advantages between brands"""
+    
+    advantages = []
+    
+    if brand1_data.get("name") == "Crooks & Castles":
+        advantages.extend([
+            "20+ year heritage advantage",
+            "Authentic hip-hop culture connection",
+            "Premium quality positioning",
+            "Celebrity endorsement history"
+        ])
+    
+    if brand2_data.get("name") == "Crooks & Castles":
+        advantages.extend([
+            "20+ year heritage advantage",
+            "Authentic hip-hop culture connection", 
+            "Premium quality positioning",
+            "Celebrity endorsement history"
+        ])
+    
+    return advantages
+
+def _group_mentions_by_threat(mentions: List[Dict]) -> Dict[str, int]:
+    """Group mentions by threat level"""
+    
+    threat_counts = {"high_threat": 0, "medium_threat": 0, "low_threat": 0, "unknown": 0}
+    
+    for mention in mentions:
+        threat_level = mention.get("threat_level", "unknown")
+        threat_counts[threat_level] = threat_counts.get(threat_level, 0) + 1
+    
+    return threat_counts
+
+def _group_mentions_by_brand(mentions: List[Dict]) -> Dict[str, int]:
+    """Group mentions by brand"""
+    
+    brand_counts = {}
+    
+    for mention in mentions:
+        brand = mention.get("brand", "Unknown")
+        brand_counts[brand] = brand_counts.get(brand, 0) + 1
+    
+    return brand_counts
 
 def _extract_trending_topics(mentions: List[Dict]) -> List[str]:
     """Extract trending topics from mentions"""
     
-    # Get top trending words
-    word_counts = {}
+    topics = []
     for mention in mentions:
-        text = str(mention.get("text", "")).lower()
-        for word in text.split():
-            word_counts[word] = word_counts.get(word, 0) + 1
-            
-    trending = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-    return [word for word, count in trending[:10] if count > 1]
+        notes = mention.get("notes", "")
+        if "Gen Z" in notes:
+            topics.append("Gen Z targeting")
+        if "digital" in notes.lower():
+            topics.append("Digital marketing")
+        if "collaboration" in notes.lower() or "collab" in notes.lower():
+            topics.append("Brand collaborations")
+        if "luxury" in notes.lower():
+            topics.append("Luxury positioning")
+        if "nostalgia" in notes.lower():
+            topics.append("Nostalgia marketing")
+    
+    # Return unique topics
+    return list(set(topics))
 
-def _extract_growth_trends(insights: List[Dict]) -> List[str]:
-    """Extract growth trends from insights"""
+def _extract_strengths_from_notes(notes: str) -> List[str]:
+    """Extract strengths from brand notes"""
     
-    trends = []
-    growth_keywords = ["growth", "growing", "increase", "rising", "expanding", "boom"]
+    strengths = []
+    if "hype" in notes.lower():
+        strengths.append("Hype generation")
+    if "viral" in notes.lower():
+        strengths.append("Viral marketing")
+    if "luxury" in notes.lower():
+        strengths.append("Luxury positioning")
+    if "celebrity" in notes.lower():
+        strengths.append("Celebrity influence")
+    if "global" in notes.lower():
+        strengths.append("Global reach")
     
-    for insight in insights:
-        if isinstance(insight, dict):
-            text = str(insight.get("description", "")).lower()
-            for keyword in growth_keywords:
-                if keyword in text:
-                    trends.append(insight.get("description", f"Growth {keyword} identified"))
-                    break
-    
-    return trends[:5]
+    return strengths
 
-def _identify_competitive_gaps(insights: List[Dict]) -> List[str]:
-    """Identify competitive gaps from insights"""
+def _extract_weaknesses_from_notes(notes: str) -> List[str]:
+    """Extract weaknesses from brand notes"""
     
-    gaps = []
-    gap_keywords = ["gap", "missing", "lacking", "opportunity", "unmet", "underserved"]
+    weaknesses = []
+    if "fading" in notes.lower():
+        weaknesses.append("Declining relevance")
+    if "corporate" in notes.lower():
+        weaknesses.append("Corporate image")
+    if "dormant" in notes.lower():
+        weaknesses.append("Inactive brand")
+    if "nostalgia-only" in notes.lower():
+        weaknesses.append("Limited to nostalgia")
+    if "off-price" in notes.lower():
+        weaknesses.append("Low price positioning")
     
-    for insight in insights:
-        if isinstance(insight, dict):
-            text = str(insight.get("description", "")).lower()
-            for keyword in gap_keywords:
-                if keyword in text:
-                    gap_desc = insight.get("description", f"Market {keyword} identified")
-                    if gap_desc not in gaps:
-                        gaps.append(gap_desc)
-                        break
-                        
-    return gaps[:5] # Return top 5 gaps
-
+    return weaknesses
