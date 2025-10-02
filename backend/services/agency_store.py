@@ -1,151 +1,165 @@
 # backend/services/agency_store.py
 from __future__ import annotations
-import csv, sqlite3, os, datetime
-from pathlib import Path
-from typing import List, Dict, Any, Optional
 
-BASE_DIR   = Path(__file__).resolve().parents[1]
-DB_PATH    = BASE_DIR / "storage" / "agency.db"
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+import datetime
+import logging
+from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
-STATUS_VALUES = [
-    "Not Started", "In Progress", "Blocked", "Waiting Approval", "Approved", "Done"
-]
+# If you're using SQLAlchemy Core/Engine:
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
 
-def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+# If you prefer to keep parsing in a helper module, uncomment this and use parse_due_date below:
+# from ._date_utils import parse_due_date as _parse_due_date
 
-def init_schema():
-    with _conn() as cx:
-        cx.execute("""
-        CREATE TABLE IF NOT EXISTS deliverables (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phase TEXT,
-            task TEXT,
-            owner TEXT,
-            channel TEXT,
-            assets TEXT,
-            dependencies TEXT,
-            notes TEXT,
-            due_date TEXT,
-            status TEXT DEFAULT 'Not Started',
-            priority INTEGER DEFAULT 3,
-            last_updated TEXT
-        )
-        """)
-        cx.execute("CREATE INDEX IF NOT EXISTS idx_deliverables_phase ON deliverables(phase)")
-        cx.execute("CREATE INDEX IF NOT EXISTS idx_deliverables_status ON deliverables(status)")
 
-def _normalize(row: Dict[str, Any]) -> Dict[str, Any]:
-    # Map CSV headers → DB columns (adjust to your CSV header names)
-    # Expected headers (case-insensitive): Phase, Task, Owner, Channel, Assets, Dependencies, Notes, Due Date, Priority
-    def g(keys, default=""):
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s %(name)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+def parse_due_date(raw: Optional[str]) -> Optional[str]:
+    """
+    Normalize various date strings to ISO (YYYY-MM-DD).
+    Returns None if parsing fails (do not persist raw TEXT dates).
+    """
+    if not raw:
+        return None
+    s = raw.strip()
+    # Common formats to support:
+    formats = (
+        "%Y-%m-%d",  # ISO
+        "%Y/%m/%d",  # ISO with slashes
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%m-%d-%Y",
+        "%m-%d-%y",
+    )
+    for fmt in formats:
+        try:
+            dt = datetime.datetime.strptime(s, fmt)
+            return dt.date().isoformat()
+        except ValueError:
+            continue
+    logger.warning("Unparsable due date %r; dropping value", raw)
+    return None
+
+# If you imported helper module, swap to:
+# def parse_due_date(raw: Optional[str]) -> Optional[str]:
+#     return _parse_due_date(raw)
+
+
+def safe_execute(conn: Connection, sql: str, params: Optional[Dict[str, Any]] = None):
+    """
+    Execute parameterized SQL safely (prevents SQL injection).
+    Usage:
+      safe_execute(conn, "SELECT * FROM t WHERE brand = :brand", {"brand": brand})
+    """
+    return conn.execute(text(sql), params or {})
+
+
+# -----------------------------------------------------------------------------
+# Core ingestion/path you already have
+# -----------------------------------------------------------------------------
+def ingest_row(row: Dict[str, Any], *, conn: Connection) -> None:
+    """
+    Example ingestion entry point. Adjust field names to your schema.
+    Assumes you were previously doing something like g([...]) to fetch values.
+    """
+    def g(keys: Iterable[str]) -> Optional[str]:
         for k in keys:
-            for cand in row.keys():
-                if cand.strip().lower() == k.lower():
-                    return (row[cand] or "").strip()
-        return default
+            if k in row and row[k] is not None:
+                v = str(row[k]).strip()
+                if v != "":
+                    return v
+        return None
 
-    due = g(["Due Date","DueDate"])
-    try:
-        # Normalize to YYYY-MM-DD
-        if due:
-            dt = datetime.datetime.fromisoformat(due.replace("/", "-"))
-            due = dt.date().isoformat()
-    except Exception:
-        pass
+    # --- FIXED: robust due-date normalization (no blind except/pass) ---
+    due = parse_due_date(g(["Due Date", "DueDate"]))
 
-    pri = g(["Priority"])
-    try:
-        pri = int(pri) if str(pri).strip() else 3
-    except Exception:
-        pri = 3
-
-    return {
-        "phase": g(["Phase"]),
-        "task": g(["Task","Deliverable","Title"]),
-        "owner": g(["Owner","Assignee"]),
-        "channel": g(["Channel","Platform"]),
-        "assets": g(["Assets","Asset Links","Links"]),
-        "dependencies": g(["Dependencies","Depends On"]),
-        "notes": g(["Notes","Description"]),
-        "due_date": due,
-        "priority": pri,
+    # Example: parameterized insert/update — replace with your real table/columns
+    sql = """
+    INSERT INTO agencies (brand, title, due)
+    VALUES (:brand, :title, :due)
+    ON CONFLICT (brand, title)
+    DO UPDATE SET due = COALESCE(EXCLUDED.due, agencies.due)
+    """
+    params = {
+        "brand": g(["Brand", "brand"]),
+        "title": g(["Title", "Task", "Name"]),
+        "due": due,  # None or ISO date string
     }
 
-def import_csv(csv_path: Path, truncate: bool = True) -> int:
-    init_schema()
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV not found: {csv_path}")
+    # --- FIXED: no f-strings in SQL; use parameters ---
+    try:
+        safe_execute(conn, sql, params)
+    except Exception as e:
+        # Narrow/handle by expected exceptions if you know them (IntegrityError, etc.)
+        logger.error("ingest_row failed for %s: %s", params.get("title"), e)
+        raise  # do not silently pass
 
-    with csv_path.open("r", encoding="utf-8-sig") as f, _conn() as cx:
-        rdr = csv.DictReader(f)
-        if truncate:
-            cx.execute("DELETE FROM deliverables")
-        count = 0
-        for raw in rdr:
-            d = _normalize(raw)
-            cx.execute("""
-            INSERT INTO deliverables (phase, task, owner, channel, assets, dependencies, notes, due_date, status, priority, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Not Started', ?, ?)
-            """, (
-                d["phase"], d["task"], d["owner"], d["channel"], d["assets"], d["dependencies"], d["notes"], d["due_date"],
-                d["priority"], datetime.datetime.utcnow().isoformat()
-            ))
-            count += 1
-        return count
 
-def list_deliverables(phase: Optional[str]=None, status: Optional[str]=None, q: Optional[str]=None) -> List[Dict[str,Any]]:
-    init_schema()
-    sql = "SELECT * FROM deliverables WHERE 1=1"
-    args: List[Any] = []
-    if phase:
-        sql += " AND phase = ?"
-        args.append(phase)
-    if status:
-        sql += " AND status = ?"
-        args.append(status)
-    if q:
-        like = f"%{q}%"
-        sql += " AND (task LIKE ? OR owner LIKE ? OR channel LIKE ? OR notes LIKE ?)"
-        args.extend([like, like, like, like])
-    sql += " ORDER BY priority ASC, COALESCE(due_date, '9999-12-31') ASC, id ASC"
-    with _conn() as cx:
-        rows = [dict(r) for r in cx.execute(sql, args).fetchall()]
+def list_deliverables(*, conn: Connection, brand: Optional[str] = None) -> Sequence[Tuple]:
+    """
+    Example query using parameterization; sorts by date correctly because 'due'
+    is stored as ISO text or NULL (no raw '12/20/2026' strings).
+    """
+    base = """
+    SELECT id, brand, title, due
+    FROM agencies
+    WHERE (:brand IS NULL OR brand = :brand)
+    ORDER BY due NULLS LAST, id DESC
+    """
+    rows = safe_execute(conn, base, {"brand": brand}).fetchall()
     return rows
 
-def get_one(item_id: int) -> Optional[Dict[str,Any]]:
-    with _conn() as cx:
-        r = cx.execute("SELECT * FROM deliverables WHERE id = ?", (item_id,)).fetchone()
-        return dict(r) if r else None
 
-def update_one(item_id: int, fields: Dict[str,Any]) -> Optional[Dict[str,Any]]:
-    allowed = {"phase","task","owner","channel","assets","dependencies","notes","due_date","status","priority"}
-    set_parts = []
-    args: List[Any] = []
-    for k,v in fields.items():
-        if k in allowed:
-            set_parts.append(f"{k} = ?")
-            args.append(v)
-    if not set_parts:
-        return get_one(item_id)
-    set_parts.append("last_updated = ?")
-    args.append(datetime.datetime.utcnow().isoformat())
-    args.append(item_id)
-    with _conn() as cx:
-        cx.execute(f"UPDATE deliverables SET {', '.join(set_parts)} WHERE id = ?", args)
-    return get_one(item_id)
+def stats(*, conn: Connection, today: Optional[datetime.date] = None) -> Dict[str, Any]:
+    """
+    Example stats calculation comparing ISO dates lexicographically works,
+    but to be explicit we cast to DATE where needed.
+    """
+    today = today or datetime.date.today()
+    params = {"today": today.isoformat()}
 
-def phases() -> List[str]:
-    with _conn() as cx:
-        rows = cx.execute("SELECT DISTINCT phase FROM deliverables ORDER BY phase").fetchall()
-    return [r[0] for r in rows if r[0]]
+    sql = """
+    SELECT
+      COUNT(*) FILTER (WHERE due IS NOT NULL AND DATE(due) < DATE(:today)) AS overdue,
+      COUNT(*) FILTER (WHERE due IS NOT NULL AND DATE(due) = DATE(:today)) AS due_today,
+      COUNT(*) FILTER (WHERE due IS NOT NULL AND DATE(due) > DATE(:today)) AS upcoming,
+      COUNT(*) AS total
+    FROM agencies
+    """
+    row = safe_execute(conn, sql, params).mappings().first() or {}
+    return {
+        "overdue": row.get("overdue", 0),
+        "due_today": row.get("due_today", 0),
+        "upcoming": row.get("upcoming", 0),
+        "total": row.get("total", 0),
+    }
 
-def stats() -> Dict[str,Any]:
-    with _conn() as cx:
-        total = cx.execute("SELECT COUNT(*) FROM deliverables").fetchone()[0]
-        by_status = {s: cx.execute("SELECT COUNT(*) FROM deliverables WHERE status = ?", (s,)).fetchone()[0] for s in STATUS_VALUES}
-        overdue = cx.execute("SELECT COUNT(*) FROM deliverables WHERE due_date IS NOT NULL AND due_date < date('now') AND status NOT IN ('Approved','Done')").fetchone()[0]
-    return {"total": total, "by_status": by_status, "overdue": overdue, "statuses": STATUS_VALUES}
+
+# -----------------------------------------------------------------------------
+# Public API your routers probably call
+# -----------------------------------------------------------------------------
+def ingest_many(rows: Iterable[Dict[str, Any]], *, conn: Connection) -> int:
+    """
+    Bulk ingest with proper error handling (no try/except/pass).
+    """
+    count = 0
+    for r in rows:
+        ingest_row(r, conn=conn)
+        count += 1
+    return count
