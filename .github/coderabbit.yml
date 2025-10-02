@@ -1,11 +1,22 @@
-# .github/coderabbit.yml
-
+version: 1
 reviews:
-  auto_review: true          # Run reviews automatically on all PRs
-  inline_comments: true      # Leave comments directly on lines of code
-  summary: true              # Provide a summary review at the end
-  request_changes: false     # Don’t block merges (set true if you want stricter enforcement)
-  review_status: true        # Show review status in PR checks
-
-branches:
-  include: ["*"]             # Review all branches (not just main)
+  auto_review:
+    enabled: true
+    on:
+      pull_request:
+        # review non-default branches too
+        target_branches: ["*"]
+        base_branches: ["*"]
+    trigger:
+      comments:
+        enabled: true
+        commands: ["review"]
+  review_status: true   # show the status check in PR
+  profile: CHILL        # matches what CodeRabbit reported
+paths:
+  include:
+    - "backend/**"
+    - "frontend/**"
+tools:
+  ruff:
+    enabled: true
