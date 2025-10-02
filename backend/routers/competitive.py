@@ -421,3 +421,4 @@ def _extract_weaknesses_from_notes(notes: str) -> List[str]:
         weaknesses.append("Low price positioning")
     
     return weaknesses
+
