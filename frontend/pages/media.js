@@ -1,61 +1,154 @@
-// frontend/pages/media.js
 import { useEffect, useState } from "react";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_BASE || "";
 
 export default function Media() {
-  const [items, setItems] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  async function load() {
-    const res = await fetch(`${API_BASE}/api/media/assets`);
-    const j = await res.json();
-    setItems(j.assets || j || []); // support either shape
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function onUpload(e) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setBusy(true); setMsg("");
+  const loadAssets = async () => {
+    setLoading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", f);
-      const res = await fetch(`${API_BASE}/api/media/upload`, { method: "POST", body: fd });
-      if (!res.ok) throw new Error(`Upload failed: HTTP ${res.status}`);
-      await load();
-      setMsg("Uploaded!");
+      const res = await fetch(`${API_BASE}/api/media/assets`);
+      if (res.ok) {
+        const data = await res.json();
+        setAssets(data.assets || []);
+      }
     } catch (err) {
-      setMsg(String(err.message || err));
-    } finally { setBusy(false); }
+      console.error("Failed to load assets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${API_BASE}/api/media/upload`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (response.ok) {
+        await loadAssets();
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAssets();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "2rem" }}>
+        <h1>Asset Library</h1>
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: 24 }}>
-      <h1>Media Library</h1>
-      <div style={{ margin: "12px 0" }}>
-        <input
-          type="file"
-          onChange={onUpload}
-          disabled={busy}
-          style={{ background: "#15171a", color: "#e9edf2", border: "1px solid #2a2d31", padding: 8, borderRadius: 8 }}
-        />
-        <span style={{ marginLeft: 12, color: "#98a4b3" }}>{busy ? "Uploading…" : msg}</span>
+    <div style={{ padding: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+        <h1>Street Culture Asset Library</h1>
+        <button onClick={loadAssets} style={{ padding: "8px 16px", cursor: "pointer" }}>
+          Refresh
+        </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-        {items.map((it, i) => (
-          <div key={i} style={{ background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 13, color: "#98a4b3" }}>{it.filename || it.name || "Asset"}</div>
-            {it.url ? (
-              <a href={it.url} target="_blank" rel="noreferrer" style={{ color: "#6aa6ff" }}>Open</a>
-            ) : (
-              <div style={{ color: "#98a4b3" }}>No URL</div>
-            )}
+
+      <div style={{ marginBottom: "2rem" }}>
+        <h2>Upload New Asset</h2>
+        <div style={{ border: "2px dashed #ccc", padding: "2rem", textAlign: "center" }}>
+          <input
+            type="file"
+            onChange={handleFileUpload}
+            accept="image/*,video/*"
+            disabled={uploading}
+          />
+          {uploading && <p>Uploading...</p>}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "1rem" }}>
+        {assets.length === 0 ? (
+          <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+            No assets uploaded yet. Upload your first street culture asset above.
           </div>
-        ))}
+        ) : (
+          assets.map((asset, i) => (
+            <AssetCard key={i} asset={asset} />
+          ))
+        )}
       </div>
+    </div>
+  );
+}
+
+function AssetCard({ asset }) {
+  return (
+    <div style={{
+      background: "white",
+      border: "1px solid #e5e7eb",
+      borderRadius: "8px",
+      padding: "1rem"
+    }}>
+      <div style={{ marginBottom: "1rem" }}>
+        {asset.type === "image" ? (
+          <img 
+            src={asset.url} 
+            alt={asset.name}
+            style={{ width: "100%", height: "150px", objectFit: "cover", borderRadius: "4px" }}
+          />
+        ) : (
+          <div style={{ 
+            width: "100%", 
+            height: "150px", 
+            background: "#f3f4f6", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            borderRadius: "4px"
+          }}>
+            📁 {asset.name}
+          </div>
+        )}
+      </div>
+      
+      <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem" }}>{asset.name}</h3>
+      
+      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+        <div>Category: {asset.category}</div>
+        <div>Compliance: {asset.compliance_score}/100</div>
+      </div>
+      
+      <a 
+        href={asset.url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-block",
+          background: "#3b82f6",
+          color: "white",
+          padding: "0.5rem 1rem",
+          borderRadius: "4px",
+          textDecoration: "none",
+          fontSize: "0.875rem"
+        }}
+      >
+        View Asset
+      </a>
     </div>
   );
 }
