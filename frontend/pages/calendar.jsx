@@ -1,289 +1,188 @@
-// frontend/pages/calendar.jsx
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
+const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_BASE || "";
 
-const Calendar = () => {
-  const [calendarData, setCalendarData] = useState(null);
-  const [selectedDays, setSelectedDays] = useState(7);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function Calendar() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("30-day");
 
-  const timeRanges = [
-    { label: '7d', value: 7, description: 'Detailed daily execution' },
-    { label: '30d', value: 30, description: 'Weekly themes & campaigns' },
-    { label: '60d', value: 60, description: 'Major campaign planning' },
-    { label: 'Qtr', value: 90, description: 'Strategic quarterly view' }
-  ];
-
-  const fetchCalendarData = async () => {
-    setError('');
+  const loadEvents = async () => {
     setLoading(true);
-
     try {
-      const response = await fetch(`${API_BASE}/api/calendar/events?days=${selectedDays}`);
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-      const data = await response.json();
-      setCalendarData(data);
+      const res = await fetch(`${API_BASE}/api/calendar/events`);
+      if (res.ok) {
+        const data = await res.json();
+        setEvents(data.events || []);
+      }
     } catch (err) {
-      setError(`Failed to load calendar: ${err.message}`);
+      console.error("Failed to load events:", err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchCalendarData();
-  }, [selectedDays]);
+    loadEvents();
+  }, []);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      weekday: selectedDays <= 7 ? 'short' : undefined
-    });
-  };
-
-  const getCategoryColor = (category) => {
-    const colors = {
-      hip_hop_history: '#9333ea',
-      hip_hop_legend: '#dc2626',
-      contemporary_culture: '#0ea5e9',
-      cultural: '#16a34a',
-      music: '#f59e0b',
-      sports: '#ef4444',
-      fashion: '#ec4899',
-      sneaker_culture: '#8b5cf6',
-      gaming: '#06b6d4',
-      anime: '#f97316',
-      skate_culture: '#14b8a6',
-      holiday: '#10b981',
-      retail: '#eab308'
-    };
-    return colors[category] || '#6b7280';
-  };
-
-  const currentRange = timeRanges.find(r => r.value === selectedDays);
+  if (loading) {
+    return (
+      <div style={{ padding: "2rem" }}>
+        <h1>Campaign Calendar</h1>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
-    <main style={{ maxWidth: 1400, margin: '0 auto', padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Content Calendar</h1>
-          <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>{currentRange?.description}</p>
-        </div>
-        <button onClick={fetchCalendarData} style={{ padding: '8px 16px', cursor: 'pointer' }}>
-          Refresh
-        </button>
-      </div>
-
-      {error && (
-        <div style={{
-          background: '#fee',
-          border: '1px solid #f99',
-          padding: '1rem',
-          borderRadius: 8,
-          marginBottom: '1rem',
-          color: '#c33'
-        }}>
-          {error}
-        </div>
-      )}
-
-      {/* Time Range Selector */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: '2rem' }}>
-        {timeRanges.map(range => (
-          <button
-            key={range.value}
-            onClick={() => setSelectedDays(range.value)}
-            style={{
-              padding: '10px 20px',
-              borderRadius: 8,
-              border: selectedDays === range.value ? '2px solid #000' : '1px solid #ddd',
-              background: selectedDays === range.value ? '#000' : '#fff',
-              color: selectedDays === range.value ? '#fff' : '#000',
-              cursor: 'pointer',
-              fontWeight: selectedDays === range.value ? 'bold' : 'normal'
-            }}
+    <div style={{ padding: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+        <h1>Campaign Planning Calendar</h1>
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <select 
+            value={view} 
+            onChange={(e) => setView(e.target.value)}
+            style={{ padding: "8px 12px" }}
           >
-            {range.label}
+            <option value="7-day">7-Day Tactical</option>
+            <option value="30-day">30-Day Strategic</option>
+            <option value="60-day">60-Day Opportunities</option>
+            <option value="90-day">90-Day Vision</option>
+          </select>
+          <button onClick={loadEvents} style={{ padding: "8px 16px", cursor: "pointer" }}>
+            Refresh
           </button>
-        ))}
+        </div>
       </div>
 
-      {loading ? (
-        <p>Loading calendar...</p>
-      ) : (
-        <>
-          {/* 7-Day View: Detailed Daily Posts */}
-          {selectedDays <= 7 && calendarData?.detailed_posts?.length > 0 && (
-            <section style={{ marginBottom: '2rem' }}>
-              <h2>📅 This Week's Content Schedule</h2>
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {calendarData.detailed_posts.map((post, i) => (
-                  <div key={i} style={{
-                    background: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 12,
-                    padding: '1.5rem',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-                          {formatDate(post.date)} {post.time && `• ${post.time}`}
-                        </div>
-                        <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                          {post.platform}
-                        </div>
-                      </div>
-                      <div style={{
-                        background: '#f3f4f6',
-                        padding: '4px 12px',
-                        borderRadius: 6,
-                        fontSize: '0.85rem',
-                        height: 'fit-content'
-                      }}>
-                        {post.post_type}
-                      </div>
-                    </div>
-                    
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <strong>Content:</strong> {post.content}
-                    </div>
-                    
-                    {post.caption && (
-                      <div style={{ marginBottom: '0.5rem', color: '#555' }}>
-                        <strong>Caption:</strong> "{post.caption}"
-                      </div>
-                    )}
-                    
-                    {post.hashtags && (
-                      <div style={{ marginBottom: '0.5rem', color: '#0ea5e9' }}>
-                        {post.hashtags.join(' ')}
-                      </div>
-                    )}
-                    
-                    {post.visual && (
-                      <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                        <strong>Visual:</strong> {post.visual}
-                      </div>
-                    )}
-                    
-                    {post.cta && (
-                      <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: '#fef3c7', borderRadius: 6, fontSize: '0.9rem' }}>
-                        <strong>CTA:</strong> {post.cta}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+      <div style={{ marginBottom: "2rem" }}>
+        <ViewDescription view={view} />
+      </div>
 
-          {/* Cultural Moments & Campaign Ideas */}
-          {calendarData?.cultural_moments?.length > 0 && (
-            <section>
-              <h2>🎯 Cultural Moments & Campaign Opportunities</h2>
-              <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-                {selectedDays <= 7 
-                  ? 'Immediate opportunities this week'
-                  : `${calendarData.cultural_moments.length} strategic moments in the next ${selectedDays} days`
-                }
-              </p>
-              
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {calendarData.cultural_moments.map((moment, i) => (
-                  <div key={i} style={{
-                    background: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 12,
-                    padding: '1.5rem',
-                    borderLeft: `4px solid ${getCategoryColor(moment.category)}`
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                      <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-                          {moment.title}
-                        </div>
-                        <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                          {formatDate(moment.date)}
-                        </div>
-                      </div>
-                      <div style={{
-                        background: getCategoryColor(moment.category),
-                        color: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: 6,
-                        fontSize: '0.8rem',
-                        textTransform: 'capitalize'
-                      }}>
-                        {moment.category.replace(/_/g, ' ')}
-                      </div>
-                    </div>
-                    
-                    <div style={{
-                      background: '#f9fafb',
-                      padding: '1rem',
-                      borderRadius: 8,
-                      marginTop: '1rem'
-                    }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#374151' }}>
-                        💡 Campaign Idea:
-                      </div>
-                      <div style={{ color: '#555' }}>
-                        {moment.campaign_idea}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                        Content Type: {moment.content_type.replace(/_/g, ' ')}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Empty State */}
-          {!loading && (!calendarData?.cultural_moments?.length && !calendarData?.detailed_posts?.length) && (
-            <div style={{
-              padding: '3rem',
-              textAlign: 'center',
-              background: '#f9fafb',
-              borderRadius: 12,
-              border: '1px dashed #d1d5db'
-            }}>
-              <p style={{ fontSize: '1.1rem', color: '#6b7280' }}>
-                No events scheduled for this period
-              </p>
-            </div>
-          )}
-
-          {/* Summary Footer */}
-          {calendarData && (
-            <div style={{
-              marginTop: '2rem',
-              padding: '1rem',
-              background: '#f3f4f6',
-              borderRadius: 8,
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '0.9rem',
-              color: '#555'
-            }}>
-              <div>
-                Period: {formatDate(calendarData.start_date)} - {formatDate(calendarData.end_date)}
-              </div>
-              <div>
-                Total Events: {calendarData.total_events}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </main>
+      <div style={{ display: "grid", gap: "1rem" }}>
+        {events.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+            No campaign events scheduled. Start planning your street culture content calendar.
+          </div>
+        ) : (
+          events.map((event, i) => (
+            <EventCard key={i} event={event} />
+          ))
+        )}
+        
+        <DefaultEvents view={view} />
+      </div>
+    </div>
   );
-};
+}
 
-export default Calendar;
+function ViewDescription({ view }) {
+  const descriptions = {
+    "7-day": "Detailed posts with assets, timing, and targets for immediate execution",
+    "30-day": "Interactive drag-and-drop scheduling for strategic content planning",
+    "60-day": "Cultural moments, BFCM, holidays, and seasonal opportunities",
+    "90-day": "TikTok Shop launch, annual planning, and long-term vision"
+  };
+
+  return (
+    <div style={{ 
+      background: "#f9fafb", 
+      border: "1px solid #e5e7eb", 
+      borderRadius: "8px", 
+      padding: "1rem" 
+    }}>
+      <h2 style={{ margin: "0 0 0.5rem 0" }}>{view.charAt(0).toUpperCase() + view.slice(1)} View</h2>
+      <p style={{ margin: 0, color: "#6b7280" }}>{descriptions[view]}</p>
+    </div>
+  );
+}
+
+function EventCard({ event }) {
+  return (
+    <div style={{
+      background: "white",
+      border: "1px solid #e5e7eb",
+      borderRadius: "8px",
+      padding: "1rem"
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+        <div>
+          <h3 style={{ margin: "0 0 0.5rem 0" }}>{event.title}</h3>
+          <p style={{ margin: "0 0 0.5rem 0", color: "#6b7280" }}>{event.description}</p>
+          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+            <span>📅 {event.date}</span>
+            {event.category && <span style={{ marginLeft: "1rem" }}>🏷️ {event.category}</span>}
+          </div>
+        </div>
+        <span style={{
+          background: event.priority === "high" ? "#ef4444" : event.priority === "medium" ? "#f59e0b" : "#10b981",
+          color: "white",
+          padding: "0.25rem 0.75rem",
+          borderRadius: "9999px",
+          fontSize: "0.75rem",
+          textTransform: "capitalize"
+        }}>
+          {event.priority} Priority
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function DefaultEvents({ view }) {
+  const getDefaultEvents = () => {
+    switch (view) {
+      case "7-day":
+        return [
+          {
+            title: "Heritage Content Series",
+            description: "Create 3 posts showcasing Crooks & Castles legacy",
+            date: "Next 7 days",
+            category: "Content Creation",
+            priority: "high"
+          }
+        ];
+      case "30-day":
+        return [
+          {
+            title: "Monthly Content Calendar",
+            description: "Plan 15-20 posts for authentic street culture engagement",
+            date: "This month",
+            category: "Strategic Planning",
+            priority: "medium"
+          }
+        ];
+      case "60-day":
+        return [
+          {
+            title: "Black Friday Cyber Monday",
+            description: "BFCM campaign planning and cultural moment alignment",
+            date: "November 2024",
+            category: "Cultural Moment",
+            priority: "high"
+          }
+        ];
+      case "90-day":
+        return [
+          {
+            title: "TikTok Shop Launch",
+            description: "Prepare for TikTok Shop integration and social commerce",
+            date: "Q1 2025",
+            category: "Platform Expansion",
+            priority: "medium"
+          }
+        ];
+      default:
+        return [];
+    }
+  };
+
+  return (
+    <>
+      {getDefaultEvents().map((event, i) => (
+        <EventCard key={`default-${i}`} event={event} />
+      ))}
+    </>
+  );
+}
