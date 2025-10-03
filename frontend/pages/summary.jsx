@@ -1,62 +1,133 @@
-// frontend/pages/summary.js
 import { useEffect, useState } from "react";
 
 const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_BASE || "";
 
-function dollars(v) {
-  const n = Number(v || 0);
-  if (isNaN(n)) return "-";
-  return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-}
-function num(v) {
-  const n = Number(v || 0);
-  if (isNaN(n)) return "-";
-  return n.toLocaleString();
-}
-
 export default function Summary() {
-  const [data, setData] = useState(null);
-  const [err, setErr] = useState("");
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/summary/overview`);
+      if (res.ok) {
+        const data = await res.json();
+        setOverview(data);
+      }
+    } catch (err) {
+      console.error("Failed to load data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/summary/overview`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const j = await res.json();
-        setData(j);
-      } catch (e) { setErr(String(e.message || e)); }
-    })();
+    loadData();
   }, []);
 
-  const kpis = data?.kpis || data?.summary || {};
-  const notes = data?.notes || [];
+  if (loading) {
+    return (
+      <div style={{ padding: "2rem" }}>
+        <h1>Performance Summary</h1>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: 24 }}>
-      <h1 style={{ marginTop: 0 }}>Summary</h1>
-      {err && <div style={{ margin: "12px 0", padding: 12, borderRadius: 8, background: "#2a0f12", border: "1px solid #a33" }}>{err}</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        <Card label="Revenue" value={dollars(kpis.revenue)} />
-        <Card label="Orders" value={num(kpis.orders)} />
-        <Card label="AOV" value={dollars(kpis.aov)} />
-        <Card label="Sessions" value={num(kpis.sessions)} />
+    <div style={{ padding: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+        <h1>Performance Summary</h1>
+        <button onClick={loadData} style={{ padding: "8px 16px", cursor: "pointer" }}>
+          Refresh
+        </button>
       </div>
-      <div style={{ marginTop: 18, background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Highlights</h3>
-        <ul style={{ margin: 0, paddingLeft: 16, lineHeight: 1.5 }}>
-          {(notes.length ? notes : ["No highlights yet."]).map((n, i) => <li key={i}>{String(n)}</li>)}
-        </ul>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+        <MetricCard
+          title="Content Pieces"
+          value={overview?.content_pieces || 0}
+          subtitle="Published this period"
+        />
+        <MetricCard
+          title="Total Reach"
+          value={formatNumber(overview?.total_reach || 0)}
+          subtitle="Across all platforms"
+        />
+        <MetricCard
+          title="Engagement Rate"
+          value={`${overview?.engagement_rate || 0}%`}
+          subtitle="Average engagement"
+        />
+        <MetricCard
+          title="Cultural Score"
+          value={`${overview?.cultural_score || 0}/10`}
+          subtitle="Authenticity score"
+        />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "2rem" }}>
+        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "1.5rem" }}>
+          <h2>Street Culture Performance</h2>
+          <div style={{ marginBottom: "1rem" }}>
+            <h3>Reach × Awareness</h3>
+            <p>Impressions: {formatNumber(overview?.impressions || 0)}</p>
+            <p>Follower Growth: +{overview?.follower_growth || 0}</p>
+          </div>
+          <div style={{ marginBottom: "1rem" }}>
+            <h3>Engagement × Resonance</h3>
+            <p>Likes: {formatNumber(overview?.likes || 0)}</p>
+            <p>Comments: {formatNumber(overview?.comments || 0)}</p>
+          </div>
+          <div>
+            <h3>Conversion × Value</h3>
+            <p>Revenue per Post: ${overview?.revenue_per_post || 0}</p>
+            <p>ROI: {overview?.roi || 0}%</p>
+          </div>
+        </div>
+
+        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "1.5rem" }}>
+          <h2>Performance Highlights</h2>
+          {overview?.content_pieces === 0 ? (
+            <div>
+              <p>No content created yet - opportunity for growth and engagement</p>
+              <p>Focus on authentic street culture positioning for maximum resonance</p>
+            </div>
+          ) : (
+            <div>
+              <p>{overview.content_pieces} pieces published with {overview.engagement_rate}% engagement</p>
+              <p>Maintain authentic street culture positioning</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function Card({ label, value }) {
+function MetricCard({ title, value, subtitle }) {
   return (
-    <div style={{ background: "#121418", border: "1px solid #2a2d31", borderRadius: 12, padding: 16 }}>
-      <div style={{ fontSize: 13, color: "#98a4b3" }}>{label}</div>
-      <div style={{ fontSize: 24, marginTop: 6 }}>{value ?? "—"}</div>
+    <div style={{
+      background: "white",
+      border: "1px solid #e5e7eb",
+      borderRadius: "8px",
+      padding: "1.5rem"
+    }}>
+      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+        {title}
+      </div>
+      <div style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.25rem" }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+        {subtitle}
+      </div>
     </div>
   );
+}
+
+function formatNumber(num) {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
 }
