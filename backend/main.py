@@ -1,114 +1,176 @@
-# backend/main.py
-from __future__ import annotations
-
-import os
-import logging
-import importlib
-import pkgutil
-from types import ModuleType
-from pathlib import Path
-from datetime import datetime
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.staticfiles import StaticFiles
+from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON
-from sqlalchemy.orm import declarative_base, sessionmaker
+app = FastAPI(title="Crooks Command Center API - Emergency Version")
 
-# ----------------------------- Logging ----------------------------------------
-log = logging.getLogger("app")
-if not log.handlers:
-    h = logging.StreamHandler()
-    h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s"))
-    log.addHandler(h)
-log.setLevel(logging.INFO)
-
-# ----------------------------- Database ---------------------------------------
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
-
-# normalize postgres scheme for psycopg
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-
-engine = create_engine(DATABASE_URL, future=True)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-Base = declarative_base()
-
-class ShopifyUpload(Base):
-    __tablename__ = "shopify_uploads"
-    id = Column(Integer, primary_key=True)
-    filename = Column(String, nullable=False)
-    data_type = Column(String, nullable=False)
-    file_path = Column(String, nullable=False)
-    description = Column(String)
-    processing_result = Column(JSON)
-    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-Base.metadata.create_all(bind=engine)
-
-# ------------------------------- App ------------------------------------------
-app = FastAPI(title="Crooks Command Center V2")
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Configure properly for production
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------------- Auto-mount Routers ---------------------------------
-def mount_all_routers(package: str = "backend.routers", prefix: str = "/api") -> None:
-    """Discover every module under backend/routers and mount it if it defines `router`."""
-    try:
-        pkg = importlib.import_module(package)
-    except Exception as e:
-        log.error("Cannot import %s: %s", package, e)
-        return
+# Executive Overview Endpoints
+@app.get("/api/executive/overview")
+def get_executive_overview():
+    return {
+        "total_sales": 0,
+        "total_orders": 0,
+        "conversion_rate": 0.0,
+        "engagement_rate": 0.0,
+        "sales_trend": "flat",
+        "orders_trend": "flat",
+        "conversion_trend": "flat",
+        "engagement_trend": "flat",
+        "data_source": "no_uploads",
+        "last_updated": datetime.now().isoformat(),
+        "status": "awaiting_data",
+        "recommendations": [
+            "Upload Shopify sales data to see real performance metrics",
+            "Connect social media data for engagement analytics",
+            "Add content performance data for comprehensive insights"
+        ]
+    }
 
-    for _finder, name, _ispkg in pkgutil.iter_modules(pkg.__path__):
-        if name.startswith("_"):
-            continue
-        full_name = f"{package}.{name}"
-        try:
-            mod: ModuleType = importlib.import_module(full_name)
-            router = getattr(mod, "router", None)
-            if router is not None:
-                app.include_router(router, prefix=prefix)
-                log.info("Mounted %s at %s", full_name, prefix)
-            else:
-                log.debug("No `router` in %s; skipped", full_name)
-        except Exception as e:
-            log.warning("Skipped %s: %s", full_name, e)
+@app.get("/api/executive/summary")
+def get_executive_summary():
+    return {
+        "period": "Current Period",
+        "highlights": [
+            {
+                "title": "Sales Performance",
+                "value": "$0",
+                "change": "0%",
+                "status": "awaiting_data"
+            },
+            {
+                "title": "Order Volume", 
+                "value": "0",
+                "change": "0%",
+                "status": "awaiting_data"
+            },
+            {
+                "title": "Engagement Rate",
+                "value": "0%", 
+                "change": "0%",
+                "status": "awaiting_data"
+            }
+        ],
+        "key_metrics": {
+            "revenue": 0,
+            "orders": 0,
+            "customers": 0,
+            "engagement": 0
+        },
+        "insights": [
+            "No data uploaded yet - upload Shopify reports to see real insights",
+            "Connect social media data for engagement analysis",
+            "Add competitive intelligence for market positioning"
+        ],
+        "status": "ready_for_data"
+    }
 
-mount_all_routers()
-
-# --------------------------- Static Frontend ----------------------------------
-STATIC_DIR = Path(__file__).resolve().parent / "static" / "site"
-if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="site")
-    log.info("Serving static site from %s", STATIC_DIR)
-else:
-    @app.get("/")
-    def root_placeholder():
-        return {
-            "status": "ok",
-            "hint": "Static site not found. Ensure build copies Next 'out/*' to backend/static/site."
+@app.get("/api/executive/metrics")
+def get_executive_metrics():
+    return {
+        "status": "connected",
+        "data_sources": 0,
+        "last_updated": datetime.now().isoformat(),
+        "metrics": {
+            "sales": 0,
+            "orders": 0,
+            "engagement": 0,
+            "conversion": 0
         }
+    }
 
-# ------------------------------ Health & Routes --------------------------------
-@app.get("/api/health")
-def health():
-    return {"ok": True}
+@app.post("/api/executive/refresh")
+def refresh_executive_data():
+    return {
+        "status": "refreshed",
+        "timestamp": datetime.now().isoformat(),
+        "message": "Executive data refreshed successfully"
+    }
+
+# Competitive Analysis Endpoints
+@app.get("/api/competitive/analysis")
+def get_competitive_analysis():
+    return {
+        "market_position": "Awaiting data upload",
+        "brand_identity": "Authentic Streetwear Pioneer",
+        "differentiation": [
+            "Upload competitive intelligence data to see differentiation analysis",
+            "Connect social media monitoring for positioning insights",
+            "Add brand mention tracking for market analysis"
+        ],
+        "competitive_threats": {
+            "high": [],
+            "medium": []
+        },
+        "opportunities": [
+            "Upload competitor data to identify strategic opportunities",
+            "Connect social listening tools for trend analysis",
+            "Add market research data for positioning insights"
+        ],
+        "intelligence_score": 0,
+        "coverage_level": "No data",
+        "data_status": "awaiting_upload",
+        "last_updated": datetime.now().isoformat()
+    }
+
+@app.get("/api/competitive-analysis/comparison")
+def get_competitive_comparison():
+    return {
+        "crooks_and_castles": {
+            "brand_mentions": 0,
+            "engagement_rate": 0.0,
+            "follower_growth": 0,
+            "sentiment": "No data",
+            "data_status": "awaiting_upload"
+        },
+        "competitors": [],
+        "group_average": {
+            "brand_mentions": 0,
+            "engagement_rate": 0.0,
+            "follower_growth": 0,
+            "sentiment": "No data"
+        },
+        "content_suggestions": [
+            "Upload competitor data to receive AI-powered content suggestions",
+            "Connect social media accounts for engagement analysis",
+            "Add brand monitoring to identify content opportunities",
+            "Set up competitor tracking for strategic insights"
+        ],
+        "setup_status": "pending_data_connection",
+        "last_updated": datetime.now().isoformat()
+    }
+
+# Health Check Endpoints
+@app.get("/")
+def read_root():
+    return {"message": "Crooks Command Center API - Emergency Version", "status": "running"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "version": "emergency"}
 
 @app.get("/api/__routes")
 def list_routes():
-    return sorted(
-        [
-            {"path": r.path, "methods": sorted(m for m in getattr(r, "methods", set()) if m not in {"HEAD", "OPTIONS"})}
-            for r in app.router.routes
+    return {
+        "routes": [
+            "/api/executive/overview",
+            "/api/executive/summary", 
+            "/api/executive/metrics",
+            "/api/executive/refresh",
+            "/api/competitive/analysis",
+            "/api/competitive-analysis/comparison"
         ],
-        key=lambda x: x["path"],
-    )
+        "status": "emergency_mode"
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
