@@ -380,3 +380,4 @@ async def generate_ai_insights(analysis_data: Dict[str, Any]) -> List[str]:
     except Exception as e:
         print(f"[Intelligence] AI insight generation error: {e}")
         return []
+        
