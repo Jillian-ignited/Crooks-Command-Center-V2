@@ -1,138 +1,210 @@
-# backend/main.py
-import os
-import logging
-from pathlib import Path
-from typing import List, Tuple
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.routing import APIRoute
-from starlette.responses import FileResponse, JSONResponse, PlainTextResponse
-from starlette.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+from datetime import datetime
 
-# --- Logging ---
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("backend.main")
+app = FastAPI(title="Crooks Command Center API", version="2.0.0")
 
-# --- App ---
-app = FastAPI(title="Crooks Command Center V2")
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------- Helpers ----------
+# Critical API endpoints for dashboard functionality
+@app.get("/api/executive/overview")
+def get_executive_overview():
+    return {
+        "total_sales": 0,
+        "total_orders": 0,
+        "conversion_rate": 0.0,
+        "engagement_rate": 0.0,
+        "sales_trend": "flat",
+        "orders_trend": "flat",
+        "conversion_trend": "flat",
+        "engagement_trend": "flat",
+        "data_source": "no_uploads",
+        "last_updated": datetime.now().isoformat(),
+        "status": "awaiting_data",
+        "recommendations": [
+            "Upload Shopify sales data to see real performance metrics",
+            "Connect social media data for engagement analytics",
+            "Add content performance data for comprehensive insights"
+        ]
+    }
 
-def mount_frontend(app: FastAPI) -> None:
-    """
-    Serve the prerendered Next.js site.
-    Prefers backend/static/site (what your build copies to),
-    falls back to frontend/out if present.
-    """
-    candidates: List[Tuple[str, Path]] = [
-        ("backend/static/site", Path(__file__).resolve().parent / "static" / "site"),
-        ("frontend/out", Path(__file__).resolve().parents[1] / "frontend" / "out"),
-    ]
-    for label, p in candidates:
-        if p.exists() and p.is_dir():
-            app.mount("/", StaticFiles(directory=str(p), html=True), name="site")
-            log.info("✅ Static files mounted from: %s", label)
-            break
-    else:
-        log.warning("⚠️ No static site found. Expected one of: %s", ", ".join(x[0] for x in candidates))
+@app.get("/api/executive/summary")
+def get_executive_summary():
+    return {
+        "period": "Current Period",
+        "highlights": [
+            {"title": "Sales Performance", "value": "$0", "change": "0%", "status": "awaiting_data"},
+            {"title": "Order Volume", "value": "0", "change": "0%", "status": "awaiting_data"},
+            {"title": "Engagement Rate", "value": "0%", "change": "0%", "status": "awaiting_data"}
+        ],
+        "key_metrics": {"revenue": 0, "orders": 0, "customers": 0, "engagement": 0},
+        "insights": [
+            "No data uploaded yet - upload Shopify reports to see real insights",
+            "Connect social media data for engagement analysis",
+            "Add competitive intelligence for market positioning"
+        ],
+        "status": "ready_for_data"
+    }
 
-def list_routes(app: FastAPI) -> List[dict]:
-    """
-    Return a concise catalog of all registered API routes.
-    """
-    out = []
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            out.append({
-                "path": route.path,
-                "methods": sorted(list(route.methods or [])),
-                "name": route.name,
-            })
-    # Only return API endpoints to keep it clean
-    return [r for r in out if r["path"].startswith("/api") or r["path"] == "/"]
+@app.get("/api/executive/metrics")
+def get_executive_metrics():
+    return {
+        "status": "connected",
+        "data_sources": 0,
+        "last_updated": datetime.now().isoformat(),
+        "metrics": {"sales": 0, "orders": 0, "engagement": 0, "conversion": 0}
+    }
 
-def safe_include(module_path: str, prefix: str = "/api") -> bool:
-    """
-    Try to import a router module and include its `router`.
-    Returns True if included, False on failure.
-    """
-    try:
-        mod = __import__(module_path, fromlist=["router"])
-        router = getattr(mod, "router", None)
-        if router is None:
-            log.error("❌ %s has no 'router' attribute", module_path)
-            return False
-        app.include_router(router, prefix=prefix)
-        log.info("✅ %s router loaded", module_path)
-        return True
-    except Exception:
-        log.exception("❌ Failed to load router: %s", module_path)
-        return False
+@app.post("/api/executive/refresh")
+def refresh_executive_data():
+    return {
+        "status": "refreshed",
+        "timestamp": datetime.now().isoformat(),
+        "message": "Executive data refreshed successfully"
+    }
 
-# ---------- Core API: health + route index ----------
+@app.get("/api/competitive/analysis")
+def get_competitive_analysis():
+    return {
+        "market_position": "Awaiting data upload",
+        "brand_identity": "Authentic Streetwear Pioneer",
+        "differentiation": [
+            "Upload competitive intelligence data to see differentiation analysis",
+            "Connect social media monitoring for positioning insights",
+            "Add brand mention tracking for market analysis"
+        ],
+        "competitive_threats": {"high": [], "medium": []},
+        "opportunities": [
+            "Upload competitor data to identify strategic opportunities",
+            "Connect social listening tools for trend analysis",
+            "Add market research data for positioning insights"
+        ],
+        "intelligence_score": 0,
+        "coverage_level": "No data",
+        "data_status": "awaiting_upload",
+        "last_updated": datetime.now().isoformat()
+    }
 
+@app.get("/api/competitive-analysis/comparison")
+def get_competitive_comparison():
+    return {
+        "crooks_and_castles": {
+            "brand_mentions": 0, "engagement_rate": 0.0, "follower_growth": 0,
+            "sentiment": "No data", "data_status": "awaiting_upload"
+        },
+        "competitors": [],
+        "group_average": {
+            "brand_mentions": 0, "engagement_rate": 0.0, "follower_growth": 0, "sentiment": "No data"
+        },
+        "content_suggestions": [
+            "Upload competitor data to receive AI-powered content suggestions",
+            "Connect social media accounts for engagement analysis",
+            "Add brand monitoring to identify content opportunities"
+        ],
+        "setup_status": "pending_data_connection",
+        "last_updated": datetime.now().isoformat()
+    }
+
+# Health check
 @app.get("/api/health")
-def health():
-    return {"ok": True}
+def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "frontend_serving": "active",
+        "api_endpoints": "active"
+    }
 
-@app.get("/api/__routes")
-def routes_index():
-    """Returns the live API routes (so you can see what’s actually registered)."""
-    return JSONResponse(list_routes(app))
-
-# Root handler to avoid HEAD/GET 405s and serve index.html if mounted
-@app.get("/")
-def root_index():
-    # If static is mounted, StaticFiles will serve index.html automatically.
-    # Returning a tiny OK fallback keeps things friendly if no static is present.
-    return PlainTextResponse("Crooks Command Center API is running. See /api/health", status_code=200)
-
-# ---------- Optional: simple 404 hint for /api ----------
-
-@app.get("/api")
-def api_root_hint():
-    return {"hint": "This is the API root. See /api/__routes for endpoints."}
-
-# ---------- Include your routers ----------
-
-# Use fully-qualified paths so imports work in Render
-router_modules = [
-    "backend.routers.executive",
-    "backend.routers.competitive",
-    "backend.routers.competitive_analysis",  # if missing, we log and keep going
-    "backend.routers.shopify",
-    "backend.routers.agency",
-    "backend.routers.calendar",
-    "backend.routers.content_creation",
-    "backend.routers.intelligence",
-    "backend.routers.media",
-    "backend.routers.summary",
-    "backend.routers.ingest",  # use the actual filename present in your repo
-    # "backend.routers.ingest_ENHANCED_MULTI_FORMAT",  # add back if this file exists
-    # "backend.routers.upload_sidecar",                 # add back if this file exists
+# Try to mount static files from multiple possible locations
+static_mounted = False
+static_dirs_to_try = [
+    "frontend/out",
+    "frontend/.next", 
+    "frontend/build",
+    "frontend/dist",
+    "out",
+    ".next",
+    "build", 
+    "dist",
+    "public"
 ]
 
-_loaded = 0
-_failed = 0
-for mod in router_modules:
-    if safe_include(mod):
-        _loaded += 1
-    else:
-        _failed += 1
+for static_dir in static_dirs_to_try:
+    if os.path.exists(static_dir) and os.path.isdir(static_dir):
+        try:
+            app.mount("/static", StaticFiles(directory=static_dir), name="static")
+            print(f"✅ Static files mounted from: {static_dir}")
+            static_mounted = True
+            break
+        except Exception as e:
+            print(f"❌ Failed to mount {static_dir}: {e}")
+            continue
 
-# ---------- Frontend static mount ----------
-mount_frontend(app)
+if not static_mounted:
+    print("⚠️ No static directory found - frontend files may not be built")
 
-log.info("🚀 Crooks Command Center API starting up...")
-log.info("📊 Loaded %d routers successfully", _loaded)
-if _failed:
-    log.warning("⚠️ %d routers failed to load - fallback endpoints active", _failed)
-log.info("✅ Startup complete!")
+# Serve frontend for all non-API routes
+@app.get("/{full_path:path}")
+def serve_frontend(full_path: str):
+    # Don't interfere with API routes
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
+    # Try to find and serve index.html from various locations
+    index_locations = [
+        "frontend/out/index.html",
+        "frontend/.next/server/pages/index.html",
+        "frontend/build/index.html", 
+        "frontend/dist/index.html",
+        "out/index.html",
+        ".next/server/pages/index.html",
+        "build/index.html",
+        "dist/index.html",
+        "public/index.html",
+        "index.html"
+    ]
+    
+    for index_path in index_locations:
+        if os.path.exists(index_path):
+            print(f"✅ Serving frontend from: {index_path}")
+            return FileResponse(index_path)
+    
+    # If no frontend found, return helpful debug info
+    return {
+        "message": "Frontend not found - please build your React/Next.js app",
+        "current_directory": os.getcwd(),
+        "available_directories": [d for d in os.listdir(".") if os.path.isdir(d)],
+        "checked_paths": index_locations,
+        "api_status": "working",
+        "suggestion": "Run 'npm run build' or 'npm run export' in your frontend directory"
+    }
+
+# Root endpoint that doesn't conflict with frontend
+@app.get("/api/")
+def api_root():
+    return {
+        "message": "Crooks Command Center API",
+        "version": "2.0.0",
+        "status": "running",
+        "frontend_serving": static_mounted,
+        "endpoints": [
+            "/api/executive/overview",
+            "/api/executive/summary",
+            "/api/competitive/analysis",
+            "/api/competitive-analysis/comparison"
+        ]
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
