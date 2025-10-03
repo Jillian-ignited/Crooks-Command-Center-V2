@@ -1,50 +1,56 @@
-// frontend/pages/agency.jsx
 import { useEffect, useState } from "react";
 
-const API = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_BASE || "") : "";
+const API_BASE = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_BASE || "";
 
 export default function Agency() {
   const [dashboard, setDashboard] = useState(null);
-  const [deliverables, setDeliverables] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const loadData = async () => {
-    if (typeof window === 'undefined') return;
-    
     setLoading(true);
-    setError(null);
-
     try {
-      const [dashRes, delivRes] = await Promise.all([
-        fetch(`${API}/api/agency/dashboard`),
-        fetch(`${API}/api/agency/deliverables`)
-      ]);
-      
-      if (dashRes.ok) {
-        const dashData = await dashRes.json();
-        setDashboard(dashData);
-      }
-      
-      if (delivRes.ok) {
-        const delivData = await delivRes.json();
-        setDeliverables(delivData.deliverables || []);
+      const res = await fetch(`${API_BASE}/api/agency/dashboard`);
+      if (res.ok) {
+        const data = await res.json();
+        setDashboard(data);
       }
     } catch (err) {
-      console.error('Failed to load agency data:', err);
-      setError(err.message);
+      console.error("Failed to load data:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      loadData();
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${API_BASE}/api/agency/upload`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (response.ok) {
+        await loadData();
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploading(false);
     }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  if (loading && typeof window !== 'undefined') {
+  if (loading) {
     return (
       <div style={{ padding: "2rem" }}>
         <h1>Agency Dashboard</h1>
@@ -54,50 +60,69 @@ export default function Agency() {
   }
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1>Agency Dashboard</h1>
+    <div style={{ padding: "2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+        <h1>Agency Partnership Dashboard</h1>
+        <button onClick={loadData} style={{ padding: "8px 16px", cursor: "pointer" }}>
+          Refresh
+        </button>
+      </div>
 
-      {error && (
-        <div style={{ background: '#fee', border: '1px solid #f99', padding: '1rem', borderRadius: 8, marginBottom: '1rem' }}>
-          Error: {error}
+      <div style={{ marginBottom: "2rem" }}>
+        <h2>Upload Deliverables</h2>
+        <div style={{ border: "2px dashed #ccc", padding: "2rem", textAlign: "center" }}>
+          <input
+            type="file"
+            onChange={handleFileUpload}
+            accept=".csv,.xlsx,.xls,.txt"
+            disabled={uploading}
+          />
+          {uploading && <p>Uploading...</p>}
         </div>
-      )}
+      </div>
 
-      {dashboard && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-          <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
-            <div style={{ fontSize: "0.85rem", color: "#888" }}>Active Projects</div>
-            <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{dashboard.active_projects || 0}</div>
-          </div>
-          
-          <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
-            <div style={{ fontSize: "0.85rem", color: "#888" }}>Total Deliverables</div>
-            <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{dashboard.total_deliverables || 0}</div>
-          </div>
-          
-          <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
-            <div style={{ fontSize: "0.85rem", color: "#888" }}>Completion Rate</div>
-            <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{dashboard.completion_rate || 0}%</div>
-          </div>
-        </div>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+        <MetricCard
+          title="Total Deliverables"
+          value={dashboard?.total_deliverables || 0}
+          subtitle="Active projects"
+        />
+        <MetricCard
+          title="Completion Rate"
+          value={`${dashboard?.completion_rate || 0}%`}
+          subtitle="On-time delivery"
+        />
+        <MetricCard
+          title="Budget Utilization"
+          value={`${dashboard?.budget_utilization || 0}%`}
+          subtitle="Current phase"
+        />
+        <MetricCard
+          title="Days to Milestone"
+          value={dashboard?.days_to_milestone || 0}
+          subtitle="Next deadline"
+        />
+      </div>
+    </div>
+  );
+}
 
-      <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
-        <h2>Recent Deliverables</h2>
-        {deliverables.length > 0 ? (
-          <div style={{ display: "grid", gap: "0.75rem", marginTop: "1rem" }}>
-            {deliverables.map((item, i) => (
-              <div key={i} style={{ padding: "0.75rem", background: "#2a2a2a", borderRadius: "6px" }}>
-                <div style={{ fontWeight: "bold" }}>{item.title || item.name}</div>
-                <div style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.25rem" }}>
-                  Status: {item.status} | Due: {item.due_date || 'TBD'}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: "#666", marginTop: "1rem" }}>No deliverables found</p>
-        )}
+function MetricCard({ title, value, subtitle }) {
+  return (
+    <div style={{
+      background: "white",
+      border: "1px solid #e5e7eb",
+      borderRadius: "8px",
+      padding: "1.5rem"
+    }}>
+      <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+        {title}
+      </div>
+      <div style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.25rem" }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+        {subtitle}
       </div>
     </div>
   );
