@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "copy:static": "rm -rf ../backend/static/site && mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
+    "copy:static": "mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
     "build:static": "npm run build && npm run copy:static",
     "dev": "next dev -p 3000",
     "start": "next start -p 3000"
