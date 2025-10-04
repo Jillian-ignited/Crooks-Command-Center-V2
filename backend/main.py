@@ -128,6 +128,8 @@ def health_check():
 # Try to mount static files from multiple possible locations
 static_mounted = False
 static_dirs_to_try = [
+    "static/site",
+    "backend/static/site",
     "frontend/out",
     "frontend/.next", 
     "frontend/build",
@@ -142,7 +144,8 @@ static_dirs_to_try = [
 for static_dir in static_dirs_to_try:
     if os.path.exists(static_dir) and os.path.isdir(static_dir):
         try:
-            app.mount("/static", StaticFiles(directory=static_dir), name="static")
+            # Mount the static files at root to serve Next.js assets correctly
+            app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
             print(f"✅ Static files mounted from: {static_dir}")
             static_mounted = True
             break
@@ -162,6 +165,8 @@ def serve_frontend(full_path: str):
     
     # Try to find and serve index.html from various locations
     index_locations = [
+        "static/site/index.html",
+        "backend/static/site/index.html",
         "frontend/out/index.html",
         "frontend/.next/server/pages/index.html",
         "frontend/build/index.html", 
