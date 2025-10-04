@@ -5,6 +5,9 @@ from fastapi.responses import FileResponse
 import os
 from datetime import datetime
 
+# Import routers
+from routers import agency
+
 app = FastAPI(title="Crooks Command Center API", version="2.0.0")
 
 # CORS middleware
@@ -15,6 +18,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(agency.router, prefix="/api/agency", tags=["agency"])
 
 # Critical API endpoints for dashboard functionality
 @app.get("/api/executive/overview")
@@ -206,7 +212,9 @@ def api_root():
             "/api/executive/overview",
             "/api/executive/summary",
             "/api/competitive/analysis",
-            "/api/competitive-analysis/comparison"
+            "/api/competitive-analysis/comparison",
+            "/api/agency/dashboard",
+            "/api/agency/projects"
         ]
     }
 
