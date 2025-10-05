@@ -10,6 +10,31 @@ import datetime
 
 router = APIRouter()
 
+@router.get("/status")
+async def get_ingest_status() -> Dict[str, Any]:
+    """Get general ingest system status"""
+    
+    return {
+        "status": "ready",
+        "system": "operational",
+        "supported_formats": ["CSV", "Excel", "JSON"],
+        "max_file_size": "100MB",
+        "active_processes": 0,
+        "total_uploads_today": 0,
+        "last_updated": datetime.datetime.now().isoformat(),
+        "data_sources": {
+            "connected": ["Local Upload", "Manual Entry"],
+            "available": ["Shopify API", "Social Media APIs", "Google Analytics", "Email Marketing"]
+        },
+        "recent_uploads": [],
+        "processing_queue": {
+            "pending": 0,
+            "processing": 0,
+            "completed": 0,
+            "failed": 0
+        }
+    }
+
 @router.post("/upload")
 async def upload_data(file: UploadFile = File(...)):
     """Upload a data file for ingestion"""
@@ -28,7 +53,16 @@ async def upload_data(file: UploadFile = File(...)):
         # Here you would typically save the raw file and/or process it
         # For now, we'll just return a success message
         
-        return {"message": "File uploaded successfully", "filename": file.filename, "rows": len(df)}
+        return {
+            "message": "File uploaded successfully", 
+            "filename": file.filename, 
+            "rows": len(df),
+            "job_id": f"job_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "mode": "csv" if file.filename.endswith(".csv") else "excel",
+            "size": len(contents),
+            "source": "manual_upload",
+            "timestamp": datetime.datetime.now().isoformat()
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload and process file: {e}")
 
@@ -39,7 +73,12 @@ async def process_data(data: Dict[str, Any]) -> Dict[str, Any]:
     # This endpoint would trigger actual data processing tasks
     # For now, it's a placeholder
     
-    return {"message": "Data processing initiated", "data_received": data, "timestamp": datetime.datetime.now().isoformat()}
+    return {
+        "message": "Data processing initiated", 
+        "data_received": data, 
+        "process_id": f"proc_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        "timestamp": datetime.datetime.now().isoformat()
+    }
 
 @router.get("/status/{process_id}")
 async def get_process_status(process_id: str) -> Dict[str, Any]:
@@ -48,7 +87,13 @@ async def get_process_status(process_id: str) -> Dict[str, Any]:
     # This would query a task queue or database for status
     # For now, return a mock status
     
-    return {"process_id": process_id, "status": "completed", "progress": 100, "timestamp": datetime.datetime.now().isoformat()}
+    return {
+        "process_id": process_id, 
+        "status": "completed", 
+        "progress": 100, 
+        "message": "Processing completed successfully",
+        "timestamp": datetime.datetime.now().isoformat()
+    }
 
 @router.get("/results/{process_id}")
 async def get_process_results(process_id: str) -> Dict[str, Any]:
@@ -57,5 +102,14 @@ async def get_process_results(process_id: str) -> Dict[str, Any]:
     # This would retrieve results from storage
     # For now, return mock results
     
-    return {"process_id": process_id, "results": {"total_records": 1000, "new_records": 500}, "timestamp": datetime.datetime.now().isoformat()}
-
+    return {
+        "process_id": process_id, 
+        "results": {
+            "total_records": 1000, 
+            "new_records": 500,
+            "processed_records": 1000,
+            "errors": 0,
+            "warnings": 0
+        }, 
+        "timestamp": datetime.datetime.now().isoformat()
+    }
