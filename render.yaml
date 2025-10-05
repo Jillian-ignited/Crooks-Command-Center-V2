@@ -4,21 +4,14 @@ services:
     env: python
     plan: starter
     autoDeploy: true
-    buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-      # Add psycopg driver if not already in requirements.txt
-      pip install psycopg
-    startCommand: |
-      cd backend && \
-      (python migrate_shopify_uploads.py || echo "Migration skipped") && \
-      uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: crooks-command-center-db   # 👈 replace with your actual Render DB name
+          name: crooks-command-center-db
           property: connectionString
 
 databases:
-  - name: crooks-command-center-db         # 👈 match the name above (delete if DB already exists in Render)
+  - name: crooks-command-center-db
     plan: starter
