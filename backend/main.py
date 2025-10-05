@@ -5,12 +5,18 @@ from fastapi.responses import FileResponse
 import os
 from datetime import datetime
 
-# Import routers - using absolute imports since dependencies are available
+# Import ALL routers
 from routers.agency import router as agency_router
+from routers.calendar import router as calendar_router
+from routers.competitive import router as competitive_router
+from routers.competitive_analysis import router as competitive_analysis_router
+from routers.content_creation import router as content_creation_router
+from routers.executive import router as executive_router
+from routers.ingest import router as ingest_router
 from routers.intelligence import router as intelligence_router
+from routers.media import router as media_router
 from routers.shopify import router as shopify_router
 from routers.summary import router as summary_router
-from routers.competitive_analysis import router as competitive_analysis_router
 
 app = FastAPI(title="Crooks Command Center API", version="2.0.0")
 
@@ -23,111 +29,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# Include ALL routers
 app.include_router(agency_router, prefix="/api/agency", tags=["agency"])
+app.include_router(calendar_router, prefix="/api/calendar", tags=["calendar"])
+app.include_router(competitive_router, prefix="/api/competitive", tags=["competitive"])
+app.include_router(competitive_analysis_router, prefix="/api/competitive-analysis", tags=["competitive-analysis"])
+app.include_router(content_creation_router, prefix="/api/content", tags=["content"])
+app.include_router(executive_router, prefix="/api/executive", tags=["executive"])
+app.include_router(ingest_router, prefix="/api/ingest", tags=["ingest"])
 app.include_router(intelligence_router, prefix="/api/intelligence", tags=["intelligence"])
+app.include_router(media_router, prefix="/api/media", tags=["media"])
 app.include_router(shopify_router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(summary_router, prefix="/api/summary", tags=["summary"])
-app.include_router(competitive_analysis_router, prefix="/api/competitive-analysis", tags=["competitive-analysis"])
-
-# Critical API endpoints for dashboard functionality
-@app.get("/api/executive/overview")
-def get_executive_overview():
-    return {
-        "total_sales": 0,
-        "total_orders": 0,
-        "conversion_rate": 0.0,
-        "engagement_rate": 0.0,
-        "sales_trend": "flat",
-        "orders_trend": "flat",
-        "conversion_trend": "flat",
-        "engagement_trend": "flat",
-        "data_source": "no_uploads",
-        "last_updated": datetime.now().isoformat(),
-        "status": "awaiting_data",
-        "recommendations": [
-            "Upload Shopify sales data to see real performance metrics",
-            "Connect social media data for engagement analytics",
-            "Add content performance data for comprehensive insights"
-        ]
-    }
-
-@app.get("/api/executive/summary")
-def get_executive_summary():
-    return {
-        "period": "Current Period",
-        "highlights": [
-            {"title": "Sales Performance", "value": "$0", "change": "0%", "status": "awaiting_data"},
-            {"title": "Order Volume", "value": "0", "change": "0%", "status": "awaiting_data"},
-            {"title": "Engagement Rate", "value": "0%", "change": "0%", "status": "awaiting_data"}
-        ],
-        "key_metrics": {"revenue": 0, "orders": 0, "customers": 0, "engagement": 0},
-        "insights": [
-            "No data uploaded yet - upload Shopify reports to see real insights",
-            "Connect social media data for engagement analysis",
-            "Add competitive intelligence for market positioning"
-        ],
-        "status": "ready_for_data"
-    }
-
-@app.get("/api/executive/metrics")
-def get_executive_metrics():
-    return {
-        "status": "connected",
-        "data_sources": 0,
-        "last_updated": datetime.now().isoformat(),
-        "metrics": {"sales": 0, "orders": 0, "engagement": 0, "conversion": 0}
-    }
-
-@app.post("/api/executive/refresh")
-def refresh_executive_data():
-    return {
-        "status": "refreshed",
-        "timestamp": datetime.now().isoformat(),
-        "message": "Executive data refreshed successfully"
-    }
-
-@app.get("/api/competitive/analysis")
-def get_competitive_analysis():
-    return {
-        "market_position": "Awaiting data upload",
-        "brand_identity": "Authentic Streetwear Pioneer",
-        "differentiation": [
-            "Upload competitive intelligence data to see differentiation analysis",
-            "Connect social media monitoring for positioning insights",
-            "Add brand mention tracking for market analysis"
-        ],
-        "competitive_threats": {"high": [], "medium": []},
-        "opportunities": [
-            "Upload competitor data to identify strategic opportunities",
-            "Connect social listening tools for trend analysis",
-            "Add market research data for positioning insights"
-        ],
-        "intelligence_score": 0,
-        "coverage_level": "No data",
-        "data_status": "awaiting_upload",
-        "last_updated": datetime.now().isoformat()
-    }
-
-@app.get("/api/competitive-analysis/comparison")
-def get_competitive_comparison():
-    return {
-        "crooks_and_castles": {
-            "brand_mentions": 0, "engagement_rate": 0.0, "follower_growth": 0,
-            "sentiment": "No data", "data_status": "awaiting_upload"
-        },
-        "competitors": [],
-        "group_average": {
-            "brand_mentions": 0, "engagement_rate": 0.0, "follower_growth": 0, "sentiment": "No data"
-        },
-        "content_suggestions": [
-            "Upload competitor data to receive AI-powered content suggestions",
-            "Connect social media accounts for engagement analysis",
-            "Add brand monitoring to identify content opportunities"
-        ],
-        "setup_status": "pending_data_connection",
-        "last_updated": datetime.now().isoformat()
-    }
 
 # Health check
 @app.get("/api/health")
@@ -136,7 +49,12 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "frontend_serving": "active",
-        "api_endpoints": "active"
+        "api_endpoints": "active",
+        "routers_loaded": [
+            "agency", "calendar", "competitive", "competitive_analysis", 
+            "content_creation", "executive", "ingest", "intelligence", 
+            "media", "shopify", "summary"
+        ]
     }
 
 # Try to mount static files from multiple possible locations
@@ -216,20 +134,55 @@ def api_root():
         "version": "2.0.0",
         "status": "running",
         "frontend_serving": static_mounted,
+        "routers_loaded": [
+            "agency", "calendar", "competitive", "competitive_analysis", 
+            "content_creation", "executive", "ingest", "intelligence", 
+            "media", "shopify", "summary"
+        ],
         "endpoints": [
+            # Agency endpoints
             "/api/agency/dashboard",
             "/api/agency/projects",
+            
+            # Calendar endpoints  
+            "/api/calendar/events",
+            
+            # Competitive endpoints
+            "/api/competitive/analysis",
+            
+            # Competitive Analysis endpoints
+            "/api/competitive-analysis/comparison",
+            
+            # Content Creation endpoints
+            "/api/content/briefs",
+            "/api/content/create",
+            
+            # Executive endpoints
+            "/api/executive/overview",
+            "/api/executive/summary", 
+            "/api/executive/metrics",
+            
+            # Ingest endpoints
+            "/api/ingest/upload",
+            
+            # Intelligence endpoints
             "/api/intelligence/analysis",
             "/api/intelligence/reports",
+            "/api/intelligence/upload",
+            
+            # Media endpoints
+            "/api/media/library",
+            "/api/media/upload",
+            
+            # Shopify endpoints
             "/api/shopify/dashboard",
             "/api/shopify/orders",
             "/api/shopify/analytics",
+            "/api/shopify/upload",
+            
+            # Summary endpoints
             "/api/summary/overview",
-            "/api/summary/reports",
-            "/api/competitive-analysis/comparison",
-            "/api/executive/overview",
-            "/api/executive/summary",
-            "/api/executive/metrics"
+            "/api/summary/reports"
         ]
     }
 
