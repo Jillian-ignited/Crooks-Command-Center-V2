@@ -5,20 +5,20 @@ from fastapi.responses import FileResponse
 import os
 from datetime import datetime
 
-# Import all available routers
-from routers import agency
-from routers import calendar
-from routers import competitive
-from routers import content_creation
-from routers import executive
-from routers import ingest
-from routers import intelligence
-from routers import media
-from routers import shopify
-from routers import summary
+# Import all available routers with relative imports
+from .routers import agency
+from .routers import calendar
+from .routers import competitive
+from .routers import content_creation
+from .routers import executive
+from .routers import ingest
+from .routers import intelligence
+from .routers import media
+from .routers import shopify
+from .routers import summary
 
 # Import database initialization function
-from database import init_db
+from .database import init_db
 
 app = FastAPI(title="Crooks Command Center API", version="2.0.0")
 
@@ -38,7 +38,6 @@ app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intel
 app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
-
 
 # CORS middleware
 app.add_middleware(
@@ -93,7 +92,7 @@ if not static_mounted:
 # Serve frontend for all non-API routes
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):
-    # Don\u0027t interfere with API routes
+    # Don't interfere with API routes
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="API endpoint not found")
     
@@ -125,10 +124,10 @@ def serve_frontend(full_path: str):
         "available_directories": [d for d in os.listdir(".") if os.path.isdir(d)],
         "checked_paths": index_locations,
         "api_status": "working",
-        "suggestion": "Run \u0027npm run build\u0027 or \u0027npm run export\u0027 in your frontend directory"
+        "suggestion": "Run 'npm run build' or 'npm run export' in your frontend directory"
     }
 
-# Root endpoint that doesn\u0027t conflict with frontend
+# Root endpoint that doesn't conflict with frontend
 @app.get("/api/")
 def api_root():
     return {
@@ -147,5 +146,4 @@ def api_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
 
