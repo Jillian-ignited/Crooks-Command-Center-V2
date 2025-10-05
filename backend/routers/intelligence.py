@@ -11,7 +11,7 @@ import tempfile
 import traceback
 
 # Import centralized database components
-from database import engine, DB_AVAILABLE
+from ..database import engine, DB_AVAILABLE
 
 # Initialize router
 router = APIRouter()
