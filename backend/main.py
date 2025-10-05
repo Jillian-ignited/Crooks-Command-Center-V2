@@ -269,3 +269,4 @@ async def serve_spa_fallback(full_path: str):
         return FileResponse(os.path.join(static_directory, "index.html"))
     
     raise HTTPException(status_code=404, detail="Page not found")
+
