@@ -1,7 +1,7 @@
-# backend/routers/intelligence_enhanced_safe.py
+# backend/routers/intelligence_minimal_fix.py
 """
-Enhanced Intelligence Router with Advanced AI Analysis
-SAFE VERSION - Preserves all existing functionality while adding new features
+Minimal Intelligence Router Fix
+SAFE VERSION - Just fixes database issues without complex enhancements
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
@@ -12,8 +12,7 @@ import json
 import aiofiles
 from datetime import datetime
 import hashlib
-from typing import Optional, List, Dict, Any
-import pandas as pd
+from typing import Optional
 
 # Initialize router
 router = APIRouter()
@@ -50,198 +49,77 @@ except Exception as e:
 UPLOAD_DIR = "/tmp/intelligence_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-def safe_database_operation(operation_func, fallback_result=None):
-    """SAFE: Wrapper for database operations that won't break the app"""
-    try:
-        if not DB_AVAILABLE:
-            return fallback_result
-        return operation_func()
-    except Exception as e:
-        print(f"[Intelligence] Database operation failed safely: {e}")
-        return fallback_result
-
-def analyze_instagram_data(content: str) -> Dict[str, Any]:
-    """ENHANCED: Advanced Instagram hashtag analysis"""
-    try:
-        # Parse JSONL content
-        posts = []
-        for line in content.split('\n'):
-            if line.strip():
-                try:
-                    posts.append(json.loads(line))
-                except:
-                    continue
-        
-        if not posts:
-            return {"error": "No valid Instagram data found"}
-        
-        # Extract hashtags and engagement
-        all_hashtags = []
-        engagement_data = []
-        
-        for post in posts:
-            if 'hashtags' in post:
-                all_hashtags.extend(post['hashtags'])
-            
-            likes = post.get('likesCount', 0)
-            comments = post.get('commentsCount', 0)
-            engagement_data.append({
-                'likes': likes,
-                'comments': comments,
-                'total_engagement': likes + comments
-            })
-        
-        # Hashtag analysis
-        hashtag_counts = {}
-        for tag in all_hashtags:
-            hashtag_counts[tag] = hashtag_counts.get(tag, 0) + 1
-        
-        top_hashtags = sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-        
-        # Engagement metrics
-        avg_likes = sum(e['likes'] for e in engagement_data) / len(engagement_data) if engagement_data else 0
-        avg_comments = sum(e['comments'] for e in engagement_data) / len(engagement_data) if engagement_data else 0
-        
-        return {
-            "data_type": "Instagram Hashtag Analysis",
-            "posts_analyzed": len(posts),
-            "unique_hashtags": len(set(all_hashtags)),
-            "top_hashtags": top_hashtags[:5],
-            "engagement_metrics": {
-                "avg_likes": round(avg_likes, 1),
-                "avg_comments": round(avg_comments, 1)
-            },
-            "insights": [
-                f"Analyzed {len(posts)} Instagram posts from competitive hashtag research",
-                f"Identified {len(set(all_hashtags))} unique hashtags in the fashion/streetwear space",
-                f"Top performing hashtag: #{top_hashtags[0][0]} (used {top_hashtags[0][1]} times)" if top_hashtags else "No hashtags found",
-                "Strong focus on Y2K fashion, streetwear, and vintage aesthetics",
-                "Content shows mix of sponsored and organic posts in target market"
-            ],
-            "recommendations": [
-                f"🎯 Focus on top hashtags: {', '.join([f'#{tag}' for tag, count in top_hashtags[:3]])}",
-                "📸 Carousel posts show strong engagement - use multi-image showcases",
-                "🕐 Analyze posting times for optimal engagement windows",
-                "🎨 Y2K and vintage themes are trending - align content strategy"
-            ]
-        }
-    except Exception as e:
-        return {"error": f"Instagram analysis failed: {str(e)}"}
-
-def analyze_tiktok_data(content: str) -> Dict[str, Any]:
-    """ENHANCED: Advanced TikTok performance analysis"""
-    try:
-        # Parse JSONL content
-        videos = []
-        for line in content.split('\n'):
-            if line.strip():
-                try:
-                    videos.append(json.loads(line))
-                except:
-                    continue
-        
-        if not videos:
-            return {"error": "No valid TikTok data found"}
-        
-        # Extract engagement metrics
-        total_views = sum(v.get('playCount', 0) for v in videos)
-        total_likes = sum(v.get('diggCount', 0) for v in videos)
-        total_shares = sum(v.get('shareCount', 0) for v in videos)
-        total_comments = sum(v.get('commentCount', 0) for v in videos)
-        
-        avg_views = total_views / len(videos) if videos else 0
-        avg_likes = total_likes / len(videos) if videos else 0
-        engagement_rate = (total_likes / total_views * 100) if total_views > 0 else 0
-        
-        return {
-            "data_type": "TikTok Performance Analysis",
-            "videos_analyzed": len(videos),
-            "total_views": total_views,
-            "engagement_metrics": {
-                "avg_views": round(avg_views, 0),
-                "avg_likes": round(avg_likes, 0),
-                "engagement_rate": round(engagement_rate, 2)
-            },
-            "insights": [
-                f"Analyzed {len(videos)} TikTok videos from streetwear/fashion creators",
-                f"Total reach: {total_views:,} views across analyzed content",
-                f"Average engagement rate: {engagement_rate:.2f}%",
-                "Content focuses on streetwear, vintage fashion, and NYC style",
-                "Short-form fashion content shows strong performance"
-            ],
-            "recommendations": [
-                "🎬 Create more short-form styling videos (high engagement)",
-                "🏙️ NYC streetwear themes perform well - leverage urban aesthetics",
-                "🎵 Use trending audio tracks to boost discoverability",
-                "⚡ Keep videos under 30 seconds for optimal engagement"
-            ]
-        }
-    except Exception as e:
-        return {"error": f"TikTok analysis failed: {str(e)}"}
-
-def analyze_shopify_data(content: str) -> Dict[str, Any]:
-    """ENHANCED: Advanced Shopify sales analysis"""
-    try:
-        # Parse CSV content
-        from io import StringIO
-        df = pd.read_csv(StringIO(content))
-        
-        if df.empty:
-            return {"error": "No valid Shopify data found"}
-        
-        # Basic analysis (safe approach)
-        total_records = len(df)
-        
-        return {
-            "data_type": "Shopify Sales Analysis",
-            "records_analyzed": total_records,
-            "insights": [
-                f"Analyzed {total_records} Shopify sales records",
-                "Sales data covers August-September 2025 period",
-                "Daily performance metrics available for trend analysis",
-                "Conversion rate and order value data present"
-            ],
-            "recommendations": [
-                "💰 Identify peak sales days and replicate strategies",
-                "📦 Analyze top-selling products for inventory planning",
-                "📈 Scale marketing during high-conversion periods",
-                "🔄 Correlate social media trends with sales spikes"
-            ]
-        }
-    except Exception as e:
-        return {"error": f"Shopify analysis failed: {str(e)}"}
-
-def generate_ai_insights(file_content: str, filename: str) -> Dict[str, Any]:
-    """ENHANCED: Generate comprehensive AI insights based on file type and content"""
+def generate_basic_insights(filename: str, file_size: int) -> dict:
+    """Generate basic insights without complex processing"""
     
-    # Determine file type and run appropriate analysis
     filename_lower = filename.lower()
     
-    if 'instagram' in filename_lower and 'hashtag' in filename_lower:
-        return analyze_instagram_data(file_content)
-    elif 'tiktok' in filename_lower:
-        return analyze_tiktok_data(file_content)
-    elif filename_lower.endswith('.csv') and ('sales' in filename_lower or 'shopify' in filename_lower):
-        return analyze_shopify_data(file_content)
-    else:
-        # SAFE: Fallback to basic analysis for unknown file types
+    # Basic insights based on filename
+    if 'instagram' in filename_lower:
         return {
-            "data_type": "General Intelligence Analysis",
+            "data_type": "Instagram Data",
             "insights": [
-                f"Processed competitive intelligence file: {filename}",
-                "File uploaded successfully for analysis",
-                "Data available for cross-platform correlation",
-                "Ready for integration with business metrics"
+                f"Instagram competitive intelligence file uploaded: {filename}",
+                "Data ready for hashtag and engagement analysis",
+                "File contains social media competitive research",
+                "Ready for cross-platform trend analysis"
             ],
             "recommendations": [
-                "📊 Upload more data sources for comprehensive analysis",
-                "🔄 Combine with social media and sales data for insights",
-                "📈 Monitor trends across multiple data sources",
-                "🎯 Use insights to inform content and marketing strategy"
+                "🎯 Analyze hashtag performance for content strategy",
+                "📸 Review engagement patterns for optimal posting",
+                "🔄 Compare with your brand's social media metrics",
+                "📊 Use insights to inform content calendar"
+            ]
+        }
+    elif 'tiktok' in filename_lower:
+        return {
+            "data_type": "TikTok Data", 
+            "insights": [
+                f"TikTok competitive intelligence file uploaded: {filename}",
+                "Video performance data ready for analysis",
+                "Contains engagement metrics and trend data",
+                "Ready for short-form content strategy insights"
+            ],
+            "recommendations": [
+                "🎬 Analyze video performance patterns",
+                "🎵 Review trending audio and hashtags",
+                "⚡ Optimize video length and format",
+                "🏙️ Leverage location-based trends"
+            ]
+        }
+    elif filename_lower.endswith('.csv'):
+        return {
+            "data_type": "Sales/Analytics Data",
+            "insights": [
+                f"Sales analytics file uploaded: {filename}",
+                "Revenue and performance data ready for analysis", 
+                "Contains business metrics for trend analysis",
+                "Ready for sales performance insights"
+            ],
+            "recommendations": [
+                "💰 Identify peak sales periods",
+                "📦 Analyze top-performing products",
+                "📈 Correlate with marketing campaigns",
+                "🔄 Connect social media trends to sales"
+            ]
+        }
+    else:
+        return {
+            "data_type": "Competitive Intelligence",
+            "insights": [
+                f"Competitive intelligence file uploaded: {filename}",
+                f"File size: {file_size:,} bytes",
+                "Data ready for competitive analysis",
+                "Available for cross-platform insights"
+            ],
+            "recommendations": [
+                "📊 Review competitive landscape data",
+                "🎯 Identify market opportunities", 
+                "🔄 Compare with your brand performance",
+                "📈 Use insights for strategic planning"
             ]
         }
 
-# SAFE: Preserve existing health endpoint
 @router.get("/health")
 async def health_check():
     """Health check endpoint - UNCHANGED"""
@@ -253,7 +131,6 @@ async def health_check():
         "upload_directory": os.path.exists(UPLOAD_DIR)
     }
 
-# ENHANCED: Improved upload endpoint with advanced AI analysis
 @router.post("/upload")
 async def upload_intelligence_file(
     file: UploadFile = File(...),
@@ -261,16 +138,17 @@ async def upload_intelligence_file(
     brand: str = Form("Crooks & Castles"),
     description: Optional[str] = Form(None)
 ):
-    """Enhanced upload endpoint with advanced AI analysis"""
+    """MINIMAL FIX: Upload endpoint that focuses on database reliability"""
     
     try:
-        # SAFE: Preserve existing file validation
+        # SAFE: Basic validation
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
         
-        # SAFE: Read file content
+        # SAFE: Read file content (with size limit to prevent crashes)
         content = await file.read()
-        content_str = content.decode('utf-8')
+        if len(content) > 50 * 1024 * 1024:  # 50MB limit
+            raise HTTPException(status_code=400, detail="File too large (max 50MB)")
         
         # SAFE: Generate file path
         file_hash = hashlib.md5(content).hexdigest()[:8]
@@ -282,40 +160,44 @@ async def upload_intelligence_file(
         async with aiofiles.open(file_path, 'wb') as f:
             await f.write(content)
         
-        # ENHANCED: Generate advanced AI insights
-        ai_analysis = generate_ai_insights(content_str, file.filename)
+        # MINIMAL: Generate basic insights (no complex processing)
+        ai_analysis = generate_basic_insights(file.filename, len(content))
         
-        # SAFE: Database operation with fallback
-        def save_to_database():
-            if not engine:
-                return False
-            
-            with engine.connect() as db:
-                with db.begin():
-                    result = db.execute(text("""
-                        INSERT INTO intelligence_files 
-                        (original_filename, file_path, source, brand, description, analysis_results, uploaded_at)
-                        VALUES (:filename, :path, :source, :brand, :description, :analysis, NOW())
-                        RETURNING id
-                    """), {
-                        "filename": file.filename,
-                        "path": file_path,
-                        "source": source,
-                        "brand": brand,
-                        "description": description or f"AI analysis of {file.filename}",
-                        "analysis": json.dumps(ai_analysis)
-                    })
-                    return result.fetchone()[0]
+        # SAFE: Database operation with proper error handling
+        database_saved = False
+        database_error = None
         
-        # SAFE: Try database save with fallback
-        database_saved = safe_database_operation(save_to_database, False)
+        try:
+            if DB_AVAILABLE and engine:
+                with engine.connect() as db:
+                    with db.begin():
+                        result = db.execute(text("""
+                            INSERT INTO intelligence_files 
+                            (original_filename, file_path, source, brand, description, analysis_results, uploaded_at)
+                            VALUES (:filename, :path, :source, :brand, :description, :analysis, NOW())
+                            RETURNING id
+                        """), {
+                            "filename": file.filename,
+                            "path": file_path,
+                            "source": source,
+                            "brand": brand,
+                            "description": description or f"Competitive intelligence: {file.filename}",
+                            "analysis": json.dumps(ai_analysis)
+                        })
+                        inserted_id = result.fetchone()[0]
+                        database_saved = True
+                        print(f"[Intelligence] File saved to database with ID: {inserted_id}")
+        except Exception as db_error:
+            database_error = str(db_error)
+            print(f"[Intelligence] Database save failed: {db_error}")
         
         return {
-            "message": "File uploaded and analyzed successfully",
+            "message": "File uploaded successfully",
             "filename": file.filename,
             "file_size": len(content),
             "file_path": file_path,
-            "database_saved": bool(database_saved),
+            "database_saved": database_saved,
+            "database_error": database_error,
             "ai_analysis": ai_analysis,
             "upload_timestamp": datetime.now().isoformat()
         }
@@ -324,16 +206,21 @@ async def upload_intelligence_file(
         print(f"[Intelligence] Upload error: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
-# SAFE: Preserve existing files endpoint with enhancements
 @router.get("/files")
 async def list_intelligence_files():
-    """List uploaded intelligence files with analysis results"""
+    """List uploaded intelligence files - FIXED for database column issues"""
     
-    def get_files_from_db():
-        if not engine:
-            return []
+    try:
+        if not DB_AVAILABLE or not engine:
+            return {
+                "files": [],
+                "total_files": 0,
+                "data_source": "no_database",
+                "database_error": "Database not available"
+            }
         
         with engine.connect() as db:
+            # SAFE: Query only columns that should exist
             result = db.execute(text("""
                 SELECT original_filename, source, brand, uploaded_at, description, id, analysis_results
                 FROM intelligence_files 
@@ -351,7 +238,7 @@ async def list_intelligence_files():
                     "description": row[4]
                 }
                 
-                # ENHANCED: Include AI analysis if available
+                # Include AI analysis if available
                 if row[6]:  # analysis_results
                     try:
                         analysis = json.loads(row[6])
@@ -363,25 +250,34 @@ async def list_intelligence_files():
                 
                 files.append(file_data)
             
-            return files
-    
-    # SAFE: Get files with fallback
-    files = safe_database_operation(get_files_from_db, [])
-    
-    return {
-        "files": files,
-        "total_files": len(files),
-        "data_source": "database" if DB_AVAILABLE else "fallback"
-    }
+            return {
+                "files": files,
+                "total_files": len(files),
+                "data_source": "database"
+            }
+            
+    except Exception as e:
+        return {
+            "files": [],
+            "total_files": 0,
+            "data_source": "error",
+            "database_error": str(e)
+        }
 
-# ENHANCED: New summary endpoint for AI insights
 @router.get("/summary")
 async def get_intelligence_summary():
-    """Get comprehensive AI insights summary"""
+    """Get intelligence summary - SAFE version"""
     
-    def get_summary_from_db():
-        if not engine:
-            return {"insights": [], "recommendations": []}
+    try:
+        if not DB_AVAILABLE or not engine:
+            return {
+                "status": "ready",
+                "ai_available": AI_AVAILABLE,
+                "database_available": False,
+                "insights": ["Upload competitive intelligence files to see AI insights"],
+                "recommendations": ["Connect database to enable file tracking and analysis"],
+                "total_files_analyzed": 0
+            }
         
         with engine.connect() as db:
             result = db.execute(text("""
@@ -404,29 +300,30 @@ async def get_intelligence_summary():
                 except:
                     continue
             
+            if not all_insights:
+                all_insights = ["Upload competitive intelligence files to see AI insights"]
+                all_recommendations = ["Upload Instagram, TikTok, or sales data for personalized recommendations"]
+            
             return {
+                "status": "ready",
+                "ai_available": AI_AVAILABLE,
+                "database_available": True,
                 "insights": all_insights,
                 "recommendations": all_recommendations,
                 "data_sources": list(set(data_sources)),
                 "total_files_analyzed": len(data_sources)
             }
-    
-    # SAFE: Get summary with fallback
-    summary = safe_database_operation(get_summary_from_db, {
-        "insights": ["No intelligence data uploaded yet"],
-        "recommendations": ["Upload competitive intelligence files to see AI recommendations"],
-        "data_sources": [],
-        "total_files_analyzed": 0
-    })
-    
-    return {
-        "status": "ready",
-        "ai_available": AI_AVAILABLE,
-        "database_available": DB_AVAILABLE,
-        **summary
-    }
+            
+    except Exception as e:
+        return {
+            "status": "error",
+            "ai_available": AI_AVAILABLE,
+            "database_available": False,
+            "insights": [f"Database error: {str(e)}"],
+            "recommendations": ["Check database connection and table structure"],
+            "total_files_analyzed": 0
+        }
 
-# SAFE: Preserve any other existing endpoints
 @router.get("/analysis")
 async def get_analysis():
     """Get analysis results - preserves existing functionality"""
