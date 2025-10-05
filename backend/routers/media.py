@@ -1,4 +1,7 @@
-# backend/routers/media.py
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -7,8 +10,8 @@ import shutil
 import uuid
 from datetime import datetime
 
-from backend.database import get_db
-from backend.models import MediaFile
+from database import get_db
+from models import MediaFile
 
 # --- New ---
 from fastapi.staticfiles import StaticFiles
