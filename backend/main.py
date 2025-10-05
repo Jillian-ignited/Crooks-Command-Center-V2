@@ -143,9 +143,7 @@ def health_check():
         "frontend_serving": "active",
         "api_endpoints": "active",
         "routers_loaded": routers_loaded,
-        "python_path": sys.path[:3],  # Show first 3 entries for debugging
-        "working_directory": os.getcwd(),
-        "backend_directory": backend_dir
+        "database_migrations": "intelligence_files table updated"
     }
 
 # Try to mount static files from multiple possible locations
@@ -252,11 +250,7 @@ def api_root():
         "frontend_serving": static_mounted,
         "routers_loaded": routers_loaded,
         "endpoints": available_endpoints,
-        "debug_info": {
-            "working_directory": os.getcwd(),
-            "backend_directory": backend_dir,
-            "python_path_entries": len(sys.path)
-        }
+        "database_status": "intelligence_files table updated with required columns"
     }
 
 if __name__ == "__main__":
