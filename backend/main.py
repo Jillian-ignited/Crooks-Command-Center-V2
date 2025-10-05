@@ -5,8 +5,8 @@ from fastapi.responses import FileResponse
 import os
 from datetime import datetime
 
-# Import all routers
-from routers import (
+# Import all routers with correct relative paths
+from .routers import (
     agency,
     calendar,
     competitive,
