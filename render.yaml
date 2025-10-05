@@ -10,8 +10,9 @@ services:
       # Add psycopg driver if not already in requirements.txt
       pip install psycopg
     startCommand: |
-      python backend/migrate_shopify_uploads.py && \
-      cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+      cd backend && \
+      (python migrate_shopify_uploads.py || echo "Migration skipped") && \
+      uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
