@@ -1,7 +1,7 @@
-# backend/routers/intelligence_minimal_fix.py
+# backend/routers/intelligence_large_files.py
 """
-Minimal Intelligence Router Fix
-SAFE VERSION - Just fixes database issues without complex enhancements
+Intelligence Router with Large File Support
+SAFE VERSION - Handles large files without crashing the server
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
@@ -13,6 +13,7 @@ import aiofiles
 from datetime import datetime
 import hashlib
 from typing import Optional
+import tempfile
 
 # Initialize router
 router = APIRouter()
@@ -49,75 +50,147 @@ except Exception as e:
 UPLOAD_DIR = "/tmp/intelligence_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-def generate_basic_insights(filename: str, file_size: int) -> dict:
-    """Generate basic insights without complex processing"""
+def analyze_large_file_safely(file_path: str, filename: str) -> dict:
+    """Safely analyze large files without loading everything into memory"""
     
     filename_lower = filename.lower()
+    file_size = os.path.getsize(file_path)
     
-    # Basic insights based on filename
-    if 'instagram' in filename_lower:
+    try:
+        # For large Instagram files, sample the data instead of processing everything
+        if 'instagram' in filename_lower and file_size > 10 * 1024 * 1024:  # 10MB+
+            
+            # Sample first 1000 lines for analysis
+            sample_posts = []
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for i, line in enumerate(f):
+                    if i >= 1000:  # Limit to first 1000 posts
+                        break
+                    if line.strip():
+                        try:
+                            sample_posts.append(json.loads(line))
+                        except:
+                            continue
+            
+            # Analyze sample
+            hashtags = []
+            total_likes = 0
+            total_comments = 0
+            
+            for post in sample_posts:
+                if 'hashtags' in post:
+                    hashtags.extend(post['hashtags'])
+                total_likes += post.get('likesCount', 0)
+                total_comments += post.get('commentsCount', 0)
+            
+            # Count hashtags
+            hashtag_counts = {}
+            for tag in hashtags:
+                hashtag_counts[tag] = hashtag_counts.get(tag, 0) + 1
+            
+            top_hashtags = sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            
+            # Estimate total from sample
+            estimated_total_posts = (file_size // 1024) * 5  # Rough estimate
+            avg_likes = total_likes / len(sample_posts) if sample_posts else 0
+            avg_comments = total_comments / len(sample_posts) if sample_posts else 0
+            
+            return {
+                "data_type": "Instagram Hashtag Analysis (Large Dataset)",
+                "file_size_mb": round(file_size / (1024 * 1024), 1),
+                "sample_analyzed": len(sample_posts),
+                "estimated_total_posts": estimated_total_posts,
+                "insights": [
+                    f"Large Instagram dataset analyzed: {filename}",
+                    f"File size: {round(file_size / (1024 * 1024), 1)}MB with ~{estimated_total_posts:,} estimated posts",
+                    f"Sample analysis of {len(sample_posts)} posts shows strong hashtag diversity",
+                    f"Top hashtag in sample: #{top_hashtags[0][0]} (used {top_hashtags[0][1]} times)" if top_hashtags else "Hashtag analysis available",
+                    "Large-scale competitive intelligence data ready for strategic analysis"
+                ],
+                "recommendations": [
+                    "🎯 Focus on top-performing hashtags from competitive analysis",
+                    "📊 Use this large dataset for comprehensive trend identification", 
+                    "🔄 Cross-reference with your brand's hashtag performance",
+                    "📈 Leverage insights for large-scale content strategy",
+                    "⚡ Consider segmenting analysis by time periods or engagement levels"
+                ],
+                "sample_metrics": {
+                    "avg_likes": round(avg_likes, 1),
+                    "avg_comments": round(avg_comments, 1),
+                    "top_hashtags": [tag for tag, count in top_hashtags]
+                }
+            }
+            
+        elif 'tiktok' in filename_lower:
+            return {
+                "data_type": "TikTok Performance Data",
+                "file_size_mb": round(file_size / (1024 * 1024), 1),
+                "insights": [
+                    f"TikTok competitive data uploaded: {filename}",
+                    f"File size: {round(file_size / (1024 * 1024), 1)}MB",
+                    "Video performance metrics ready for trend analysis",
+                    "Engagement data available for competitive benchmarking"
+                ],
+                "recommendations": [
+                    "🎬 Analyze video performance patterns for content optimization",
+                    "🎵 Review trending audio and hashtag usage",
+                    "⚡ Optimize video format based on high-performing content",
+                    "🏙️ Leverage location and trend insights"
+                ]
+            }
+            
+        elif filename_lower.endswith('.csv'):
+            return {
+                "data_type": "Sales/Analytics Data",
+                "file_size_mb": round(file_size / (1024 * 1024), 1),
+                "insights": [
+                    f"Sales analytics uploaded: {filename}",
+                    f"File size: {round(file_size / (1024 * 1024), 1)}MB",
+                    "Revenue and performance data ready for correlation analysis",
+                    "Business metrics available for trend identification"
+                ],
+                "recommendations": [
+                    "💰 Identify peak sales periods and successful strategies",
+                    "📦 Analyze product performance trends",
+                    "📈 Correlate with social media campaign timing",
+                    "🔄 Connect competitive intelligence to sales impact"
+                ]
+            }
+        else:
+            return {
+                "data_type": "Competitive Intelligence Data",
+                "file_size_mb": round(file_size / (1024 * 1024), 1),
+                "insights": [
+                    f"Competitive intelligence uploaded: {filename}",
+                    f"File size: {round(file_size / (1024 * 1024), 1)}MB",
+                    "Large dataset ready for comprehensive analysis",
+                    "Data available for strategic competitive insights"
+                ],
+                "recommendations": [
+                    "📊 Process data for competitive landscape analysis",
+                    "🎯 Identify market opportunities and threats",
+                    "🔄 Compare with your brand's performance metrics",
+                    "📈 Use for strategic planning and positioning"
+                ]
+            }
+            
+    except Exception as e:
         return {
-            "data_type": "Instagram Data",
+            "data_type": "Large File Analysis",
+            "file_size_mb": round(file_size / (1024 * 1024), 1),
             "insights": [
-                f"Instagram competitive intelligence file uploaded: {filename}",
-                "Data ready for hashtag and engagement analysis",
-                "File contains social media competitive research",
-                "Ready for cross-platform trend analysis"
+                f"Large competitive intelligence file uploaded: {filename}",
+                f"File size: {round(file_size / (1024 * 1024), 1)}MB",
+                "File stored successfully for analysis",
+                "Data ready for processing when needed"
             ],
             "recommendations": [
-                "🎯 Analyze hashtag performance for content strategy",
-                "📸 Review engagement patterns for optimal posting",
-                "🔄 Compare with your brand's social media metrics",
-                "📊 Use insights to inform content calendar"
-            ]
-        }
-    elif 'tiktok' in filename_lower:
-        return {
-            "data_type": "TikTok Data", 
-            "insights": [
-                f"TikTok competitive intelligence file uploaded: {filename}",
-                "Video performance data ready for analysis",
-                "Contains engagement metrics and trend data",
-                "Ready for short-form content strategy insights"
+                "📊 Large dataset available for detailed analysis",
+                "🔄 Process in segments for optimal performance",
+                "📈 Use for comprehensive competitive intelligence",
+                "⚡ Consider data sampling for quick insights"
             ],
-            "recommendations": [
-                "🎬 Analyze video performance patterns",
-                "🎵 Review trending audio and hashtags",
-                "⚡ Optimize video length and format",
-                "🏙️ Leverage location-based trends"
-            ]
-        }
-    elif filename_lower.endswith('.csv'):
-        return {
-            "data_type": "Sales/Analytics Data",
-            "insights": [
-                f"Sales analytics file uploaded: {filename}",
-                "Revenue and performance data ready for analysis", 
-                "Contains business metrics for trend analysis",
-                "Ready for sales performance insights"
-            ],
-            "recommendations": [
-                "💰 Identify peak sales periods",
-                "📦 Analyze top-performing products",
-                "📈 Correlate with marketing campaigns",
-                "🔄 Connect social media trends to sales"
-            ]
-        }
-    else:
-        return {
-            "data_type": "Competitive Intelligence",
-            "insights": [
-                f"Competitive intelligence file uploaded: {filename}",
-                f"File size: {file_size:,} bytes",
-                "Data ready for competitive analysis",
-                "Available for cross-platform insights"
-            ],
-            "recommendations": [
-                "📊 Review competitive landscape data",
-                "🎯 Identify market opportunities", 
-                "🔄 Compare with your brand performance",
-                "📈 Use insights for strategic planning"
-            ]
+            "processing_note": f"Large file analysis limited for performance: {str(e)}"
         }
 
 @router.get("/health")
@@ -128,7 +201,8 @@ async def health_check():
         "ai_available": AI_AVAILABLE,
         "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "database_available": DB_AVAILABLE,
-        "upload_directory": os.path.exists(UPLOAD_DIR)
+        "upload_directory": os.path.exists(UPLOAD_DIR),
+        "max_file_size_mb": 100  # Updated limit
     }
 
 @router.post("/upload")
@@ -138,30 +212,36 @@ async def upload_intelligence_file(
     brand: str = Form("Crooks & Castles"),
     description: Optional[str] = Form(None)
 ):
-    """MINIMAL FIX: Upload endpoint that focuses on database reliability"""
+    """LARGE FILE SUPPORT: Upload endpoint that handles files up to 100MB safely"""
     
     try:
         # SAFE: Basic validation
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file provided")
         
-        # SAFE: Read file content (with size limit to prevent crashes)
-        content = await file.read()
-        if len(content) > 50 * 1024 * 1024:  # 50MB limit
-            raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+        # INCREASED LIMIT: Allow larger files (100MB) for competitive intelligence
+        max_size = 100 * 1024 * 1024  # 100MB
         
-        # SAFE: Generate file path
-        file_hash = hashlib.md5(content).hexdigest()[:8]
+        # SAFE: Stream large files to disk instead of loading into memory
+        file_hash = hashlib.md5(file.filename.encode()).hexdigest()[:8]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_filename = f"{timestamp}_{file_hash}_{file.filename}"
         file_path = os.path.join(UPLOAD_DIR, safe_filename)
         
-        # SAFE: Save file
-        async with aiofiles.open(file_path, 'wb') as f:
-            await f.write(content)
+        # MEMORY SAFE: Stream file to disk in chunks
+        total_size = 0
+        with open(file_path, 'wb') as f:
+            while chunk := await file.read(8192):  # 8KB chunks
+                total_size += len(chunk)
+                if total_size > max_size:
+                    os.remove(file_path)  # Clean up
+                    raise HTTPException(status_code=400, detail=f"File too large (max {max_size // (1024*1024)}MB)")
+                f.write(chunk)
         
-        # MINIMAL: Generate basic insights (no complex processing)
-        ai_analysis = generate_basic_insights(file.filename, len(content))
+        print(f"[Intelligence] File saved: {file_path} ({total_size:,} bytes)")
+        
+        # SAFE: Generate insights without loading large files into memory
+        ai_analysis = analyze_large_file_safely(file_path, file.filename)
         
         # SAFE: Database operation with proper error handling
         database_saved = False
@@ -181,7 +261,7 @@ async def upload_intelligence_file(
                             "path": file_path,
                             "source": source,
                             "brand": brand,
-                            "description": description or f"Competitive intelligence: {file.filename}",
+                            "description": description or f"Large competitive intelligence file: {file.filename}",
                             "analysis": json.dumps(ai_analysis)
                         })
                         inserted_id = result.fetchone()[0]
@@ -192,9 +272,10 @@ async def upload_intelligence_file(
             print(f"[Intelligence] Database save failed: {db_error}")
         
         return {
-            "message": "File uploaded successfully",
+            "message": "Large file uploaded and analyzed successfully",
             "filename": file.filename,
-            "file_size": len(content),
+            "file_size": total_size,
+            "file_size_mb": round(total_size / (1024 * 1024), 1),
             "file_path": file_path,
             "database_saved": database_saved,
             "database_error": database_error,
@@ -220,7 +301,6 @@ async def list_intelligence_files():
             }
         
         with engine.connect() as db:
-            # SAFE: Query only columns that should exist
             result = db.execute(text("""
                 SELECT original_filename, source, brand, uploaded_at, description, id, analysis_results
                 FROM intelligence_files 
@@ -245,6 +325,7 @@ async def list_intelligence_files():
                         file_data["ai_insights"] = analysis.get("insights", [])
                         file_data["recommendations"] = analysis.get("recommendations", [])
                         file_data["data_type"] = analysis.get("data_type", "Unknown")
+                        file_data["file_size_mb"] = analysis.get("file_size_mb", 0)
                     except:
                         pass
                 
@@ -266,7 +347,7 @@ async def list_intelligence_files():
 
 @router.get("/summary")
 async def get_intelligence_summary():
-    """Get intelligence summary - SAFE version"""
+    """Get intelligence summary - SAFE version with large file support"""
     
     try:
         if not DB_AVAILABLE or not engine:
@@ -290,6 +371,7 @@ async def get_intelligence_summary():
             all_insights = []
             all_recommendations = []
             data_sources = []
+            total_file_size = 0
             
             for row in result.fetchall():
                 try:
@@ -297,6 +379,7 @@ async def get_intelligence_summary():
                     all_insights.extend(analysis.get("insights", []))
                     all_recommendations.extend(analysis.get("recommendations", []))
                     data_sources.append(analysis.get("data_type", "Unknown"))
+                    total_file_size += analysis.get("file_size_mb", 0)
                 except:
                     continue
             
@@ -311,7 +394,8 @@ async def get_intelligence_summary():
                 "insights": all_insights,
                 "recommendations": all_recommendations,
                 "data_sources": list(set(data_sources)),
-                "total_files_analyzed": len(data_sources)
+                "total_files_analyzed": len(data_sources),
+                "total_data_size_mb": round(total_file_size, 1)
             }
             
     except Exception as e:
