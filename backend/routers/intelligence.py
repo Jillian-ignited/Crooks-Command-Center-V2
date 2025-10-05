@@ -1,12 +1,6 @@
-# backend/routers/intelligence_diagnostic.py
-"""
-Intelligence Router with DETAILED DIAGNOSTICS
-Shows exactly what's failing during database saves
-"""
-
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 import os
 import json
 import aiofiles
@@ -16,13 +10,11 @@ from typing import Optional
 import tempfile
 import traceback
 
+# Import centralized database components
+from database import engine, DB_AVAILABLE
+
 # Initialize router
 router = APIRouter()
-
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
 
 # OpenAI setup
 try:
@@ -34,106 +26,56 @@ except Exception as e:
     print(f"[Intelligence] OpenAI initialization failed: {e}")
     AI_AVAILABLE = False
 
-# Database connection
-try:
-    if DATABASE_URL:
-        engine = create_engine(DATABASE_URL, future=True)
-        print("[Intelligence] Database connection established")
-        DB_AVAILABLE = True
-    else:
-        print("[Intelligence] No DATABASE_URL found")
-        DB_AVAILABLE = False
-except Exception as e:
-    print(f"[Intelligence] Database connection failed: {e}")
-    DB_AVAILABLE = False
-
 UPLOAD_DIR = "/tmp/intelligence_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-def generate_simple_analysis(filename: str, file_size: int) -> dict:
-    """Generate simple but comprehensive analysis"""
-    
-    filename_lower = filename.lower()
-    
-    if 'instagram' in filename_lower and 'hashtag' in filename_lower:
+def generate_ai_analysis(file_path: str):
+    """
+    Reads a sample of a JSONL file, sends it to the OpenAI API for analysis,
+    and returns a structured dictionary of the analysis.
+    """
+    try:
+        with open(file_path, 'r') as f:
+            # Read the first 5 lines for a sample
+            sample_lines = [next(f) for _ in range(5)]
+            sample_data = [json.loads(line) for line in sample_lines]
+    except Exception as e:
         return {
-            "data_type": "Instagram Hashtag Intelligence",
-            "file_size_mb": round(file_size / (1024 * 1024), 1),
-            "insights": [
-                f"🎯 Instagram competitive intelligence uploaded: {filename}",
-                f"📊 File size: {file_size / (1024*1024):.1f}MB ready for hashtag analysis",
-                "🏆 Contains hashtag performance data from competitive research",
-                "💡 Ready for engagement pattern analysis and trend identification",
-                "🔥 Strategic data for content optimization and hashtag strategy"
-            ],
-            "recommendations": [
-                "🎯 Analyze top-performing hashtags for your content strategy",
-                "📈 Compare engagement rates with your brand's performance",
-                "🔄 Identify trending hashtags in your competitive space",
-                "📊 Use insights for content calendar planning",
-                "⚡ Focus on hashtags with highest engagement potential"
-            ],
-            "analysis_timestamp": datetime.now().isoformat()
+            "error": f"Failed to read or parse file: {e}",
+            "status": "error"
         }
-    
-    elif 'tiktok' in filename_lower:
-        return {
-            "data_type": "TikTok Competitive Analysis",
-            "file_size_mb": round(file_size / (1024 * 1024), 1),
-            "insights": [
-                f"🎬 TikTok competitive data analyzed: {filename}",
-                f"📊 File size: {file_size / (1024*1024):.1f}MB",
-                "⚡ Video performance metrics ready for trend analysis",
-                "🎵 Audio and hashtag trends available for strategy",
-                "🏙️ Location and demographic insights included"
+
+    prompt = f'''
+    Analyze the following sample of a JSONL file containing Instagram hashtag data.
+    Provide a brief summary of the data, identify 3-5 key insights, and suggest 3-5 actionable recommendations for the streetwear brand "Crooks & Castles".
+
+    Sample data:
+    {json.dumps(sample_data, indent=2)}
+
+    Your response should be a JSON object with three keys: "summary", "insights", and "recommendations".
+    The "insights" and "recommendations" keys should contain a list of strings.
+    '''
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that analyzes data for a streetwear brand and returns responses in JSON format."},
+                {"role": "user", "content": prompt}
             ],
-            "recommendations": [
-                "🎬 Analyze top-performing video formats and lengths",
-                "🎵 Identify trending audio for your content creation",
-                "⚡ Optimize posting times based on engagement data",
-                "🏙️ Leverage location-based trends for NYC market",
-                "📱 Adapt successful competitor strategies for your brand"
-            ]
-        }
-    
-    elif filename_lower.endswith('.csv'):
+            max_tokens=1000,
+            temperature=0.7,
+            response_format={"type": "json_object"}
+        )
+        analysis_json = response.choices[0].message.content
+        analysis_data = json.loads(analysis_json)
+        analysis_data["analysis_timestamp"] = datetime.now().isoformat()
+        return analysis_data
+
+    except Exception as e:
         return {
-            "data_type": "Sales Analytics Data",
-            "file_size_mb": round(file_size / (1024 * 1024), 1),
-            "insights": [
-                f"💰 Sales data uploaded: {filename}",
-                f"📊 File size: {file_size / (1024*1024):.1f}MB",
-                "📈 Revenue trends ready for correlation analysis",
-                "🛍️ Product performance data available for optimization",
-                "📅 Time-series data ready for pattern identification"
-            ],
-            "recommendations": [
-                "💰 Identify peak sales periods and replicate successful strategies",
-                "📦 Focus marketing efforts on top-performing products",
-                "📈 Correlate social media campaigns with sales spikes",
-                "🔄 Connect competitive intelligence insights to revenue impact",
-                "📊 Use data for inventory and marketing optimization"
-            ]
-        }
-    
-    else:
-        return {
-            "data_type": "Competitive Intelligence",
-            "file_size_mb": round(file_size / (1024 * 1024), 1),
-            "insights": [
-                f"🎯 Competitive intelligence uploaded: {filename}",
-                f"📊 File size: {file_size / (1024*1024):.1f}MB",
-                "📈 Strategic data ready for comprehensive analysis",
-                "🔍 Market intelligence available for competitive positioning",
-                "💡 Data ready for actionable business insights"
-            ],
-            "recommendations": [
-                "📊 Analyze competitive landscape patterns and opportunities",
-                "🎯 Identify market gaps and positioning opportunities",
-                "🔄 Compare performance metrics with your brand",
-                "📈 Use insights for strategic business planning",
-                "💡 Develop data-driven competitive advantages"
-            ]
+            "error": f"Failed to get AI analysis: {e}",
+            "status": "error"
         }
 
 @router.get("/health")
@@ -143,60 +85,10 @@ async def health_check():
         "ai_available": AI_AVAILABLE,
         "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "database_available": DB_AVAILABLE,
-        "database_url_configured": bool(DATABASE_URL),
+        "database_url_configured": bool(os.getenv("DATABASE_URL")),
         "upload_directory": os.path.exists(UPLOAD_DIR),
         "max_file_size_mb": 100
     }
-
-@router.get("/debug")
-async def debug_database():
-    """Detailed database diagnostics"""
-    
-    debug_info = {
-        "database_url_exists": bool(DATABASE_URL),
-        "database_url_format": DATABASE_URL[:20] + "..." if DATABASE_URL else None,
-        "db_available": DB_AVAILABLE,
-        "engine_created": engine is not None if DB_AVAILABLE else False
-    }
-    
-    if DB_AVAILABLE and engine:
-        try:
-            with engine.connect() as db:
-                # Test basic connection
-                result = db.execute(text("SELECT 1 as test"))
-                debug_info["connection_test"] = "SUCCESS"
-                
-                # Check table exists
-                table_check = db.execute(text("""
-                    SELECT EXISTS (
-                        SELECT FROM information_schema.tables 
-                        WHERE table_name = 'intelligence_files'
-                    )
-                """))
-                debug_info["table_exists"] = table_check.fetchone()[0]
-                
-                # Check table structure
-                if debug_info["table_exists"]:
-                    columns = db.execute(text("""
-                        SELECT column_name, data_type, is_nullable
-                        FROM information_schema.columns
-                        WHERE table_name = 'intelligence_files'
-                        ORDER BY ordinal_position
-                    """))
-                    debug_info["table_columns"] = [
-                        {"name": row[0], "type": row[1], "nullable": row[2]}
-                        for row in columns.fetchall()
-                    ]
-                    
-                    # Count existing records
-                    count_result = db.execute(text("SELECT COUNT(*) FROM intelligence_files"))
-                    debug_info["record_count"] = count_result.fetchone()[0]
-                
-        except Exception as e:
-            debug_info["connection_error"] = str(e)
-            debug_info["connection_traceback"] = traceback.format_exc()
-    
-    return debug_info
 
 @router.post("/upload")
 async def upload_intelligence_file(
@@ -239,7 +131,7 @@ async def upload_intelligence_file(
         
         # Generate AI analysis
         upload_log.append("Generating AI analysis...")
-        ai_analysis = generate_simple_analysis(file.filename, total_size)
+        ai_analysis = generate_ai_analysis(file_path)
         upload_log.append(f"AI analysis generated: {len(ai_analysis.get('insights', []))} insights")
         
         # Database save with detailed diagnostics
@@ -267,58 +159,30 @@ async def upload_intelligence_file(
                 with engine.connect() as db:
                     database_log.append("Database connection opened")
                     
-                    # Test connection first
-                    test_result = db.execute(text("SELECT 1"))
-                    database_log.append("Connection test passed")
-                    
-                    # Check table exists
-                    table_check = db.execute(text("""
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables 
-                            WHERE table_name = 'intelligence_files'
-                        )
-                    """))
-                    table_exists = table_check.fetchone()[0]
-                    database_log.append(f"Table exists: {table_exists}")
-                    
-                    if not table_exists:
-                        database_error = "intelligence_files table does not exist"
-                        database_log.append("ERROR: Table missing")
-                    else:
-                        # Try the insert
-                        database_log.append("Attempting database insert...")
+                    with db.begin():
+                        database_log.append("Transaction started")
                         
-                        with db.begin():
-                            database_log.append("Transaction started")
-                            
-                            result = db.execute(text("""
-                                INSERT INTO intelligence_files 
-                                (original_filename, file_path, source, brand, description, analysis_results, uploaded_at)
-                                VALUES (:filename, :path, :source, :brand, :description, :analysis::jsonb, NOW())
-                                RETURNING id
-                            """), {
-                                "filename": file.filename,
-                                "path": file_path,
-                                "source": source,
-                                "brand": brand,
-                                "description": description or f"AI-analyzed competitive intelligence: {file.filename}",
-                                "analysis": analysis_json
-                            })
-                            
-                            database_log.append("INSERT executed")
-                            
-                            inserted_id = result.fetchone()[0]
-                            database_saved = True
-                            database_log.append(f"Record inserted with ID: {inserted_id}")
-                            
-                            # Verify the save
-                            verify_result = db.execute(text("""
-                                SELECT analysis_results FROM intelligence_files WHERE id = :id
-                            """), {"id": inserted_id})
-                            saved_analysis = verify_result.fetchone()[0]
-                            database_log.append(f"Verification: Data saved correctly: {saved_analysis is not None}")
+                        result = db.execute(text("""
+                            INSERT INTO intelligence_files 
+                            (filename, source, brand, file_path, insights, uploaded_at)
+                            VALUES (:filename, :source, :brand, :file_path, :insights, :uploaded_at)
+                            RETURNING id
+                        """), {
+                            "filename": file.filename,
+                            "source": source,
+                            "brand": brand,
+                            "file_path": file_path,
+                            "insights": analysis_json,
+                            "uploaded_at": datetime.now()
+                        })
                         
-                        database_log.append("Transaction committed successfully")
+                        database_log.append("INSERT executed")
+                        
+                        inserted_id = result.fetchone()[0]
+                        database_saved = True
+                        database_log.append(f"Record inserted with ID: {inserted_id}")
+                        
+                database_log.append("Transaction committed successfully")
                         
         except Exception as db_error:
             database_error = str(db_error)
@@ -351,148 +215,31 @@ async def upload_intelligence_file(
             "upload_log": upload_log
         })
 
+
+
+
 @router.get("/files")
 async def list_intelligence_files():
-    """List files with detailed diagnostics"""
-    
+    """List all intelligence files from the database."""
+    if not DB_AVAILABLE or not engine:
+        raise HTTPException(status_code=503, detail="Database not available")
+
     try:
-        if not DB_AVAILABLE or not engine:
-            return {
-                "files": [],
-                "total_files": 0,
-                "data_source": "no_database",
-                "error": "Database not available"
-            }
-        
         with engine.connect() as db:
-            result = db.execute(text("""
-                SELECT original_filename, source, brand, uploaded_at, description, id, analysis_results
-                FROM intelligence_files 
-                ORDER BY uploaded_at DESC
-            """))
-            
-            files = []
-            for row in result.fetchall():
-                file_data = {
-                    "id": row[5],
-                    "filename": row[0],
-                    "source": row[1],
-                    "brand": row[2],
-                    "uploaded_at": row[3].isoformat() if row[3] else None,
-                    "description": row[4],
-                    "analysis_results_type": str(type(row[6])),
-                    "analysis_results_is_null": row[6] is None
+            result = db.execute(text("SELECT id, filename, source, brand, file_path, insights, uploaded_at FROM intelligence_files ORDER BY uploaded_at DESC"))
+            files = result.fetchall()
+            return [
+                {
+                    "id": row[0],
+                    "filename": row[1],
+                    "source": row[2],
+                    "brand": row[3],
+                    "file_path": row[4],
+                    "insights": json.loads(row[5]),
+                    "uploaded_at": row[6],
                 }
-                
-                # Parse AI analysis
-                if row[6]:
-                    try:
-                        if isinstance(row[6], str):
-                            analysis = json.loads(row[6])
-                        else:
-                            analysis = row[6]
-                        
-                        file_data["ai_insights"] = analysis.get("insights", [])
-                        file_data["recommendations"] = analysis.get("recommendations", [])
-                        file_data["data_type"] = analysis.get("data_type", "Unknown")
-                        file_data["file_size_mb"] = analysis.get("file_size_mb", 0)
-                        file_data["has_ai_analysis"] = True
-                        
-                    except Exception as parse_error:
-                        file_data["has_ai_analysis"] = False
-                        file_data["parse_error"] = str(parse_error)
-                else:
-                    file_data["has_ai_analysis"] = False
-                
-                files.append(file_data)
-            
-            return {
-                "files": files,
-                "total_files": len(files),
-                "data_source": "database"
-            }
-            
+                for row in files
+            ]
     except Exception as e:
-        return {
-            "files": [],
-            "total_files": 0,
-            "data_source": "error",
-            "database_error": str(e),
-            "traceback": traceback.format_exc()
-        }
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve files: {e}")
 
-@router.get("/summary")
-async def get_intelligence_summary():
-    """Get intelligence summary with diagnostics"""
-    
-    try:
-        if not DB_AVAILABLE or not engine:
-            return {
-                "status": "ready",
-                "ai_available": AI_AVAILABLE,
-                "database_available": False,
-                "insights": ["Upload competitive intelligence files to see AI insights"],
-                "recommendations": ["Database connection required for file tracking"],
-                "total_files_analyzed": 0,
-                "error": "Database not available"
-            }
-        
-        with engine.connect() as db:
-            result = db.execute(text("""
-                SELECT analysis_results, original_filename
-                FROM intelligence_files 
-                WHERE analysis_results IS NOT NULL
-                ORDER BY uploaded_at DESC
-            """))
-            
-            all_insights = []
-            all_recommendations = []
-            data_sources = []
-            
-            for row in result.fetchall():
-                try:
-                    if isinstance(row[0], str):
-                        analysis = json.loads(row[0])
-                    else:
-                        analysis = row[0]
-                    
-                    insights = analysis.get("insights", [])
-                    recommendations = analysis.get("recommendations", [])
-                    
-                    all_insights.extend(insights)
-                    all_recommendations.extend(recommendations)
-                    data_sources.append(analysis.get("data_type", "Unknown"))
-                    
-                except Exception as parse_error:
-                    continue
-            
-            if not all_insights:
-                all_insights = ["Upload competitive intelligence files to see AI insights"]
-                all_recommendations = ["Upload Instagram, TikTok, or sales data for personalized recommendations"]
-            
-            return {
-                "status": "ready",
-                "ai_available": AI_AVAILABLE,
-                "database_available": True,
-                "insights": all_insights,
-                "recommendations": all_recommendations,
-                "data_sources": list(set(data_sources)),
-                "total_files_analyzed": len(data_sources)
-            }
-            
-    except Exception as e:
-        return {
-            "status": "error",
-            "ai_available": AI_AVAILABLE,
-            "database_available": False,
-            "insights": [f"Summary error: {str(e)}"],
-            "recommendations": ["Check database connection and analysis data"],
-            "total_files_analyzed": 0,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
-
-@router.get("/analysis")
-async def get_analysis():
-    """Get analysis results"""
-    return await get_intelligence_summary()
