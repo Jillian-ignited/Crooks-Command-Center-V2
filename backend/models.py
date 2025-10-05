@@ -1,7 +1,10 @@
-# backend/models.py
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
+
 from sqlalchemy import Column, Integer, String, DateTime, Float, Text, JSON, Boolean
 from sqlalchemy.sql import func
-from backend.database import Base
+from database import Base
 
 class MediaFile(Base):
     __tablename__ = "media_files"
@@ -62,3 +65,4 @@ class CalendarEvent(Base):
     description = Column(Text)
     relevance = Column(String, default="medium")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
