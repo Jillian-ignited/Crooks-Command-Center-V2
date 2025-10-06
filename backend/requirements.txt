@@ -1,22 +1,40 @@
+# Core FastAPI and web framework
 fastapi==0.111.0
 uvicorn[standard]==0.30.0
 python-multipart==0.0.9
-gunicorn==21.2.0
-Pillow==10.0.0
+aiofiles==23.2.1
+
+# Database
+sqlalchemy==2.0.43
+psycopg==3.1.12
+alembic==1.13.2
+
+# OpenAI for AI analysis
+openai==1.51.2
+
+# Rate limiting (CRITICAL FIX #7)
+slowapi==0.1.9
+
+# Data processing
 pandas==2.2.2
-numpy==1.24.3
 openpyxl==3.1.2
 xlsxwriter==3.1.2
-textblob==0.17.1
+
+# Utilities
+python-dotenv==1.1.1
+pydantic==2.11.10
 requests==2.31.0
-jinja2==3.1.2
 python-dateutil==2.8.2
-aiofiles==23.2.1
-python-magic==0.4.27
-starlette>=0.37.2
-pydantic>=2.7.0
-openai>=1.0.0
-sqlalchemy>=1.4.53
-celery>=5.3.0
-redis>=4.5.0
-psycopg==3.1.12
+
+# Background tasks
+celery==5.5.3
+redis==6.4.0
+
+# Text processing
+nltk==3.9.2
+textblob==0.17.1
+
+# Development and testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.28.1
