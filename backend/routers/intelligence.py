@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from pathlib import Path
 import os
@@ -10,9 +10,6 @@ import tempfile
 import traceback
 import re
 import random
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 # Import centralized database components
 from ..database import get_db, DB_AVAILABLE
@@ -20,11 +17,6 @@ from ..models import IntelligenceFile
 
 # Initialize router
 router = APIRouter()
-
-# CRITICAL FIX #7: Rate limiting to prevent API abuse
-limiter = Limiter(key_func=get_remote_address)
-router.state.limiter = limiter
-router.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CRITICAL FIX #18: Proper OpenAI setup with validation
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -52,6 +44,31 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 # CRITICAL FIX #3: File type validation
 ALLOWED_EXTENSIONS = {'.jsonl', '.json', '.csv', '.txt', '.xlsx', '.xls'}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+
+# Simple rate limiting storage (in production, use Redis)
+upload_attempts = {}
+
+def check_rate_limit(request: Request) -> bool:
+    """Simple rate limiting - 10 uploads per hour per IP"""
+    client_ip = request.client.host
+    current_time = datetime.utcnow()
+    
+    if client_ip not in upload_attempts:
+        upload_attempts[client_ip] = []
+    
+    # Remove attempts older than 1 hour
+    upload_attempts[client_ip] = [
+        attempt for attempt in upload_attempts[client_ip]
+        if (current_time - attempt).seconds < 3600
+    ]
+    
+    # Check if under limit
+    if len(upload_attempts[client_ip]) >= 10:
+        return False
+    
+    # Add current attempt
+    upload_attempts[client_ip].append(current_time)
+    return True
 
 def sanitize_filename(filename: str) -> str:
     """CRITICAL FIX #15: Secure filename sanitization"""
@@ -137,8 +154,8 @@ def intelligence_health_check():
     }
 
 @router.post("/upload")
-@limiter.limit("10/hour")  # CRITICAL FIX #7: Rate limiting
 async def upload_intelligence_file(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     source: str = "manual_upload",
@@ -147,6 +164,13 @@ async def upload_intelligence_file(
     db: Session = Depends(get_db)
 ):
     """Upload and analyze intelligence file with security fixes"""
+    
+    # CRITICAL FIX #7: Rate limiting (simplified version)
+    if not check_rate_limit(request):
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Maximum 10 uploads per hour."
+        )
     
     # CRITICAL FIX #3: Validate file type
     file_ext = os.path.splitext(file.filename)[1].lower()
