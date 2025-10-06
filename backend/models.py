@@ -1,4 +1,4 @@
-# CRITICAL FIX #6: Create proper database models
+# CRITICAL FIX #6: Create proper database models (Fixed reserved names)
 from sqlalchemy import Column, Integer, String, DateTime, Float, Text, JSON, Boolean
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -37,7 +37,7 @@ class MediaFile(Base):
     category = Column(String(100), default="general")
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     uploaded_by = Column(String(100))
-    metadata = Column(JSON, default={})
+    file_metadata = Column(JSON, default={})  # FIXED: was 'metadata' (reserved)
 
 class ExecutiveMetric(Base):
     """Executive dashboard metrics"""
@@ -49,7 +49,7 @@ class ExecutiveMetric(Base):
     value = Column(Float, nullable=False)
     period = Column(String(50), default="30d")  # 1d, 7d, 30d, 90d
     recorded_at = Column(DateTime(timezone=True), server_default=func.now())
-    metadata = Column(JSON, default={})
+    metric_metadata = Column(JSON, default={})  # FIXED: was 'metadata' (reserved)
 
 class ContentBrief(Base):
     """Content creation briefs"""
