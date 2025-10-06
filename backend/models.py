@@ -1,8 +1,13 @@
-# CRITICAL FIX #6: Create proper database models (Fixed reserved names)
+# CRITICAL FIX #6: Create proper database models (Fixed imports)
 from sqlalchemy import Column, Integer, String, DateTime, Float, Text, JSON, Boolean
 from sqlalchemy.sql import func
 from datetime import datetime
-from .database import Base
+
+# Import Base from database module
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database import Base
 
 class IntelligenceFile(Base):
     """Intelligence file uploads with AI analysis"""
@@ -37,7 +42,7 @@ class MediaFile(Base):
     category = Column(String(100), default="general")
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     uploaded_by = Column(String(100))
-    file_metadata = Column(JSON, default={})  # FIXED: was 'metadata' (reserved)
+    file_metadata = Column(JSON, default={})
 
 class ExecutiveMetric(Base):
     """Executive dashboard metrics"""
@@ -49,7 +54,7 @@ class ExecutiveMetric(Base):
     value = Column(Float, nullable=False)
     period = Column(String(50), default="30d")  # 1d, 7d, 30d, 90d
     recorded_at = Column(DateTime(timezone=True), server_default=func.now())
-    metric_metadata = Column(JSON, default={})  # FIXED: was 'metadata' (reserved)
+    metric_metadata = Column(JSON, default={})
 
 class ContentBrief(Base):
     """Content creation briefs"""
