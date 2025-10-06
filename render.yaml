@@ -5,7 +5,6 @@ services:
     plan: starter
     autoDeploy: true
     
-    # Persistent disk for file storage
     disk:
       name: intelligence-files
       mountPath: /opt/render/project/src/uploads
@@ -15,32 +14,10 @@ services:
       pip install --upgrade pip
       pip install -r backend/requirements.txt
     
-    # COMPREHENSIVE DATABASE INITIALIZATION
     startCommand: |
-      echo "🚀 Starting Crooks Command Center V2..." && \
-      python backend/init_all_tables.py && \
-      echo "✅ Database initialized" && \
+      python backend/quick_db_fix.py && \
       uvicorn backend.main:app --host 0.0.0.0 --port $PORT
-    startCommand: |
-  python -c "
-  import os
-  from sqlalchemy import create_engine, text
-  
-  DATABASE_URL = os.getenv('DATABASE_URL')
-  if DATABASE_URL.startswith('postgres://'):
-      DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+psycopg://', 1)
-  
-  engine = create_engine(DATABASE_URL)
-  with engine.connect() as conn:
-      try:
-          conn.execute(text('ALTER TABLE intelligence_files ADD COLUMN filename VARCHAR(255)'))
-          conn.commit()
-          print('✅ Added filename column')
-      except:
-          print('⚠️ Column might already exist')
-  " && \
-  uvicorn backend.main:app --host 0.0.0.0 --port $PORT
-
+    
     envVars:
       - key: DATABASE_URL
         fromDatabase:
