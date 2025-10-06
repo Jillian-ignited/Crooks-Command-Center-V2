@@ -39,10 +39,20 @@ app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
 
-# CORS middleware
+# SECURE CORS - CRITICAL FIX #1
+ALLOWED_ORIGINS = [
+    "https://crooks-command-center-v2.onrender.com",
+    "http://localhost:3000",  # for development
+    "http://localhost:8000",  # for local testing
+]
+
+# Only allow * in development
+if os.getenv("ENVIRONMENT") == "development":
+    ALLOWED_ORIGINS = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -146,4 +156,3 @@ def api_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
