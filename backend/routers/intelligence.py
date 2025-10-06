@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pathlib import Path
 import os
 import json
@@ -18,7 +19,7 @@ from ..models import IntelligenceFile
 # Initialize router
 router = APIRouter()
 
-# CRITICAL FIX #18: OpenAI v0.28.1 setup (old API format)
+# OpenAI v0.28.1 setup
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     print("[Intelligence] ⚠️ No OPENAI_API_KEY - AI analysis disabled")
@@ -26,10 +27,7 @@ if not OPENAI_API_KEY:
 else:
     try:
         import openai
-        # Old API format - set the API key globally
         openai.api_key = OPENAI_API_KEY
-        
-        # Test the API works
         models = openai.Model.list()
         AI_AVAILABLE = True
         print("[Intelligence] ✅ OpenAI v0.28.1 initialized successfully")
@@ -37,15 +35,15 @@ else:
         print(f"[Intelligence] ❌ OpenAI initialization failed: {e}")
         AI_AVAILABLE = False
 
-# CRITICAL FIX #13: Use persistent storage, not /tmp
+# File storage setup
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads/intelligence")
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
-# CRITICAL FIX #3: File type validation
+# File validation
 ALLOWED_EXTENSIONS = {'.jsonl', '.json', '.csv', '.txt', '.xlsx', '.xls'}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
-# Simple rate limiting storage (in production, use Redis)
+# Rate limiting
 upload_attempts = {}
 
 def check_rate_limit(request: Request) -> bool:
@@ -56,48 +54,113 @@ def check_rate_limit(request: Request) -> bool:
     if client_ip not in upload_attempts:
         upload_attempts[client_ip] = []
     
-    # Remove attempts older than 1 hour
     upload_attempts[client_ip] = [
         attempt for attempt in upload_attempts[client_ip]
         if (current_time - attempt).seconds < 3600
     ]
     
-    # Check if under limit
     if len(upload_attempts[client_ip]) >= 10:
         return False
     
-    # Add current attempt
     upload_attempts[client_ip].append(current_time)
     return True
 
 def sanitize_filename(filename: str) -> str:
-    """CRITICAL FIX #15: Secure filename sanitization"""
-    # Remove any path components
+    """Secure filename sanitization"""
     filename = os.path.basename(filename)
-    # Keep only alphanumeric, dash, underscore, dot
     filename = re.sub(r'[^\w\-.]', '_', filename)
     return filename
 
+def get_table_columns(db: Session) -> list:
+    """Get the actual columns that exist in the intelligence_files table"""
+    try:
+        result = db.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'intelligence_files'
+            ORDER BY ordinal_position;
+        """))
+        columns = [row[0] for row in result]
+        print(f"[Intelligence] 📊 Available table columns: {columns}")
+        return columns
+    except Exception as e:
+        print(f"[Intelligence] ❌ Failed to get table columns: {e}")
+        return []
+
+def create_adaptive_record(db: Session, file_data: dict) -> dict:
+    """Create a database record using only the columns that actually exist"""
+    try:
+        # Get available columns
+        available_columns = get_table_columns(db)
+        
+        if not available_columns:
+            raise Exception("Could not determine table structure")
+        
+        # Map our data to available columns
+        column_mapping = {
+            'filename': file_data.get('filename'),
+            'original_filename': file_data.get('original_filename'),
+            'source': file_data.get('source', 'manual_upload'),
+            'brand': file_data.get('brand', 'Crooks & Castles'),
+            'file_path': file_data.get('file_path'),
+            'file_size': file_data.get('file_size'),
+            'file_type': file_data.get('file_type'),
+            'description': file_data.get('description', ''),
+            'analysis_results': file_data.get('analysis_results'),
+            'status': file_data.get('status', 'uploaded'),
+            'uploaded_at': file_data.get('uploaded_at', datetime.utcnow()),
+            'processed_at': file_data.get('processed_at'),
+            'created_by': file_data.get('created_by')
+        }
+        
+        # Filter to only include columns that exist in the table
+        filtered_data = {
+            col: value for col, value in column_mapping.items() 
+            if col in available_columns and value is not None
+        }
+        
+        print(f"[Intelligence] 📝 Inserting data: {list(filtered_data.keys())}")
+        
+        # Build dynamic SQL
+        columns = list(filtered_data.keys())
+        placeholders = [f":{col}" for col in columns]
+        
+        sql = f"""
+            INSERT INTO intelligence_files ({', '.join(columns)}) 
+            VALUES ({', '.join(placeholders)})
+            RETURNING id
+        """
+        
+        result = db.execute(text(sql), filtered_data)
+        db.commit()
+        
+        record_id = result.scalar()
+        print(f"[Intelligence] ✅ Created record with ID: {record_id}")
+        
+        return {"id": record_id, "columns_used": columns}
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[Intelligence] ❌ Failed to create record: {e}")
+        raise
+
 def generate_ai_analysis(file_path: str, filename: str) -> dict:
-    """CRITICAL FIX #17 & #19: OpenAI v0.28.1 API format"""
+    """Generate AI analysis using OpenAI v0.28.1"""
     if not AI_AVAILABLE:
         return {"error": "AI analysis not available", "analysis": "Manual review required"}
     
     try:
         import openai
         
-        # Better file sampling
+        # Sample file content
         with open(file_path, 'r', encoding='utf-8') as f:
             all_lines = f.readlines()
-            
-            # Take random sample from entire file
             sample_size = min(10, len(all_lines))
             if len(all_lines) > 10:
                 sample_lines = random.sample(all_lines, sample_size)
             else:
                 sample_lines = all_lines
             
-            # Parse JSON lines safely
             sample_data = []
             for line in sample_lines:
                 try:
@@ -108,13 +171,13 @@ def generate_ai_analysis(file_path: str, filename: str) -> dict:
         if not sample_data:
             return {"error": "No valid JSON data found", "analysis": "File format issue"}
         
-        # OpenAI v0.28.1 API format
+        # OpenAI v0.28.1 API call
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Reliable model for v0.28.1
+            model="gpt-3.5-turbo",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert competitive intelligence analyst for fashion and streetwear brands. Analyze the provided social media data and extract key insights about trends, engagement patterns, content themes, and strategic opportunities. Focus on actionable insights for brand strategy."
+                    "content": "You are an expert competitive intelligence analyst for fashion and streetwear brands. Analyze the provided social media data and extract key insights about trends, engagement patterns, content themes, and strategic opportunities."
                 },
                 {
                     "role": "user",
@@ -132,7 +195,6 @@ def generate_ai_analysis(file_path: str, filename: str) -> dict:
             "sample_size": len(sample_data),
             "total_records": len(all_lines),
             "model_used": "gpt-3.5-turbo",
-            "api_version": "0.28.1",
             "timestamp": datetime.utcnow().isoformat()
         }
         
@@ -167,16 +229,13 @@ async def upload_intelligence_file(
     description: str = "",
     db: Session = Depends(get_db)
 ):
-    """Upload and analyze intelligence file with security fixes"""
+    """Upload and analyze intelligence file - ADAPTIVE VERSION"""
     
-    # CRITICAL FIX #7: Rate limiting (simplified version)
+    # Rate limiting
     if not check_rate_limit(request):
-        raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Maximum 10 uploads per hour."
-        )
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
     
-    # CRITICAL FIX #3: Validate file type
+    # File validation
     file_ext = os.path.splitext(file.filename)[1].lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -184,54 +243,49 @@ async def upload_intelligence_file(
             detail=f"Invalid file type '{file_ext}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     
-    # CRITICAL FIX #15: Secure filename generation
+    # Generate secure filename
     file_hash = hashlib.md5(file.filename.encode()).hexdigest()[:8]
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     safe_filename = f"{timestamp}_{file_hash}{file_ext}"
     file_path = os.path.join(UPLOAD_DIR, safe_filename)
     
-    # CRITICAL FIX #16: Proper cleanup on failure
     try:
-        # Stream file with size validation
+        # Save file
         total_size = 0
         async with aiofiles.open(file_path, 'wb') as f:
             while chunk := await file.read(8192):
                 total_size += len(chunk)
                 if total_size > MAX_FILE_SIZE:
-                    # Clean up partial file
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024 * 1024)}MB"
-                    )
+                    raise HTTPException(status_code=413, detail="File too large")
                 await f.write(chunk)
         
-        # CRITICAL FIX #12: Use ORM for better transaction management
-        intelligence_file = IntelligenceFile(
-            filename=safe_filename,
-            original_filename=sanitize_filename(file.filename),
-            source=source,
-            brand=brand,
-            description=description,
-            file_path=file_path,
-            file_size=total_size,
-            file_type=file_ext,
-            status="uploaded",
-            uploaded_at=datetime.utcnow()
-        )
+        # Prepare file data
+        file_data = {
+            'filename': safe_filename,
+            'original_filename': sanitize_filename(file.filename),
+            'source': source,
+            'brand': brand,
+            'description': description,
+            'file_path': file_path,
+            'file_size': total_size,
+            'file_type': file_ext,
+            'status': 'uploaded',
+            'uploaded_at': datetime.utcnow()
+        }
         
-        db.add(intelligence_file)
-        db.commit()
-        db.refresh(intelligence_file)
+        # Create database record using adaptive method
+        record_info = create_adaptive_record(db, file_data)
         
-        # CRITICAL FIX #20: Run AI analysis in background
+        # Queue AI analysis if available
         if AI_AVAILABLE:
             background_tasks.add_task(
-                process_ai_analysis,
-                intelligence_file.id,
+                process_ai_analysis_adaptive,
+                record_info['id'],
                 file_path,
-                file.filename
+                file.filename,
+                db
             )
             message = "File uploaded successfully. AI analysis in progress."
         else:
@@ -240,91 +294,112 @@ async def upload_intelligence_file(
         return {
             "success": True,
             "message": message,
-            "file_id": intelligence_file.id,
-            "filename": intelligence_file.original_filename,
+            "file_id": record_info['id'],
+            "filename": file_data['original_filename'],
             "size": total_size,
+            "columns_used": record_info['columns_used'],
             "ai_analysis_queued": AI_AVAILABLE
         }
         
     except HTTPException:
-        # Re-raise HTTP exceptions (like file too large)
         raise
     except Exception as e:
-        # CRITICAL FIX #16: Clean up file on any error
         if os.path.exists(file_path):
             os.remove(file_path)
         
         print(f"[Intelligence] Upload error: {e}")
         print(f"[Intelligence] Traceback: {traceback.format_exc()}")
         
-        raise HTTPException(
-            status_code=500,
-            detail=f"Upload failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
-def process_ai_analysis(file_id: int, file_path: str, original_filename: str):
-    """Background task to process AI analysis"""
-    from ..database import SessionLocal
-    
-    db = SessionLocal()
+def process_ai_analysis_adaptive(file_id: int, file_path: str, original_filename: str, db: Session):
+    """Background task for AI analysis - adaptive version"""
     try:
         # Generate AI analysis
         ai_analysis = generate_ai_analysis(file_path, original_filename)
         
-        # Update database record
-        intelligence_file = db.query(IntelligenceFile).filter(
-            IntelligenceFile.id == file_id
-        ).first()
+        # Update record with analysis (if analysis_results column exists)
+        available_columns = get_table_columns(db)
         
-        if intelligence_file:
-            intelligence_file.analysis_results = ai_analysis
-            intelligence_file.status = "processed"
-            intelligence_file.processed_at = datetime.utcnow()
-            db.commit()
-            
+        if 'analysis_results' in available_columns:
+            db.execute(
+                text("UPDATE intelligence_files SET analysis_results = :analysis WHERE id = :id"),
+                {"analysis": json.dumps(ai_analysis), "id": file_id}
+            )
+        
+        if 'status' in available_columns:
+            db.execute(
+                text("UPDATE intelligence_files SET status = :status WHERE id = :id"),
+                {"status": "processed", "id": file_id}
+            )
+        
+        if 'processed_at' in available_columns:
+            db.execute(
+                text("UPDATE intelligence_files SET processed_at = :processed_at WHERE id = :id"),
+                {"processed_at": datetime.utcnow(), "id": file_id}
+            )
+        
+        db.commit()
         print(f"[Intelligence] ✅ AI analysis completed for file {file_id}")
         
     except Exception as e:
         print(f"[Intelligence] ❌ Background AI analysis failed: {e}")
-        
-        # Update status to failed
-        try:
-            intelligence_file = db.query(IntelligenceFile).filter(
-                IntelligenceFile.id == file_id
-            ).first()
-            if intelligence_file:
-                intelligence_file.status = "analysis_failed"
-                intelligence_file.analysis_results = {"error": str(e)}
-                db.commit()
-        except:
-            pass
-    finally:
-        db.close()
 
 @router.get("/files")
 def list_intelligence_files(db: Session = Depends(get_db)):
-    """List all uploaded intelligence files"""
+    """List all uploaded intelligence files - adaptive version"""
     try:
-        files = db.query(IntelligenceFile).order_by(
-            IntelligenceFile.uploaded_at.desc()
-        ).all()
+        # Get available columns
+        available_columns = get_table_columns(db)
+        
+        # Build dynamic query based on available columns
+        select_columns = []
+        if 'id' in available_columns:
+            select_columns.append('id')
+        if 'original_filename' in available_columns:
+            select_columns.append('original_filename')
+        elif 'filename' in available_columns:
+            select_columns.append('filename')
+        if 'source' in available_columns:
+            select_columns.append('source')
+        if 'brand' in available_columns:
+            select_columns.append('brand')
+        if 'file_size' in available_columns:
+            select_columns.append('file_size')
+        if 'status' in available_columns:
+            select_columns.append('status')
+        if 'uploaded_at' in available_columns:
+            select_columns.append('uploaded_at')
+        if 'processed_at' in available_columns:
+            select_columns.append('processed_at')
+        if 'analysis_results' in available_columns:
+            select_columns.append('analysis_results')
+        
+        if not select_columns:
+            return {"files": [], "total": 0, "error": "No readable columns found"}
+        
+        sql = f"SELECT {', '.join(select_columns)} FROM intelligence_files ORDER BY id DESC"
+        result = db.execute(text(sql))
+        
+        files = []
+        for row in result:
+            file_data = dict(zip(select_columns, row))
+            files.append({
+                "id": file_data.get('id'),
+                "filename": file_data.get('original_filename') or file_data.get('filename'),
+                "source": file_data.get('source'),
+                "brand": file_data.get('brand'),
+                "size": file_data.get('file_size'),
+                "status": file_data.get('status'),
+                "uploaded_at": file_data.get('uploaded_at').isoformat() if file_data.get('uploaded_at') else None,
+                "processed_at": file_data.get('processed_at').isoformat() if file_data.get('processed_at') else None,
+                "has_analysis": bool(file_data.get('analysis_results'))
+            })
         
         return {
-            "files": [
-                {
-                    "id": file.id,
-                    "filename": file.original_filename,
-                    "source": file.source,
-                    "brand": file.brand,
-                    "size": file.file_size,
-                    "status": file.status,
-                    "uploaded_at": file.uploaded_at.isoformat() if file.uploaded_at else None,
-                    "processed_at": file.processed_at.isoformat() if file.processed_at else None,
-                    "has_analysis": bool(file.analysis_results)
-                }
-                for file in files
-            ],
-            "total": len(files)
+            "files": files,
+            "total": len(files),
+            "available_columns": available_columns
         }
         
     except Exception as e:
@@ -333,26 +408,34 @@ def list_intelligence_files(db: Session = Depends(get_db)):
 
 @router.get("/files/{file_id}")
 def get_intelligence_file(file_id: int, db: Session = Depends(get_db)):
-    """Get specific intelligence file with analysis"""
+    """Get specific intelligence file - adaptive version"""
     try:
-        file = db.query(IntelligenceFile).filter(
-            IntelligenceFile.id == file_id
-        ).first()
+        available_columns = get_table_columns(db)
         
-        if not file:
+        if not available_columns:
+            raise HTTPException(status_code=500, detail="Cannot read table structure")
+        
+        sql = f"SELECT * FROM intelligence_files WHERE id = :file_id"
+        result = db.execute(text(sql), {"file_id": file_id})
+        row = result.fetchone()
+        
+        if not row:
             raise HTTPException(status_code=404, detail="File not found")
         
+        file_data = dict(zip(available_columns, row))
+        
         return {
-            "id": file.id,
-            "filename": file.original_filename,
-            "source": file.source,
-            "brand": file.brand,
-            "description": file.description,
-            "size": file.file_size,
-            "status": file.status,
-            "uploaded_at": file.uploaded_at.isoformat() if file.uploaded_at else None,
-            "processed_at": file.processed_at.isoformat() if file.processed_at else None,
-            "analysis": file.analysis_results
+            "id": file_data.get('id'),
+            "filename": file_data.get('original_filename') or file_data.get('filename'),
+            "source": file_data.get('source'),
+            "brand": file_data.get('brand'),
+            "description": file_data.get('description'),
+            "size": file_data.get('file_size'),
+            "status": file_data.get('status'),
+            "uploaded_at": file_data.get('uploaded_at').isoformat() if file_data.get('uploaded_at') else None,
+            "processed_at": file_data.get('processed_at').isoformat() if file_data.get('processed_at') else None,
+            "analysis": file_data.get('analysis_results'),
+            "available_columns": available_columns
         }
         
     except HTTPException:
