@@ -7,18 +7,13 @@ aiofiles==23.2.1
 # Database
 sqlalchemy==2.0.43
 psycopg==3.1.12
-alembic==1.13.2
 
 # OpenAI for AI analysis
 openai==1.51.2
 
-# Rate limiting (CRITICAL FIX #7)
-slowapi==0.1.9
-
 # Data processing
 pandas==2.2.2
 openpyxl==3.1.2
-xlsxwriter==3.1.2
 
 # Utilities
 python-dotenv==1.1.1
