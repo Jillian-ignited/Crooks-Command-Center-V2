@@ -27,9 +27,11 @@ if not OPENAI_API_KEY:
 else:
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        # Test the key works
-        client.models.list()
+        # FIXED: Simple client initialization without extra arguments
+        client = OpenAI()  # Uses OPENAI_API_KEY from environment automatically
+        
+        # Test the client works with a simple call
+        models = client.models.list()
         AI_AVAILABLE = True
         print("[Intelligence] ✅ OpenAI client initialized successfully")
     except Exception as e:
