@@ -1,13 +1,11 @@
-# CRITICAL FIX #6: Create proper database models (Fixed imports)
+# CRITICAL FIX #6: Create proper database models (Final import fix)
 from sqlalchemy import Column, Integer, String, DateTime, Float, Text, JSON, Boolean
 from sqlalchemy.sql import func
+from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
-# Import Base from database module
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from database import Base
+# Create Base directly here to avoid import issues
+Base = declarative_base()
 
 class IntelligenceFile(Base):
     """Intelligence file uploads with AI analysis"""
