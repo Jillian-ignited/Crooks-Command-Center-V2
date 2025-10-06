@@ -1,6 +1,5 @@
 import os
 from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from fastapi import HTTPException
 
@@ -54,8 +53,6 @@ except Exception as e:
     else:
         print("[Database] ⚠️ Continuing without database (development mode)")
 
-Base = declarative_base()
-
 # CRITICAL FIX #11: Better error handling in get_db
 def get_db():
     """Dependency for FastAPI routes with proper error handling"""
@@ -81,6 +78,8 @@ def init_db():
         return
         
     try:
+        # Import Base from models to avoid circular imports
+        from models import Base
         Base.metadata.create_all(bind=engine)
         print("[Database] ✅ Tables initialized")
     except Exception as e:
