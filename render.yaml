@@ -5,7 +5,7 @@ services:
     plan: starter
     autoDeploy: true
     
-    # CRITICAL FIX #13: Add persistent disk for file storage
+    # Persistent disk for file storage
     disk:
       name: intelligence-files
       mountPath: /opt/render/project/src/uploads
@@ -15,8 +15,11 @@ services:
       pip install --upgrade pip
       pip install -r backend/requirements.txt
     
+    # COMPREHENSIVE DATABASE INITIALIZATION
     startCommand: |
-      python backend/migrate_shopify_uploads.py && \
+      echo "🚀 Starting Crooks Command Center V2..." && \
+      python backend/init_all_tables.py && \
+      echo "✅ Database initialized" && \
       uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     
     envVars:
@@ -26,20 +29,18 @@ services:
           property: connectionString
       
       - key: OPENAI_API_KEY
-        sync: false  # Set this manually in Render dashboard
+        sync: false
       
       - key: ENVIRONMENT
         value: production
       
-      # CRITICAL FIX #13: Point uploads to persistent disk
       - key: UPLOAD_DIR
-        value: /opt/render/project/src/uploads/intelligence
+        value: /opt/render/project/src/uploads
 
 databases:
   - name: crooks-command-center-db
     plan: starter
 
-# CRITICAL FIX #13: Define the persistent disk
 disks:
   - name: intelligence-files
     sizeGB: 1
