@@ -18,7 +18,7 @@ from ..models import IntelligenceFile
 # Initialize router
 router = APIRouter()
 
-# CRITICAL FIX #18: Proper OpenAI setup with validation
+# CRITICAL FIX #18: Defensive OpenAI setup with multiple fallback methods
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     print("[Intelligence] ⚠️ No OPENAI_API_KEY - AI analysis disabled")
@@ -27,13 +27,52 @@ if not OPENAI_API_KEY:
 else:
     try:
         from openai import OpenAI
-        # FIXED: Simple client initialization without extra arguments
-        client = OpenAI()  # Uses OPENAI_API_KEY from environment automatically
         
-        # Test the client works with a simple call
-        models = client.models.list()
-        AI_AVAILABLE = True
-        print("[Intelligence] ✅ OpenAI client initialized successfully")
+        # Try multiple initialization methods to handle version differences
+        client = None
+        
+        # Method 1: Simple initialization (preferred)
+        try:
+            client = OpenAI()
+            print("[Intelligence] ✅ OpenAI client initialized with method 1")
+        except Exception as e1:
+            print(f"[Intelligence] Method 1 failed: {e1}")
+            
+            # Method 2: Explicit API key
+            try:
+                client = OpenAI(api_key=OPENAI_API_KEY)
+                print("[Intelligence] ✅ OpenAI client initialized with method 2")
+            except Exception as e2:
+                print(f"[Intelligence] Method 2 failed: {e2}")
+                
+                # Method 3: Minimal configuration
+                try:
+                    client = OpenAI(
+                        api_key=OPENAI_API_KEY,
+                        timeout=30.0
+                    )
+                    print("[Intelligence] ✅ OpenAI client initialized with method 3")
+                except Exception as e3:
+                    print(f"[Intelligence] Method 3 failed: {e3}")
+                    client = None
+        
+        if client:
+            # Test the client works
+            try:
+                models = client.models.list()
+                AI_AVAILABLE = True
+                print("[Intelligence] ✅ OpenAI client test successful")
+            except Exception as test_error:
+                print(f"[Intelligence] ❌ OpenAI client test failed: {test_error}")
+                AI_AVAILABLE = False
+                client = None
+        else:
+            AI_AVAILABLE = False
+            
+    except ImportError:
+        print("[Intelligence] ❌ OpenAI package not installed")
+        AI_AVAILABLE = False
+        client = None
     except Exception as e:
         print(f"[Intelligence] ❌ OpenAI initialization failed: {e}")
         AI_AVAILABLE = False
@@ -108,30 +147,45 @@ def generate_ai_analysis(file_path: str, filename: str) -> dict:
         if not sample_data:
             return {"error": "No valid JSON data found", "analysis": "File format issue"}
         
-        # CRITICAL FIX #17: Use correct OpenAI model
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # FIXED: was gpt-4.1-mini (doesn't exist)
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an expert competitive intelligence analyst. Analyze the provided data and extract key insights about trends, engagement patterns, content themes, and strategic opportunities."
-                },
-                {
-                    "role": "user",
-                    "content": f"Analyze this competitive intelligence data from {filename}. Sample data: {json.dumps(sample_data[:3], indent=2)}"
+        # Try different model names in case one doesn't work
+        models_to_try = ["gpt-4o-mini", "gpt-3.5-turbo", "gpt-4"]
+        
+        for model_name in models_to_try:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert competitive intelligence analyst. Analyze the provided data and extract key insights about trends, engagement patterns, content themes, and strategic opportunities."
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Analyze this competitive intelligence data from {filename}. Sample data: {json.dumps(sample_data[:3], indent=2)}"
+                        }
+                    ],
+                    max_tokens=1000,
+                    temperature=0.3
+                )
+                
+                analysis_text = response.choices[0].message.content
+                
+                return {
+                    "analysis": analysis_text,
+                    "sample_size": len(sample_data),
+                    "total_records": len(all_lines),
+                    "model_used": model_name,
+                    "timestamp": datetime.utcnow().isoformat()
                 }
-            ],
-            max_tokens=1000,
-            temperature=0.3
-        )
+                
+            except Exception as model_error:
+                print(f"[Intelligence] Model {model_name} failed: {model_error}")
+                continue
         
-        analysis_text = response.choices[0].message.content
-        
+        # If all models failed
         return {
-            "analysis": analysis_text,
-            "sample_size": len(sample_data),
-            "total_records": len(all_lines),
-            "model_used": "gpt-4o-mini",
+            "error": "All AI models failed",
+            "analysis": "AI analysis failed - manual review required",
             "timestamp": datetime.utcnow().isoformat()
         }
         
