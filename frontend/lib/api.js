@@ -1,3 +1,5 @@
+// frontend/lib/api.js - PURE JAVASCRIPT VERSION
+
 // API configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
   (typeof window !== 'undefined' && window.location.origin.includes('localhost')
@@ -7,7 +9,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
 
 export const api = {
   // Intelligence endpoints
-  uploadFile: async (file: File, source: string, brand: string, description?: string) => {
+  uploadFile: async (file, source, brand, description) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('source', source);
@@ -26,7 +28,7 @@ export const api = {
     return response.json();
   },
 
-  getFiles: async (source?: string) => {
+  getFiles: async (source) => {
     const url = source 
       ? `${API_BASE_URL}/intelligence/files?source=${source}`
       : `${API_BASE_URL}/intelligence/files`;
@@ -35,12 +37,12 @@ export const api = {
     return response.json();
   },
 
-  getFileAnalysis: async (fileId: number) => {
+  getFileAnalysis: async (fileId) => {
     const response = await fetch(`${API_BASE_URL}/intelligence/files/${fileId}`);
     return response.json();
   },
 
-  getInsights: async (source?: string, days?: number) => {
+  getInsights: async (source, days) => {
     const params = new URLSearchParams();
     if (source) params.append('source', source);
     if (days) params.append('days', days.toString());
