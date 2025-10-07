@@ -257,3 +257,20 @@ class AgencyProject(Base):
     deliverables = Column(JSON, default=[])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+class CompetitiveData(Base):
+    __tablename__ = "competitive_data"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    competitor = Column(String, index=True)
+    platform = Column(String, index=True)  # instagram, tiktok, twitter, etc.
+    content_type = Column(String)  # post, reel, video, story
+    engagement_count = Column(Integer, default=0)
+    post_url = Column(String)
+    caption = Column(Text)
+    hashtags = Column(JSON)
+    post_date = Column(DateTime(timezone=True))
+    threat_level = Column(String, index=True)  # high, medium, low
+    sentiment = Column(String)  # positive, neutral, negative
+    raw_data = Column(JSON)
+    scraped_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
