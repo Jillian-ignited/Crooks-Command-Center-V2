@@ -69,6 +69,25 @@ def get_shopify_dashboard(
     prev_aov = prev_revenue / prev_order_count if prev_order_count > 0 else 0
     prev_customers = len(set(o.customer_email for o in prev_orders if o.customer_email))
     
+    # Get session data (for conversion rate)
+    current_sessions = db.query(func.sum(ShopifyMetrics.total_sessions)).filter(
+        and_(
+            ShopifyMetrics.period_start >= start_date,
+            ShopifyMetrics.period_start <= now
+        )
+    ).scalar() or 0
+    
+    prev_sessions = db.query(func.sum(ShopifyMetrics.total_sessions)).filter(
+        and_(
+            ShopifyMetrics.period_start >= prev_start,
+            ShopifyMetrics.period_start < prev_end
+        )
+    ).scalar() or 0
+    
+    # Calculate conversion rate
+    current_conversion = (current_order_count / current_sessions * 100) if current_sessions > 0 else 0
+    prev_conversion = (prev_order_count / prev_sessions * 100) if prev_sessions > 0 else 0
+    
     # Calculate growth
     def calc_growth(current, previous):
         if previous == 0:
@@ -96,6 +115,16 @@ def get_shopify_dashboard(
             "current": current_customers,
             "previous": prev_customers,
             "growth": round(calc_growth(current_customers, prev_customers), 1)
+        },
+        "conversion_rate": {
+            "current": round(current_conversion, 2),
+            "previous": round(prev_conversion, 2),
+            "growth": round(calc_growth(current_conversion, prev_conversion), 1)
+        },
+        "sessions": {
+            "current": int(current_sessions),
+            "previous": int(prev_sessions),
+            "growth": round(calc_growth(current_sessions, prev_sessions), 1)
         }
     }
 
@@ -264,6 +293,60 @@ async def import_shopify_csv(
         
     except Exception as e:
         raise HTTPException(400, f"Error importing CSV: {str(e)}")
+
+
+@router.post("/sessions")
+def record_sessions(
+    date: str,
+    sessions: int,
+    db: Session = Depends(get_db)
+):
+    """Record daily sessions (from Google Analytics or Shopify Analytics)
+    
+    This lets you track conversion rate = orders / sessions
+    """
+    
+    try:
+        session_date = datetime.fromisoformat(date)
+        if session_date.tzinfo is None:
+            session_date = session_date.replace(tzinfo=timezone.utc)
+    except:
+        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+    
+    # Check if metric already exists for this day
+    existing = db.query(ShopifyMetrics).filter(
+        and_(
+            ShopifyMetrics.period_type == "daily",
+            ShopifyMetrics.period_start == session_date
+        )
+    ).first()
+    
+    if existing:
+        existing.total_sessions = sessions
+        
+        # Recalculate conversion rate
+        if existing.total_orders > 0 and sessions > 0:
+            existing.conversion_rate = (existing.total_orders / sessions) * 100
+    else:
+        # Create new daily metric
+        metric = ShopifyMetrics(
+            period_type="daily",
+            period_start=session_date,
+            period_end=session_date + timedelta(days=1),
+            total_sessions=sessions,
+            total_orders=0,
+            conversion_rate=0
+        )
+        db.add(metric)
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "date": date,
+        "sessions": sessions,
+        "message": "Sessions recorded"
+    }
 
 
 @router.get("/top-products")
