@@ -71,17 +71,25 @@ def get_db():
     finally:
         db.close()
 
+# backend/database.py - UPDATE THE init_db FUNCTION
+
 def init_db():
-    """Initialize database tables with proper error handling"""
+    """Initialize database tables"""
     if not DB_AVAILABLE or engine is None:
-        print("[Database] ⚠️ Skipping table creation - database not available")
+        print("[Database] ⚠️ Skipping - database not available")
         return
         
     try:
-        # Import Base from models to avoid circular imports
-        from models import Base
+        # Import Base from models
+        from .models import Base
+        
+        # Create all tables
         Base.metadata.create_all(bind=engine)
-        print("[Database] ✅ Tables initialized")
+        
+        print("[Database] ✅ Tables initialized:")
+        for table in Base.metadata.tables.keys():
+            print(f"  - {table}")
+            
     except Exception as e:
-        print(f"[Database] ❌ Table creation failed: {e}")
+        print(f"[Database] ❌ Initialization failed: {e}")
         raise
