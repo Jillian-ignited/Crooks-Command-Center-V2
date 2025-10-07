@@ -98,8 +98,11 @@ export default function Dashboard() {
             <a href="/upload" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "inherit" }}>
               <div>📤 Upload Intelligence</div>
             </a>
-            <a href="/intelligence" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", textDecoration: "none", color: "inherit" }}>
+            <a href="/intelligence" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "inherit" }}>
               <div>📊 View Files</div>
+            </a>
+            <a href="/campaigns" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", textDecoration: "none", color: "inherit" }}>
+              <div>🎯 Campaigns</div>
             </a>
           </div>
         </div>
