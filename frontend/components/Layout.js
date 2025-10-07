@@ -6,27 +6,18 @@ export default function Layout({ children }) {
       <header className="row" style={{justifyContent:'space-between', marginBottom:16}}>
         <div className="row" style={{gap:10}}>
           <div className="pill">Crooks Command Center</div>
-          <nav className="row" style={{gap:6, flexWrap: 'wrap', fontSize: '14px'}}>
-            <Link href="/">Dashboard</Link>
-            <Link href="/executive" style={{ 
-              fontWeight: 'bold',
-              color: 'var(--brand)',
-              textDecoration: 'underline'
-            }}>
-              Executive Overview
-            </Link>
+          <nav className="row" style={{gap:12, flexWrap: 'wrap', fontSize: '14px'}}>
+            <Link href="/" style={{ fontWeight: '600' }}>Dashboard</Link>
             <Link href="/intelligence">Intelligence</Link>
-            <Link href="/summary">Executive Summary</Link>
-            <Link href="/shopify">Shopify</Link>
-            <Link href="/competitive">Competitive Intelligence</Link>
-            <Link href="/content">Content Creation</Link>
-            <Link href="/media">Media Library</Link>
-            <Link href="/calendar">Calendar</Link>
-            <Link href="/agency">Agency</Link>
-            <Link href="/ingest">Data Ingest</Link>
+            <Link href="/upload">Upload</Link>
+            {/* Coming soon */}
+            <Link href="/campaigns" style={{ color: '#888' }}>Campaigns (Soon)</Link>
+            <Link href="/deliverables" style={{ color: '#888' }}>Deliverables (Soon)</Link>
+            <Link href="/shopify" style={{ color: '#888' }}>Shopify (Soon)</Link>
+            <Link href="/competitive" style={{ color: '#888' }}>Competitive (Soon)</Link>
           </nav>
         </div>
-        <div className="muted">v2.1</div>
+        <div className="muted">v2.5</div>
       </header>
       {children}
     </div>
