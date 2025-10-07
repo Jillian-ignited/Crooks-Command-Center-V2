@@ -1,53 +1,59 @@
-// frontend/lib/api.js
-const API_BASE = "/api";
+// API configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (typeof window !== 'undefined' && window.location.origin.includes('localhost')
+    ? 'http://localhost:8000/api'
+    : 'https://crooks-command-center-v2.onrender.com/api'
+  );
 
-const collapse = (p) =>
-  ("/" + String(p || "").replace(/^\/+/, "")).replace(/\/{2,}/g, "/");
+export const api = {
+  // Intelligence endpoints
+  uploadFile: async (file: File, source: string, brand: string, description?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('source', source);
+    formData.append('brand', brand);
+    if (description) formData.append('description', description);
 
-function withQuery(path, query) {
-  if (!query || typeof query !== "object" || Array.isArray(query)) return path;
-  const entries = Object.entries(query)
-    .filter(([_, v]) => v !== undefined && v !== null && v !== "")
-    .map(([k, v]) => [k, Array.isArray(v) ? v : [v]])
-    .flatMap(([k, arr]) => arr.map((val) => [k, String(val)]));
-  if (!entries.length) return path;
-  const usp = new URLSearchParams(entries);
-  return path + (path.includes("?") ? "&" : "?") + usp.toString();
-}
+    const response = await fetch(`${API_BASE_URL}/intelligence/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
 
-async function request(path, { method = "GET", body, headers = {}, query } = {}) {
-  const urlPath = withQuery(API_BASE + collapse(path), query);
+  getFiles: async (source?: string) => {
+    const url = source 
+      ? `${API_BASE_URL}/intelligence/files?source=${source}`
+      : `${API_BASE_URL}/intelligence/files`;
+    
+    const response = await fetch(url);
+    return response.json();
+  },
 
-  const isFD = typeof FormData !== "undefined" && body instanceof FormData;
-  const isBlob = typeof Blob !== "undefined" && body instanceof Blob;
+  getFileAnalysis: async (fileId: number) => {
+    const response = await fetch(`${API_BASE_URL}/intelligence/files/${fileId}`);
+    return response.json();
+  },
 
-  const hdrs = { ...headers };
-  let payload = body;
+  getInsights: async (source?: string, days?: number) => {
+    const params = new URLSearchParams();
+    if (source) params.append('source', source);
+    if (days) params.append('days', days.toString());
+    
+    const response = await fetch(`${API_BASE_URL}/intelligence/insights?${params}`);
+    return response.json();
+  },
 
-  if (payload != null && !isFD && !isBlob && typeof payload !== "string") {
-    hdrs["Content-Type"] = hdrs["Content-Type"] || "application/json";
-    payload = JSON.stringify(payload);
+  // Health check
+  healthCheck: async () => {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return response.json();
   }
+};
 
-  const res = await fetch(urlPath, {
-    method,
-    headers: isFD || isBlob ? undefined : hdrs,
-    body: payload,
-  });
-
-  const ct = res.headers.get("content-type") || "";
-  const data = ct.includes("application/json") ? await res.json() : await res.text();
-
-  if (!res.ok) {
-    const msg = typeof data === "string" ? data : JSON.stringify(data);
-    throw new Error(`HTTP ${res.status} @ ${urlPath}\n${msg}`);
-  }
-  return data;
-}
-
-export const apiGet  = (p, o)      => request(p, { method: "GET", ...(o || {}) });
-export const apiPost = (p, body, o)=> request(p, { method: "POST", body, ...(o || {}) });
-export const apiPut  = (p, body, o)=> request(p, { method: "PUT",  body, ...(o || {}) });
-export const apiDel  = (p, o)      => request(p, { method: "DELETE", ...(o || {}) });
-
-export default { apiGet, apiPost, apiPut, apiDel };
+export default api;
