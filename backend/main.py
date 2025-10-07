@@ -30,6 +30,7 @@ ALLOWED_ORIGINS = [
     "https://crooks-command-center-v2-1d5b.vercel.app",
     "http://crooks-command-center-v2-1d5b.vercel.app",
     "https://crooks-command-center-v2.onrender.com",
+    "https://crookscommandcenter.netlify.app",  
     "http://localhost:3000",
     "http://localhost:8000",
 ]
