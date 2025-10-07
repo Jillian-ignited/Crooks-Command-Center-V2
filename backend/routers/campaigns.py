@@ -100,80 +100,6 @@ def create_campaign(
     }
 
 
-@router.get("/{campaign_id}")
-def get_campaign(campaign_id: int, db: Session = Depends(get_db)):
-    """Get campaign details with content suggestions"""
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    return {
-        "id": campaign.id,
-        "name": campaign.name,
-        "description": campaign.description,
-        "theme": campaign.theme,
-        "launch_date": campaign.launch_date.isoformat() if campaign.launch_date else None,
-        "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
-        "status": campaign.status,
-        "cultural_moment": campaign.cultural_moment,
-        "target_audience": campaign.target_audience,
-        "content_suggestions": campaign.content_suggestions,
-        "notes": campaign.notes,
-        "created_at": campaign.created_at.isoformat()
-    }
-
-
-@router.post("/{campaign_id}/generate-suggestions")
-def regenerate_suggestions(campaign_id: int, db: Session = Depends(get_db)):
-    """Regenerate AI content suggestions for a campaign"""
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    if not AI_AVAILABLE:
-        raise HTTPException(503, "AI suggestions unavailable - OpenAI not configured")
-    
-    suggestions = generate_content_suggestions(campaign, db)
-    campaign.content_suggestions = suggestions
-    db.commit()
-    
-    return {
-        "success": True,
-        "suggestions": suggestions
-    }
-
-
-@router.put("/{campaign_id}")
-def update_campaign(
-    campaign_id: int,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    status: Optional[str] = None,
-    notes: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    """Update campaign"""
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    if name:
-        campaign.name = name
-    if description:
-        campaign.description = description
-    if status:
-        campaign.status = status
-    if notes:
-        campaign.notes = notes
-    
-    db.commit()
-    
-    return {"success": True}
-
-
 @router.get("/cultural-calendar")
 def get_cultural_calendar(days_ahead: int = 120, db: Session = Depends(get_db)):
     """Get rolling cultural calendar - upcoming moments for the next 90-120 days
@@ -569,6 +495,80 @@ def get_cultural_calendar(days_ahead: int = 120, db: Session = Depends(get_db)):
             "on_radar": len(next_90_days) + len(beyond_90_days)
         }
     }
+
+
+@router.get("/{campaign_id}")
+def get_campaign(campaign_id: int, db: Session = Depends(get_db)):
+    """Get campaign details with content suggestions"""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    
+    return {
+        "id": campaign.id,
+        "name": campaign.name,
+        "description": campaign.description,
+        "theme": campaign.theme,
+        "launch_date": campaign.launch_date.isoformat() if campaign.launch_date else None,
+        "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
+        "status": campaign.status,
+        "cultural_moment": campaign.cultural_moment,
+        "target_audience": campaign.target_audience,
+        "content_suggestions": campaign.content_suggestions,
+        "notes": campaign.notes,
+        "created_at": campaign.created_at.isoformat()
+    }
+
+
+@router.post("/{campaign_id}/generate-suggestions")
+def regenerate_suggestions(campaign_id: int, db: Session = Depends(get_db)):
+    """Regenerate AI content suggestions for a campaign"""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    
+    if not AI_AVAILABLE:
+        raise HTTPException(503, "AI suggestions unavailable - OpenAI not configured")
+    
+    suggestions = generate_content_suggestions(campaign, db)
+    campaign.content_suggestions = suggestions
+    db.commit()
+    
+    return {
+        "success": True,
+        "suggestions": suggestions
+    }
+
+
+@router.put("/{campaign_id}")
+def update_campaign(
+    campaign_id: int,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    status: Optional[str] = None,
+    notes: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Update campaign"""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    
+    if name:
+        campaign.name = name
+    if description:
+        campaign.description = description
+    if status:
+        campaign.status = status
+    if notes:
+        campaign.notes = notes
+    
+    db.commit()
+    
+    return {"success": True}
 
 
 def generate_content_suggestions(campaign: Campaign, db: Session):
