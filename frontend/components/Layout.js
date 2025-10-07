@@ -13,7 +13,7 @@ export default function Layout({ children }) {
             <Link href="/campaigns">Campaigns</Link>
             <Link href="/deliverables">Deliverables</Link>
             <Link href="/shopify">Shopify</Link>
-            <Link href="/competitive" style={{ color: '#888' }}>Competitive (Soon)</Link>
+            <Link href="/competitive">Competitive</Link>
           </nav>
         </div>
         <div className="muted">v3.0</div>
