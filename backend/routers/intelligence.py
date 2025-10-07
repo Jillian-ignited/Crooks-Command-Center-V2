@@ -56,8 +56,22 @@ def analyze_large_file(file_path: str, filename: str, source: str) -> dict:
         }
     
     try:
-        # Create client instance with only api_key
-        client = OpenAIClient(api_key=OPENAI_API_KEY)
+        # Create client with explicit error handling
+        try:
+            client = OpenAIClient(api_key=OPENAI_API_KEY)
+            use_legacy_api = False
+        except TypeError as te:
+            # If proxies error, try alternative initialization
+            print(f"[Analysis] ⚠️ Client init error: {te}, trying legacy API")
+            import openai
+            openai.api_key = OPENAI_API_KEY
+            use_legacy_api = True
+        except Exception as e:
+            print(f"[Analysis] ❌ Failed to create OpenAI client: {e}")
+            return {
+                "error": f"OpenAI client creation failed: {str(e)}",
+                "analysis": "Could not initialize AI - please check API configuration"
+            }
         
         print(f"[Analysis] Reading file: {filename}")
         
@@ -135,17 +149,30 @@ Provide:
         # Call OpenAI API
         print(f"[Analysis] Calling OpenAI API...")
         
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-16k",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=2000,
-            temperature=0.3
-        )
-        
-        analysis_text = response.choices[0].message.content
+        if not use_legacy_api:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo-16k",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.3
+            )
+            analysis_text = response.choices[0].message.content
+        else:
+            # Fallback to legacy API if needed
+            import openai
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo-16k",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.3
+            )
+            analysis_text = response.choices[0].message.content
         
         print(f"[Analysis] ✅ AI analysis complete")
         
@@ -297,7 +324,7 @@ def list_files(
                 "size_mb": round(f.file_size / 1024 / 1024, 2) if f.file_size else 0,
                 "status": f.status,
                 "uploaded_at": f.uploaded_at.isoformat(),
-                "has_analysis": bool(f.analysis_results and isinstance(f.analysis_results, dict) and "analysis" in f.analysis_results)
+                "has_analysis": bool(f.analysis_results and isinstance(f.analysis_results, dict) and "analysis" in f.analysis_results and "error" not in f.analysis_results)
             }
             for f in files
         ],
