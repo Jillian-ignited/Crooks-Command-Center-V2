@@ -17,7 +17,7 @@ export default function Layout({ children }) {
             <Link href="/competitive" style={{ color: '#888' }}>Competitive (Soon)</Link>
           </nav>
         </div>
-        <div className="muted">v2.6</div>
+        <div className="muted">v3.0</div>
       </header>
       {children}
     </div>
