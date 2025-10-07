@@ -55,7 +55,7 @@ app.include_router(agency.router, prefix="/api/agency", tags=["agency"])
 app.include_router(campaigns.router, prefix="/api/campaigns", tags=["campaigns"])  # NEW
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
-
+app.include_router(deliverables.router, prefix="/api/deliverables", tags=["deliverables"])
 @app.get("/api/health")
 def health_check():
     return {
