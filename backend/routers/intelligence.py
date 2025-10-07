@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pathlib import Path
 import os
@@ -8,26 +8,20 @@ import aiofiles
 from datetime import datetime
 import traceback
 import re
-import random
 
 from ..database import get_db, DB_AVAILABLE
 from ..models import IntelligenceFile
 
 router = APIRouter()
 
-# OpenAI setup - FIXED VERSION
+# OpenAI setup
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AI_AVAILABLE = bool(OPENAI_API_KEY)
 
 if AI_AVAILABLE:
-    try:
-        from openai import OpenAI
-        # Don't initialize client here, do it in the function
-        print("[Intelligence] ✅ OpenAI configured")
-        AI_AVAILABLE = True
-    except Exception as e:
-        print(f"[Intelligence] ❌ OpenAI import failed: {e}")
-        AI_AVAILABLE = False
+    print("[Intelligence] ✅ OpenAI API key configured")
+else:
+    print("[Intelligence] ⚠️ No OpenAI API key - AI analysis disabled")
 
 # File storage
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads/intelligence")
@@ -36,8 +30,9 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {'.jsonl', '.json', '.csv', '.txt', '.xlsx', '.xls'}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
+
 def sanitize_filename(filename: str) -> str:
-    """Secure filename"""
+    """Secure filename sanitization"""
     return re.sub(r'[^\w\-.]', '_', os.path.basename(filename))
 
 
@@ -47,17 +42,22 @@ def analyze_large_file(file_path: str, filename: str, source: str) -> dict:
     Uses intelligent sampling instead of reading entire file
     """
     if not AI_AVAILABLE:
-        return {"error": "OpenAI not configured", "analysis": "AI analysis unavailable"}
+        return {
+            "error": "OpenAI not configured",
+            "analysis": "AI analysis unavailable - please configure OPENAI_API_KEY"
+        }
     
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # Import here to avoid initialization issues
+        import openai
+        
+        # Create client with ONLY api_key parameter
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
         
         print(f"[Analysis] Reading file: {filename}")
         
-        # OPTIMIZED SAMPLING for large files
+        # Read and sample file
         with open(file_path, 'r', encoding='utf-8') as f:
-            # Count total lines
             all_lines = f.readlines()
             total_lines = len(all_lines)
             print(f"[Analysis] Total records: {total_lines}")
@@ -90,7 +90,10 @@ def analyze_large_file(file_path: str, filename: str, source: str) -> dict:
                         continue
         
         if not sample_lines:
-            return {"error": "No valid JSON data", "analysis": "File format issue"}
+            return {
+                "error": "No valid JSON data",
+                "analysis": "Could not parse file - please check format"
+            }
         
         print(f"[Analysis] Sampled {len(sample_lines)} records from {total_lines} total")
         
@@ -124,10 +127,10 @@ Provide:
 6. **Sentiment Overview**: Brand perception and audience mood
 7. **Timing Insights**: Best times for content and campaigns"""
 
-        # Call OpenAI
+        # Call OpenAI API
         print(f"[Analysis] Calling OpenAI API...")
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo-16k",  # 16k model for larger context
+            model="gpt-3.5-turbo-16k",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -154,13 +157,13 @@ Provide:
         traceback.print_exc()
         return {
             "error": str(e),
-            "analysis": "AI analysis failed - please try again"
+            "analysis": "AI analysis failed - please try again or review manually"
         }
 
 
 @router.get("/health")
 def health():
-    """Health check"""
+    """Health check for intelligence module"""
     return {
         "status": "healthy",
         "ai_available": AI_AVAILABLE,
@@ -173,7 +176,7 @@ def health():
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    source: str = "manual_upload",  # apify, shopify, manus
+    source: str = "manual_upload",  # apify, shopify, manus, manual_upload
     brand: str = "Crooks & Castles",
     description: str = "",
     db: Session = Depends(get_db)
@@ -183,10 +186,10 @@ async def upload_file(
     Analysis runs synchronously - will take 30-60 seconds for large files
     """
     
-    # Validate
+    # Validate file type
     file_ext = os.path.splitext(file.filename)[1].lower()
     if file_ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(400, f"Invalid file type: {file_ext}")
+        raise HTTPException(400, f"Invalid file type: {file_ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
     
     # Generate secure filename
     file_hash = hashlib.md5(file.filename.encode()).hexdigest()[:8]
@@ -203,7 +206,8 @@ async def upload_file(
             while chunk := await file.read(8192):
                 total_size += len(chunk)
                 if total_size > MAX_FILE_SIZE:
-                    os.remove(file_path)
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
                     raise HTTPException(413, "File exceeds 100MB limit")
                 await f.write(chunk)
         
@@ -264,7 +268,7 @@ def list_files(
     limit: int = 50,
     db: Session = Depends(get_db)
 ):
-    """List uploaded files"""
+    """List uploaded intelligence files"""
     query = db.query(IntelligenceFile)
     
     if source:
