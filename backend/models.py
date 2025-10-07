@@ -159,3 +159,36 @@ class AgencyProject(Base):
     deliverables = Column(JSON, default=[])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+class Deliverable(Base):
+    """Agency deliverables tracker - flexible phases"""
+    __tablename__ = "deliverables"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer)  # Optional link to campaign
+    
+    # Phase info (not date-locked)
+    phase = Column(String(50), nullable=False)  # "Phase 1", "Phase 2", "Phase 3"
+    phase_name = Column(String(255))  # "Foundation & Awareness", etc.
+    
+    # Task details
+    category = Column(String(100), nullable=False)
+    task = Column(Text, nullable=False)
+    asset_requirements = Column(Text)
+    
+    # Dates (flexible)
+    due_date = Column(DateTime(timezone=True))
+    completed_date = Column(DateTime(timezone=True))
+    
+    # Status
+    status = Column(String(50), default="not_started")  # not_started, in_progress, complete, blocked
+    
+    # Ownership
+    owner = Column(String(100))  # High Voltage or You
+    assigned_to = Column(String(100))  # Specific person
+    
+    # Notes
+    notes = Column(Text)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
