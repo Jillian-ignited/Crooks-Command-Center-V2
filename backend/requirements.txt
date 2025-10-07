@@ -8,8 +8,8 @@ aiofiles==23.2.1
 sqlalchemy==2.0.43
 psycopg==3.1.12
 
-# OpenAI for AI analysis (STABLE VERSION)
-openai==0.28.1
+# OpenAI - UPDATED to v1.x
+openai==1.54.0
 
 # Data processing
 pandas==2.2.2
@@ -20,14 +20,6 @@ python-dotenv==1.1.1
 pydantic==2.11.10
 requests==2.31.0
 python-dateutil==2.8.2
-
-# Background tasks
-celery==5.5.3
-redis==6.4.0
-
-# Text processing
-nltk==3.9.2
-textblob==0.17.1
 
 # Development and testing
 pytest==8.3.3
