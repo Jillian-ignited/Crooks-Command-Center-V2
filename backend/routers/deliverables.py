@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, or_
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import csv
 import io
@@ -33,7 +33,8 @@ def get_deliverables(
         query = query.filter(Deliverable.category == category)
     
     if upcoming_days:
-        cutoff = datetime.utcnow() + timedelta(days=upcoming_days)
+        now = datetime.now(timezone.utc)
+        cutoff = now + timedelta(days=upcoming_days)
         query = query.filter(
             and_(
                 Deliverable.due_date.isnot(None),
@@ -86,7 +87,7 @@ def get_deliverables_dashboard(db: Session = Depends(get_db)):
     }
     
     # Upcoming (next 7 days)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     upcoming = [
         d for d in all_deliverables 
         if d.due_date and d.due_date <= now + timedelta(days=7) and d.status != "complete"
@@ -156,7 +157,7 @@ def get_deliverables_by_phase(phase: str, db: Session = Depends(get_db)):
             for d in deliverables
         ],
         "total": len(deliverables),
-        "completion_rate": len([d for d in deliverables if d.status == "complete"]) / len(deliverables) * 100
+        "completion_rate": len([d for d in deliverables if d.status == "complete"]) / len(deliverables) * 100 if deliverables else 0
     }
 
 
@@ -173,7 +174,15 @@ def create_deliverable(
 ):
     """Create a new deliverable"""
     
-    due_dt = datetime.fromisoformat(due_date) if due_date else None
+    due_dt = None
+    if due_date:
+        try:
+            due_dt = datetime.fromisoformat(due_date)
+            # Make sure it's timezone-aware
+            if due_dt.tzinfo is None:
+                due_dt = due_dt.replace(tzinfo=timezone.utc)
+        except:
+            pass
     
     deliverable = Deliverable(
         phase=phase,
@@ -216,10 +225,16 @@ def update_deliverable(
     if status:
         deliverable.status = status
         if status == "complete" and not deliverable.completed_date:
-            deliverable.completed_date = datetime.utcnow()
+            deliverable.completed_date = datetime.now(timezone.utc)
     
     if due_date:
-        deliverable.due_date = datetime.fromisoformat(due_date)
+        try:
+            due_dt = datetime.fromisoformat(due_date)
+            if due_dt.tzinfo is None:
+                due_dt = due_dt.replace(tzinfo=timezone.utc)
+            deliverable.due_date = due_dt
+        except:
+            pass
     
     if notes:
         deliverable.notes = notes
@@ -227,10 +242,10 @@ def update_deliverable(
     if assigned_to:
         deliverable.assigned_to = assigned_to
     
-    if campaign_id:
+    if campaign_id is not None:
         deliverable.campaign_id = campaign_id
     
-    deliverable.updated_at = datetime.utcnow()
+    deliverable.updated_at = datetime.now(timezone.utc)
     db.commit()
     
     return {"success": True}
@@ -259,18 +274,25 @@ async def import_deliverables_csv(
             if row.get('Due Date'):
                 try:
                     due_date = datetime.fromisoformat(row['Due Date'])
+                    if due_date.tzinfo is None:
+                        due_date = due_date.replace(tzinfo=timezone.utc)
                 except:
                     pass
             
+            # Extract phase (e.g., "Phase 1" from "Phase 1: Foundation & Awareness")
+            phase_full = row.get('Phase', '')
+            phase = phase_full.split(':')[0].strip() if ':' in phase_full else phase_full.strip()
+            phase_name = phase_full.split(':', 1)[1].strip() if ':' in phase_full else ''
+            
             deliverable = Deliverable(
-                phase=row.get('Phase', '').split(':')[0].strip(),  # Extract "Phase 1" from "Phase 1: Foundation..."
-                phase_name=row.get('Phase', '').split(':', 1)[1].strip() if ':' in row.get('Phase', '') else '',
+                phase=phase,
+                phase_name=phase_name,
                 category=row.get('Category', ''),
                 task=row.get('Task', ''),
                 asset_requirements=row.get('Asset Requirements', ''),
                 due_date=due_date,
                 status=row.get('Status', 'not_started').lower().replace(' ', '_'),
-                owner=row.get('Owner', 'High Voltage Digital')
+                owner=row.get('Owner') if row.get('Owner') else 'High Voltage Digital'
             )
             
             db.add(deliverable)
@@ -315,6 +337,8 @@ def activate_phase(
     
     try:
         phase_start = datetime.fromisoformat(start_date)
+        if phase_start.tzinfo is None:
+            phase_start = phase_start.replace(tzinfo=timezone.utc)
     except:
         raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
     
@@ -331,7 +355,6 @@ def activate_phase(
             d.status = "in_progress"
         
         # If deliverable doesn't have a due date yet, calculate one
-        # (You can customize this logic based on your needs)
         if not d.due_date:
             # Example: Ad creative due 2 weeks after phase start
             if "creative" in d.category.lower():
@@ -342,6 +365,9 @@ def activate_phase(
             # Reporting due end of month
             elif "report" in d.category.lower():
                 d.due_date = phase_start + timedelta(days=30)
+            # Email/SMS due bi-weekly
+            elif "email" in d.category.lower() or "sms" in d.category.lower():
+                d.due_date = phase_start + timedelta(days=14)
             else:
                 d.due_date = phase_start + timedelta(days=14)  # Default 2 weeks
         
@@ -355,4 +381,69 @@ def activate_phase(
         "start_date": start_date,
         "deliverables_updated": updated,
         "message": f"{phase} activated starting {start_date}"
+    }
+
+
+@router.get("/upcoming")
+def get_upcoming_deliverables(days: int = 7, db: Session = Depends(get_db)):
+    """Get deliverables due in the next X days"""
+    
+    now = datetime.now(timezone.utc)
+    cutoff = now + timedelta(days=days)
+    
+    deliverables = db.query(Deliverable).filter(
+        and_(
+            Deliverable.due_date.isnot(None),
+            Deliverable.due_date <= cutoff,
+            Deliverable.due_date >= now,
+            Deliverable.status != "complete"
+        )
+    ).order_by(Deliverable.due_date).all()
+    
+    return {
+        "upcoming_days": days,
+        "count": len(deliverables),
+        "deliverables": [
+            {
+                "id": d.id,
+                "task": d.task,
+                "due_date": d.due_date.isoformat(),
+                "phase": d.phase,
+                "category": d.category,
+                "status": d.status,
+                "days_until_due": (d.due_date - now).days
+            }
+            for d in deliverables
+        ]
+    }
+
+
+@router.get("/overdue")
+def get_overdue_deliverables(db: Session = Depends(get_db)):
+    """Get all overdue deliverables"""
+    
+    now = datetime.now(timezone.utc)
+    
+    deliverables = db.query(Deliverable).filter(
+        and_(
+            Deliverable.due_date.isnot(None),
+            Deliverable.due_date < now,
+            Deliverable.status != "complete"
+        )
+    ).order_by(Deliverable.due_date).all()
+    
+    return {
+        "count": len(deliverables),
+        "deliverables": [
+            {
+                "id": d.id,
+                "task": d.task,
+                "due_date": d.due_date.isoformat(),
+                "phase": d.phase,
+                "category": d.category,
+                "status": d.status,
+                "days_overdue": (now - d.due_date).days
+            }
+            for d in deliverables
+        ]
     }
