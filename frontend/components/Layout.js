@@ -10,9 +10,8 @@ export default function Layout({ children }) {
             <Link href="/" style={{ fontWeight: '600' }}>Dashboard</Link>
             <Link href="/intelligence">Intelligence</Link>
             <Link href="/upload">Upload</Link>
-            {/* Coming soon */}
-            <Link href="/campaigns" style={{ color: '#888' }}>Campaigns (Soon)</Link>
-            <Link href="/deliverables" style={{ color: '#888' }}>Deliverables (Soon)</Link>
+            <Link href="/campaigns">Campaigns</Link>
+            <Link href="/deliverables">Deliverables</Link>
             <Link href="/shopify" style={{ color: '#888' }}>Shopify (Soon)</Link>
             <Link href="/competitive" style={{ color: '#888' }}>Competitive (Soon)</Link>
           </nav>
