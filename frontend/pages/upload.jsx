@@ -268,7 +268,7 @@ export default function UploadPage() {
                 fontWeight: "600"
               }}
             >
-              View in Intelligence →
+              View in Intelligence &rarr;
             </a>
           </div>
         )}
