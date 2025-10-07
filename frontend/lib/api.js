@@ -117,3 +117,20 @@ export const apiDelete = async (endpoint) => {
 };
 
 export default api;
+// Add these to the existing api object:
+
+  // Executive/Dashboard endpoints
+  getDashboardOverview: async () => {
+    const response = await fetch(`${API_BASE_URL}/executive/overview`);
+    return response.json();
+  },
+
+  getWeeklyPriorities: async () => {
+    const response = await fetch(`${API_BASE_URL}/executive/priorities`);
+    return response.json();
+  },
+
+  getQuickStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/executive/quick-stats`);
+    return response.json();
+  },
