@@ -5,8 +5,6 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "copy:static": "mkdir -p ../backend/static/site && cp -R out/* ../backend/static/site/",
-    "build:static": "npm run build && npm run copy:static",
     "start": "next start -p 3000"
   },
   "dependencies": {
