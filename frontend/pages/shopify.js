@@ -71,6 +71,34 @@ export default function ShopifyPage() {
     }
   }
 
+  async function handleAnalyticsUpload(endpoint, file) {
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/shopify/${endpoint}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`✅ ${result.message}`);
+        loadData();
+      } else {
+        alert(`❌ Error: ${result.detail || 'Upload failed'}`);
+      }
+    } catch (err) {
+      alert(`❌ Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -122,7 +150,7 @@ export default function ShopifyPage() {
                 <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🛍️</div>
                 <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#e9edf2" }}>No Shopify Data Yet</h2>
                 <p style={{ color: "#888", marginBottom: "2rem", maxWidth: "500px", margin: "0 auto 2rem" }}>
-                  Upload your Shopify orders CSV to see real revenue, conversion rates, and customer analytics
+                  Upload your Shopify analytics reports to see real revenue, conversion rates, and customer analytics
                 </p>
                 <button onClick={() => setActiveTab("upload")} style={{ padding: "12px 24px", background: "#6aa6ff", color: "#fff", border: "none", borderRadius: "8px", fontSize: "1rem", cursor: "pointer", fontWeight: "600" }}>
                   Upload Shopify Data
@@ -236,7 +264,7 @@ export default function ShopifyPage() {
               <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
                 <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📦</div>
                 <h3 style={{ marginBottom: "1rem", color: "#e9edf2" }}>No Orders Yet</h3>
-                <p style={{ color: "#888" }}>Upload your Shopify CSV to see orders here</p>
+                <p style={{ color: "#888" }}>Upload your Shopify orders CSV to see orders here</p>
               </div>
             ) : (
               <div style={{ display: "grid", gap: "1rem" }}>
@@ -331,48 +359,157 @@ export default function ShopifyPage() {
         {/* UPLOAD TAB */}
         {activeTab === "upload" && (
           <div>
-            <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", maxWidth: "700px", margin: "0 auto" }}>
+            <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", maxWidth: "900px", margin: "0 auto" }}>
               <h3 style={{ fontSize: "1.5rem", marginBottom: "1.5rem", color: "#e9edf2" }}>📤 Upload Shopify Data</h3>
               
-              <div style={{ marginBottom: "2rem" }}>
-                <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#e9edf2" }}>How to Export from Shopify:</h4>
-                <ol style={{ color: "#888", lineHeight: "1.8", paddingLeft: "1.5rem" }}>
+              {/* Orders Export */}
+              <div style={{ marginBottom: "3rem" }}>
+                <h4 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#e9edf2" }}>📦 Option 1: Individual Orders</h4>
+                <p style={{ color: "#888", marginBottom: "1rem", lineHeight: "1.6" }}>
+                  For detailed customer and product tracking
+                </p>
+                <ol style={{ color: "#888", lineHeight: "1.8", paddingLeft: "1.5rem", marginBottom: "1.5rem" }}>
                   <li>Go to your Shopify admin dashboard</li>
                   <li>Click on <strong style={{ color: "#e9edf2" }}>Orders</strong> in the left menu</li>
-                  <li>Click the <strong style={{ color: "#e9edf2" }}>Export</strong> button at the top</li>
-                  <li>Choose <strong style={{ color: "#e9edf2" }}>All orders</strong> or a date range</li>
+                  <li>Click the <strong style={{ color: "#e9edf2" }}>Export</strong> button</li>
+                  <li>Choose date range</li>
                   <li>Select <strong style={{ color: "#e9edf2" }}>Plain CSV file</strong></li>
                   <li>Click <strong style={{ color: "#e9edf2" }}>Export orders</strong></li>
-                  <li>Upload the downloaded CSV below</li>
                 </ol>
+                
+                <div style={{ border: "2px dashed #2a2a2a", borderRadius: "12px", padding: "1.5rem", textAlign: "center", background: "#0a0b0d" }}>
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                    style={{ display: "none" }}
+                    id="shopify-orders-upload"
+                  />
+                  <label 
+                    htmlFor="shopify-orders-upload" 
+                    style={{ 
+                      display: "inline-block",
+                      padding: "12px 24px", 
+                      background: uploading ? "#444" : "#6aa6ff", 
+                      color: "#fff", 
+                      borderRadius: "8px", 
+                      cursor: uploading ? "not-allowed" : "pointer",
+                      fontWeight: "600",
+                      fontSize: "0.95rem"
+                    }}
+                  >
+                    {uploading ? "Uploading..." : "📦 Upload Orders CSV"}
+                  </label>
+                </div>
               </div>
 
-              <div style={{ border: "2px dashed #2a2a2a", borderRadius: "12px", padding: "2rem", textAlign: "center", background: "#0a0b0d" }}>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleFileUpload}
-                  disabled={uploading}
-                  style={{ display: "none" }}
-                  id="shopify-upload"
-                />
-                <label 
-                  htmlFor="shopify-upload" 
-                  style={{ 
-                    display: "inline-block",
-                    padding: "14px 28px", 
-                    background: uploading ? "#444" : "#6aa6ff", 
-                    color: "#fff", 
-                    borderRadius: "8px", 
-                    cursor: uploading ? "not-allowed" : "pointer",
-                    fontWeight: "600",
-                    fontSize: "1rem"
-                  }}
-                >
-                  {uploading ? "Uploading..." : "📁 Choose Shopify CSV"}
-                </label>
-                <div style={{ marginTop: "1rem", fontSize: "0.9rem", color: "#888" }}>
-                  Supports Shopify order export CSV files
+              {/* Analytics Reports */}
+              <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: "2rem" }}>
+                <h4 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#e9edf2" }}>📊 Option 2: Analytics Reports</h4>
+                <p style={{ color: "#888", marginBottom: "1rem", lineHeight: "1.6" }}>
+                  For daily metrics and conversion tracking
+                </p>
+                <ol style={{ color: "#888", lineHeight: "1.8", paddingLeft: "1.5rem", marginBottom: "1.5rem" }}>
+                  <li>Go to <strong style={{ color: "#e9edf2" }}>Analytics → Reports</strong> in Shopify</li>
+                  <li>Export these reports as CSV:</li>
+                  <ul style={{ marginTop: "0.5rem", marginLeft: "1rem" }}>
+                    <li><strong style={{ color: "#e9edf2" }}>Total sales over time</strong></li>
+                    <li><strong style={{ color: "#e9edf2" }}>Orders over time</strong></li>
+                    <li><strong style={{ color: "#e9edf2" }}>Conversion rate over time</strong></li>
+                  </ul>
+                </ol>
+
+                <div style={{ display: "grid", gap: "1rem" }}>
+                  {/* Sales Analytics */}
+                  <div style={{ border: "2px dashed #2a2a2a", borderRadius: "12px", padding: "1.5rem", textAlign: "center", background: "#0a0b0d" }}>
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) handleAnalyticsUpload('import-analytics-sales', file);
+                      }}
+                      disabled={uploading}
+                      style={{ display: "none" }}
+                      id="analytics-sales-upload"
+                    />
+                    <label 
+                      htmlFor="analytics-sales-upload" 
+                      style={{ 
+                        display: "inline-block",
+                        padding: "12px 24px", 
+                        background: uploading ? "#444" : "#4ade80", 
+                        color: "#fff", 
+                        borderRadius: "8px", 
+                        cursor: uploading ? "not-allowed" : "pointer",
+                        fontWeight: "600",
+                        fontSize: "0.95rem"
+                      }}
+                    >
+                      📊 Upload Total Sales Over Time
+                    </label>
+                  </div>
+
+                  {/* Orders Analytics */}
+                  <div style={{ border: "2px dashed #2a2a2a", borderRadius: "12px", padding: "1.5rem", textAlign: "center", background: "#0a0b0d" }}>
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) handleAnalyticsUpload('import-analytics-orders', file);
+                      }}
+                      disabled={uploading}
+                      style={{ display: "none" }}
+                      id="analytics-orders-upload"
+                    />
+                    <label 
+                      htmlFor="analytics-orders-upload" 
+                      style={{ 
+                        display: "inline-block",
+                        padding: "12px 24px", 
+                        background: uploading ? "#444" : "#4ade80", 
+                        color: "#fff", 
+                        borderRadius: "8px", 
+                        cursor: uploading ? "not-allowed" : "pointer",
+                        fontWeight: "600",
+                        fontSize: "0.95rem"
+                      }}
+                    >
+                      📊 Upload Orders Over Time
+                    </label>
+                  </div>
+
+                  {/* Conversion Analytics */}
+                  <div style={{ border: "2px dashed #2a2a2a", borderRadius: "12px", padding: "1.5rem", textAlign: "center", background: "#0a0b0d" }}>
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) handleAnalyticsUpload('import-analytics-conversion', file);
+                      }}
+                      disabled={uploading}
+                      style={{ display: "none" }}
+                      id="analytics-conversion-upload"
+                    />
+                    <label 
+                      htmlFor="analytics-conversion-upload" 
+                      style={{ 
+                        display: "inline-block",
+                        padding: "12px 24px", 
+                        background: uploading ? "#444" : "#4ade80", 
+                        color: "#fff", 
+                        borderRadius: "8px", 
+                        cursor: uploading ? "not-allowed" : "pointer",
+                        fontWeight: "600",
+                        fontSize: "0.95rem"
+                      }}
+                    >
+                      📊 Upload Conversion Rate Over Time
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -380,7 +517,7 @@ export default function ShopifyPage() {
                 <div style={{ marginTop: "2rem", padding: "1rem", background: "#1a2a1a", borderRadius: "8px", borderLeft: "3px solid #4ade80" }}>
                   <div style={{ color: "#4ade80", fontWeight: "600", marginBottom: "0.5rem" }}>✅ Data Already Imported</div>
                   <div style={{ fontSize: "0.9rem", color: "#888" }}>
-                    You have {dashboard.orders.current} orders imported. Upload a new CSV to add more orders or update existing ones.
+                    You have data imported. Upload new CSVs weekly to keep metrics current.
                   </div>
                 </div>
               )}
