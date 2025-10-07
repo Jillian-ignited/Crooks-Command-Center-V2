@@ -15,19 +15,18 @@ from ..models import IntelligenceFile
 
 router = APIRouter()
 
-# OpenAI setup
+# OpenAI setup - FIXED VERSION
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AI_AVAILABLE = bool(OPENAI_API_KEY)
 
 if AI_AVAILABLE:
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        # Test connection
-        client.models.list()
-        print("[Intelligence] ✅ OpenAI v1.x initialized")
+        # Don't initialize client here, do it in the function
+        print("[Intelligence] ✅ OpenAI configured")
+        AI_AVAILABLE = True
     except Exception as e:
-        print(f"[Intelligence] ❌ OpenAI init failed: {e}")
+        print(f"[Intelligence] ❌ OpenAI import failed: {e}")
         AI_AVAILABLE = False
 
 # File storage
