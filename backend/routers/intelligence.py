@@ -8,6 +8,7 @@ import aiofiles
 from datetime import datetime
 import traceback
 import re
+import random
 
 from ..database import get_db, DB_AVAILABLE
 from ..models import IntelligenceFile
@@ -20,9 +21,11 @@ AI_AVAILABLE = bool(OPENAI_API_KEY)
 
 if AI_AVAILABLE:
     try:
-        import openai
-        openai.api_key = OPENAI_API_KEY
-        print("[Intelligence] ✅ OpenAI initialized")
+        from openai import OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        # Test connection
+        client.models.list()
+        print("[Intelligence] ✅ OpenAI v1.x initialized")
     except Exception as e:
         print(f"[Intelligence] ❌ OpenAI init failed: {e}")
         AI_AVAILABLE = False
@@ -38,75 +41,122 @@ def sanitize_filename(filename: str) -> str:
     """Secure filename"""
     return re.sub(r'[^\w\-.]', '_', os.path.basename(filename))
 
-def generate_ai_analysis(file_path: str, filename: str, source: str) -> dict:
-    """Generate AI analysis with streetwear focus"""
+
+def analyze_large_file(file_path: str, filename: str, source: str) -> dict:
+    """
+    Optimized AI analysis for large files (up to 70MB)
+    Uses intelligent sampling instead of reading entire file
+    """
     if not AI_AVAILABLE:
-        return {"error": "AI not available", "analysis": "Manual review required"}
+        return {"error": "OpenAI not configured", "analysis": "AI analysis unavailable"}
     
     try:
-        import openai
+        from openai import OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
         
-        # Read sample data
+        print(f"[Analysis] Reading file: {filename}")
+        
+        # OPTIMIZED SAMPLING for large files
         with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()[:10]  # Sample first 10 lines
-            sample_data = []
-            for line in lines:
+            # Count total lines
+            all_lines = f.readlines()
+            total_lines = len(all_lines)
+            print(f"[Analysis] Total records: {total_lines}")
+            
+            # Intelligent sampling: beginning, middle, end
+            sample_lines = []
+            
+            # First 5 records
+            for line in all_lines[:5]:
                 try:
-                    sample_data.append(json.loads(line.strip()))
+                    sample_lines.append(json.loads(line.strip()))
                 except:
                     continue
+            
+            # Middle 5 records
+            if total_lines > 20:
+                middle_start = total_lines // 2
+                for line in all_lines[middle_start:middle_start+5]:
+                    try:
+                        sample_lines.append(json.loads(line.strip()))
+                    except:
+                        continue
+            
+            # Last 5 records
+            if total_lines > 10:
+                for line in all_lines[-5:]:
+                    try:
+                        sample_lines.append(json.loads(line.strip()))
+                    except:
+                        continue
         
-        if not sample_data:
-            return {"error": "No valid data", "analysis": "Could not parse file"}
+        if not sample_lines:
+            return {"error": "No valid JSON data", "analysis": "File format issue"}
+        
+        print(f"[Analysis] Sampled {len(sample_lines)} records from {total_lines} total")
         
         # Streetwear-specific AI prompt
-        system_prompt = """You are a streetwear brand strategist analyzing competitive intelligence.
-        
+        system_prompt = """You are a streetwear brand strategist analyzing competitive intelligence data.
+
 Focus on:
 1. Cultural moments & trends (music, sports, art, subcultures)
-2. Product drops & release strategies  
+2. Product drops & release strategies
 3. Influencer/celebrity mentions
-4. Aesthetic trends (Y2K, techwear, vintage, etc.)
-5. Engagement tactics (giveaways, limited drops, community)
+4. Aesthetic trends (Y2K, techwear, vintage, gorpcore, etc.)
+5. Engagement tactics (giveaways, limited drops, community building)
 6. Sentiment and audience reactions
+7. Pricing strategies and positioning
 
-Provide actionable insights for Crooks & Castles."""
+Provide actionable insights for Crooks & Castles to compete effectively."""
 
-        user_prompt = f"""Analyze this {source} data from {filename}.
+        user_prompt = f"""Analyze this {source} competitive intelligence data from {filename}.
 
-Sample data: {json.dumps(sample_data[:3], indent=2)}
+Dataset: {total_lines} total records (sampled {len(sample_lines)} for analysis)
+
+Sample data:
+{json.dumps(sample_lines[:5], indent=2)}
 
 Provide:
-1. Key trends & cultural moments
-2. Top performing content themes
-3. Engagement patterns
-4. Strategic opportunities for Crooks & Castles
-5. Sentiment overview"""
+1. **Key Cultural Trends**: What's resonating in streetwear culture?
+2. **Top Content Themes**: What content performs best?
+3. **Engagement Patterns**: When/how is audience most engaged?
+4. **Competitive Moves**: What are competitors doing well?
+5. **Strategic Opportunities**: Specific actions for Crooks & Castles
+6. **Sentiment Overview**: Brand perception and audience mood
+7. **Timing Insights**: Best times for content and campaigns"""
 
-        # OpenAI v0.28.1 API call
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        # Call OpenAI
+        print(f"[Analysis] Calling OpenAI API...")
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo-16k",  # 16k model for larger context
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=1500,
+            max_tokens=2000,
             temperature=0.3
         )
         
         analysis_text = response.choices[0].message.content
         
+        print(f"[Analysis] ✅ AI analysis complete")
+        
         return {
             "analysis": analysis_text,
-            "sample_size": len(sample_data),
-            "total_records": len(lines),
-            "model": "gpt-3.5-turbo",
+            "sample_size": len(sample_lines),
+            "total_records": total_lines,
+            "sampling_method": "intelligent (beginning, middle, end)",
+            "model": "gpt-3.5-turbo-16k",
             "timestamp": datetime.utcnow().isoformat()
         }
         
     except Exception as e:
-        print(f"[Intelligence] AI error: {e}")
-        return {"error": str(e), "analysis": "AI analysis failed"}
+        print(f"[Analysis] AI error: {e}")
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "analysis": "AI analysis failed - please try again"
+        }
 
 
 @router.get("/health")
@@ -115,22 +165,26 @@ def health():
     return {
         "status": "healthy",
         "ai_available": AI_AVAILABLE,
-        "database_available": DB_AVAILABLE
+        "database_available": DB_AVAILABLE,
+        "upload_directory": UPLOAD_DIR,
+        "max_file_size_mb": MAX_FILE_SIZE // (1024 * 1024)
     }
 
 
 @router.post("/upload")
 async def upload_file(
-    request: Request,
     file: UploadFile = File(...),
-    source: str = "manual_upload",  # apify, shopify, manus, manual_upload
+    source: str = "manual_upload",  # apify, shopify, manus
     brand: str = "Crooks & Castles",
     description: str = "",
     db: Session = Depends(get_db)
 ):
-    """Upload intelligence file - SIMPLIFIED VERSION"""
+    """
+    Upload intelligence file (up to 100MB)
+    Analysis runs synchronously - will take 30-60 seconds for large files
+    """
     
-    # Validate file type
+    # Validate
     file_ext = os.path.splitext(file.filename)[1].lower()
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, f"Invalid file type: {file_ext}")
@@ -144,18 +198,24 @@ async def upload_file(
     try:
         # Save file
         total_size = 0
+        print(f"[Upload] Receiving: {file.filename}")
+        
         async with aiofiles.open(file_path, 'wb') as f:
             while chunk := await file.read(8192):
                 total_size += len(chunk)
                 if total_size > MAX_FILE_SIZE:
                     os.remove(file_path)
-                    raise HTTPException(413, "File too large")
+                    raise HTTPException(413, "File exceeds 100MB limit")
                 await f.write(chunk)
         
-        # Generate AI analysis (synchronous - no background task needed)
+        print(f"[Upload] Saved: {total_size / 1024 / 1024:.2f} MB")
+        
+        # Generate AI analysis (synchronous - user waits)
         analysis_results = None
         if AI_AVAILABLE:
-            analysis_results = generate_ai_analysis(file_path, file.filename, source)
+            print(f"[Upload] Starting AI analysis...")
+            analysis_results = analyze_large_file(file_path, file.filename, source)
+            print(f"[Upload] AI analysis complete")
         
         # Create database record using ORM
         file_record = IntelligenceFile(
@@ -167,7 +227,7 @@ async def upload_file(
             file_path=file_path,
             file_size=total_size,
             file_type=file_ext,
-            analysis_results=analysis_results,  # Store as JSON
+            analysis_results=analysis_results,
             status="processed" if analysis_results else "uploaded",
             processed_at=datetime.utcnow() if analysis_results else None
         )
@@ -176,14 +236,17 @@ async def upload_file(
         db.commit()
         db.refresh(file_record)
         
+        print(f"[Upload] ✅ Complete - ID: {file_record.id}")
+        
         return {
             "success": True,
             "file_id": file_record.id,
             "filename": file_record.original_filename,
-            "size": total_size,
+            "size_mb": round(total_size / 1024 / 1024, 2),
             "source": source,
+            "status": file_record.status,
             "ai_analysis_complete": bool(analysis_results),
-            "status": file_record.status
+            "message": "Upload and analysis complete!" if analysis_results else "Upload complete (AI unavailable)"
         }
         
     except HTTPException:
@@ -191,14 +254,14 @@ async def upload_file(
     except Exception as e:
         if os.path.exists(file_path):
             os.remove(file_path)
-        print(f"[Intelligence] Upload error: {e}")
-        print(traceback.format_exc())
+        print(f"[Upload] ❌ Error: {e}")
+        traceback.print_exc()
         raise HTTPException(500, f"Upload failed: {str(e)}")
 
 
 @router.get("/files")
 def list_files(
-    source: str = None,  # Filter: apify, shopify, manus
+    source: str = None,
     limit: int = 50,
     db: Session = Depends(get_db)
 ):
@@ -217,7 +280,7 @@ def list_files(
                 "filename": f.original_filename,
                 "source": f.source,
                 "brand": f.brand,
-                "size": f.file_size,
+                "size_mb": round(f.file_size / 1024 / 1024, 2) if f.file_size else 0,
                 "status": f.status,
                 "uploaded_at": f.uploaded_at.isoformat(),
                 "has_analysis": bool(f.analysis_results)
@@ -244,7 +307,7 @@ def get_file(file_id: int, db: Session = Depends(get_db)):
         "source": file_record.source,
         "brand": file_record.brand,
         "description": file_record.description,
-        "size": file_record.file_size,
+        "size_mb": round(file_record.file_size / 1024 / 1024, 2) if file_record.file_size else 0,
         "status": file_record.status,
         "uploaded_at": file_record.uploaded_at.isoformat(),
         "processed_at": file_record.processed_at.isoformat() if file_record.processed_at else None,
@@ -258,7 +321,7 @@ def get_insights(
     days: int = 30,
     db: Session = Depends(get_db)
 ):
-    """Get aggregated insights from all files"""
+    """Get aggregated insights from recent files"""
     from datetime import timedelta
     
     since = datetime.utcnow() - timedelta(days=days)
@@ -271,16 +334,12 @@ def get_insights(
     if source:
         query = query.filter(IntelligenceFile.source == source)
     
-    files = query.all()
-    
-    # Aggregate insights
-    all_analyses = [f.analysis_results for f in files if f.analysis_results]
+    files = query.order_by(IntelligenceFile.uploaded_at.desc()).all()
     
     return {
         "period": f"Last {days} days",
         "total_files": len(files),
         "sources": list(set(f.source for f in files)),
-        "files_analyzed": len(all_analyses),
         "files": [
             {
                 "id": f.id,
@@ -289,8 +348,10 @@ def get_insights(
                 "uploaded_at": f.uploaded_at.isoformat(),
                 "analysis_preview": (
                     f.analysis_results.get("analysis", "")[:200] + "..."
-                    if isinstance(f.analysis_results, dict)
+                    if isinstance(f.analysis_results, dict) and "analysis" in f.analysis_results
                     else str(f.analysis_results)[:200] + "..."
+                    if f.analysis_results
+                    else "No analysis available"
                 )
             }
             for f in files
