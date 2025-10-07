@@ -208,3 +208,104 @@ export default function CampaignsPage() {
                         <div style={{ gridColumn: "1 / -1", padding: "0.75rem", background: "#1a2a1a", borderRadius: "6px", borderLeft: "3px solid #4ade80" }}>
                           <strong style={{ color: "#4ade80" }}>Cultural Connection:</strong> {s.cultural_connection}
                         </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {selectedCampaign.content_suggestions.timing_strategy && (
+                  <div style={{ marginTop: "2rem", padding: "1.5rem", background: "#2a1a1a", borderRadius: "8px", borderLeft: "3px solid #6aa6ff" }}>
+                    <strong>⏰ Timing Strategy:</strong>
+                    <p style={{ marginTop: "0.5rem", color: "#ccc" }}>{selectedCampaign.content_suggestions.timing_strategy}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CULTURAL CALENDAR TAB */}
+        {activeTab === "calendar" && (
+          <div>
+            <div style={{ marginBottom: "2rem" }}>
+              <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>📅 Upcoming Cultural Moments</h2>
+              <p style={{ color: "#888" }}>Next 30 days of hip hop, urban, and streetwear opportunities</p>
+            </div>
+            
+            <div style={{ display: "grid", gap: "1rem" }}>
+              {culturalMoments.map((m, i) => (
+                <div key={i} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                    <div>
+                      <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>{m.name}</h3>
+                      <div style={{ color: "#888", fontSize: "0.9rem" }}>
+                        {m.formatted_date} • {m.days_away} days away
+                      </div>
+                    </div>
+                    <span style={{ padding: "4px 12px", background: "#2a1a2a", color: m.days_away <= 7 ? "#ff6b6b" : "#6aa6ff", borderRadius: "12px", fontSize: "0.85rem" }}>
+                      {m.planning_window}
+                    </span>
+                  </div>
+                  <p style={{ color: "#ccc", lineHeight: "1.6" }}>{m.opportunity}</p>
+                  <div style={{ marginTop: "1rem", display: "inline-block", padding: "4px 12px", background: "#0a0b0d", borderRadius: "6px", fontSize: "0.85rem" }}>
+                    {m.category}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CREATE CAMPAIGN TAB */}
+        {activeTab === "create" && (
+          <div>
+            <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", maxWidth: "800px" }}>
+              <h2 style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}>Create New Campaign</h2>
+              
+              <form onSubmit={handleCreateCampaign}>
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Campaign Name *</label>
+                  <input name="name" required placeholder="e.g., Holiday Drop 2025" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
+                </div>
+
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Description *</label>
+                  <textarea name="description" required rows={3} placeholder="What's this campaign about?" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem", fontFamily: "inherit" }} />
+                </div>
+
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Theme</label>
+                  <input name="theme" placeholder="e.g., Y2K Holiday Nostalgia" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
+                </div>
+
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Launch Date</label>
+                  <input name="launch_date" type="date" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
+                </div>
+
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Cultural Moment</label>
+                  <input name="cultural_moment" placeholder="e.g., Holiday Party Season, NBA All-Star Weekend" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
+                </div>
+
+                <div style={{ marginBottom: "2rem" }}>
+                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Target Audience *</label>
+                  <input name="target_audience" required placeholder="e.g., Gen Z streetwear enthusiasts, 18-30" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
+                </div>
+
+                <div style={{ padding: "1rem", background: "#1a2a1a", borderRadius: "6px", marginBottom: "2rem", borderLeft: "3px solid #4ade80" }}>
+                  <div style={{ fontSize: "0.9rem", color: "#4ade80", marginBottom: "0.5rem" }}>✨ AI-Powered Suggestions</div>
+                  <div style={{ fontSize: "0.85rem", color: "#ccc" }}>When you create this campaign, AI will analyze your intelligence data and generate culturally relevant content suggestions for hip hop & streetwear audiences.</div>
+                </div>
+
+                <button type="submit" style={{ width: "100%", padding: "14px", background: "#6aa6ff", color: "#fff", border: "none", borderRadius: "6px", fontSize: "1rem", fontWeight: "600", cursor: "pointer" }}>
+                  🚀 Create Campaign with AI Suggestions
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
