@@ -8,7 +8,7 @@ from .routers import intelligence
 from .routers import executive
 from .routers import competitive
 from .routers import agency
-from .routers import calendar
+from .routers import campaigns  # NEW: Replaces calendar
 from .routers import shopify
 from .routers import summary
 
@@ -16,7 +16,7 @@ from .database import init_db
 
 app = FastAPI(
     title="Crooks Command Center API",
-    version="2.0.0",
+    version="2.5.0",  # Updated version
     description="Command center for competitive intelligence, brand performance, and campaign planning"
 )
 
@@ -28,7 +28,7 @@ def on_startup():
 # CORS - FIXED FOR VERCEL
 ALLOWED_ORIGINS = [
     "https://crooks-command-center-v2-1d5b.vercel.app",
-    "http://crooks-command-center-v2-1d5b.vercel.app",  # Also allow http just in case
+    "http://crooks-command-center-v2-1d5b.vercel.app",
     "https://crooks-command-center-v2.onrender.com",
     "http://localhost:3000",
     "http://localhost:8000",
@@ -42,9 +42,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicitly include OPTIONS
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    max_age=3600,  # Cache preflight for 1 hour
+    max_age=3600,
 )
 
 # Include routers AFTER CORS
@@ -52,7 +52,7 @@ app.include_router(intelligence.router, prefix="/api/intelligence", tags=["intel
 app.include_router(executive.router, prefix="/api/executive", tags=["executive"])
 app.include_router(competitive.router, prefix="/api/competitive", tags=["competitive"])
 app.include_router(agency.router, prefix="/api/agency", tags=["agency"])
-app.include_router(calendar.router, prefix="/api/calendar", tags=["calendar"])
+app.include_router(campaigns.router, prefix="/api/campaigns", tags=["campaigns"])  # NEW
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
 
@@ -66,7 +66,7 @@ def health_check():
             "database": os.getenv("DATABASE_URL") is not None,
             "openai": os.getenv("OPENAI_API_KEY") is not None
         },
-        "version": "2.0.0",
+        "version": "2.5.0",
         "cors_origins": ALLOWED_ORIGINS
     }
 
@@ -74,7 +74,7 @@ def health_check():
 def api_root():
     return {
         "message": "Crooks Command Center API",
-        "version": "2.0.0",
+        "version": "2.5.0",
         "status": "running",
         "docs": "/docs",
         "endpoints": {
@@ -82,6 +82,9 @@ def api_root():
             "executive": "/api/executive/",
             "competitive": "/api/competitive/",
             "agency": "/api/agency/",
+            "campaigns": "/api/campaigns/",  # NEW
+            "shopify": "/api/shopify/",
+            "summary": "/api/summary/",
             "health": "/api/health"
         }
     }
