@@ -450,3 +450,227 @@ def delete_order(order_id: int, db: Session = Depends(get_db)):
     db.commit()
     
     return {"success": True}
+@router.post("/import-analytics-conversion")
+async def import_conversion_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import Shopify conversion rate analytics CSV"""
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(400, "File must be a CSV")
+    
+    try:
+        contents = await file.read()
+        csv_text = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+        
+        imported = 0
+        updated = 0
+        
+        for row in csv_reader:
+            try:
+                day = row.get('Day')
+                if not day:
+                    continue
+                
+                # Parse date
+                try:
+                    date = datetime.strptime(day, '%Y-%m-%d')
+                    date = date.replace(tzinfo=timezone.utc)
+                except:
+                    continue
+                
+                # Get sessions and conversion data
+                sessions = int(row.get('Sessions', 0))
+                conversion_rate = float(row.get('Conversion rate', 0))
+                
+                # Check if metric exists
+                existing = db.query(ShopifyMetrics).filter(
+                    and_(
+                        ShopifyMetrics.period_type == "daily",
+                        ShopifyMetrics.period_start == date
+                    )
+                ).first()
+                
+                if existing:
+                    existing.total_sessions = sessions
+                    existing.conversion_rate = conversion_rate
+                    updated += 1
+                else:
+                    metric = ShopifyMetrics(
+                        period_type="daily",
+                        period_start=date,
+                        period_end=date + timedelta(days=1),
+                        total_sessions=sessions,
+                        conversion_rate=conversion_rate
+                    )
+                    db.add(metric)
+                    imported += 1
+                
+            except Exception as e:
+                continue
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "imported": imported,
+            "updated": updated,
+            "message": f"Imported {imported} new days, updated {updated} existing days"
+        }
+        
+    except Exception as e:
+        raise HTTPException(400, f"Error importing CSV: {str(e)}")
+
+
+@router.post("/import-analytics-orders")
+async def import_orders_analytics_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import Shopify orders over time analytics CSV"""
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(400, "File must be a CSV")
+    
+    try:
+        contents = await file.read()
+        csv_text = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+        
+        imported = 0
+        updated = 0
+        
+        for row in csv_reader:
+            try:
+                day = row.get('Day')
+                if not day:
+                    continue
+                
+                # Parse date
+                try:
+                    date = datetime.strptime(day, '%Y-%m-%d')
+                    date = date.replace(tzinfo=timezone.utc)
+                except:
+                    continue
+                
+                # Get order data
+                orders = int(row.get('Orders', 0))
+                avg_order_value = float(row.get('Average order value', 0))
+                
+                # Check if metric exists
+                existing = db.query(ShopifyMetrics).filter(
+                    and_(
+                        ShopifyMetrics.period_type == "daily",
+                        ShopifyMetrics.period_start == date
+                    )
+                ).first()
+                
+                if existing:
+                    existing.total_orders = orders
+                    existing.avg_order_value = avg_order_value
+                    updated += 1
+                else:
+                    metric = ShopifyMetrics(
+                        period_type="daily",
+                        period_start=date,
+                        period_end=date + timedelta(days=1),
+                        total_orders=orders,
+                        avg_order_value=avg_order_value
+                    )
+                    db.add(metric)
+                    imported += 1
+                
+            except Exception as e:
+                continue
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "imported": imported,
+            "updated": updated,
+            "message": f"Imported {imported} new days, updated {updated} existing days"
+        }
+        
+    except Exception as e:
+        raise HTTPException(400, f"Error importing CSV: {str(e)}")
+
+
+@router.post("/import-analytics-sales")
+async def import_sales_analytics_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import Shopify total sales over time analytics CSV"""
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(400, "File must be a CSV")
+    
+    try:
+        contents = await file.read()
+        csv_text = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+        
+        imported = 0
+        updated = 0
+        
+        for row in csv_reader:
+            try:
+                day = row.get('Day')
+                if not day:
+                    continue
+                
+                # Parse date
+                try:
+                    date = datetime.strptime(day, '%Y-%m-%d')
+                    date = date.replace(tzinfo=timezone.utc)
+                except:
+                    continue
+                
+                # Get sales data
+                orders = int(row.get('Orders', 0))
+                net_sales = float(row.get('Net sales', 0))
+                total_sales = float(row.get('Total sales', 0))
+                
+                # Check if metric exists
+                existing = db.query(ShopifyMetrics).filter(
+                    and_(
+                        ShopifyMetrics.period_type == "daily",
+                        ShopifyMetrics.period_start == date
+                    )
+                ).first()
+                
+                if existing:
+                    existing.total_orders = orders
+                    existing.total_revenue = total_sales
+                    if orders > 0:
+                        existing.avg_order_value = total_sales / orders
+                    updated += 1
+                else:
+                    metric = ShopifyMetrics(
+                        period_type="daily",
+                        period_start=date,
+                        period_end=date + timedelta(days=1),
+                        total_orders=orders,
+                        total_revenue=total_sales,
+                        avg_order_value=total_sales / orders if orders > 0 else 0
+                    )
+                    db.add(metric)
+                    imported += 1
+                
+            except Exception as e:
+                continue
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "imported": imported,
+            "updated": updated,
+            "message": f"Imported {imported} new days, updated {updated} existing days"
+        }
+        
+    except Exception as e:
+        raise HTTPException(400, f"Error importing CSV: {str(e)}")
