@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (typeof window !== 'undefined' && window.location.origin.includes('localhost')
+    ? 'http://localhost:8000/api'
+    : 'https://crooks-command-center-v2.onrender.com/api'
+  );
 
 export default function Dashboard() {
   const [overview, setOverview] = useState(null);
@@ -17,9 +22,9 @@ export default function Dashboard() {
       setLoading(true);
       
       const [overviewData, prioritiesData, statsData] = await Promise.all([
-        api.getDashboardOverview(),
-        api.getWeeklyPriorities(),
-        api.getQuickStats()
+        fetch(`${API_BASE_URL}/executive/overview`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/executive/priorities`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/executive/quick-stats`).then(r => r.json())
       ]);
       
       setOverview(overviewData);
@@ -60,7 +65,6 @@ export default function Dashboard() {
       padding: "2rem"
     }}>
       <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <h1 style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>
             Command Center
@@ -82,7 +86,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Weekly Priorities */}
         <div style={{ 
           background: "#1a1a1a", 
           padding: "2rem", 
@@ -133,7 +136,7 @@ export default function Dashboard() {
                         fontWeight: "600"
                       }}
                     >
-                      {priority.action} →
+                      {priority.action} &rarr;
                     </a>
                   </div>
                 </div>
@@ -142,7 +145,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Stats Grid */}
         {quickStats && (
           <div style={{ 
             display: "grid", 
@@ -181,13 +183,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Two Column Layout */}
         <div style={{ 
           display: "grid", 
           gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
           gap: "2rem"
         }}>
-          {/* Recent Intelligence */}
           <div style={{ 
             background: "#1a1a1a", 
             padding: "1.5rem", 
@@ -202,7 +202,7 @@ export default function Dashboard() {
             }}>
               <h2 style={{ fontSize: "1.2rem" }}>📊 Recent Intelligence</h2>
               <a href="/intelligence" style={{ color: "#6aa6ff", fontSize: "0.9rem", textDecoration: "none" }}>
-                View All →
+                View All &rarr;
               </a>
             </div>
             
@@ -222,7 +222,7 @@ export default function Dashboard() {
                       {file.filename}
                     </div>
                     <div style={{ fontSize: "0.85rem", color: "#888" }}>
-                      {file.source} • {new Date(file.uploaded_at).toLocaleDateString()}
+                      {file.source} &bull; {new Date(file.uploaded_at).toLocaleDateString()}
                       {file.has_analysis && (
                         <span style={{ color: "#4ade80", marginLeft: "0.5rem" }}>
                           ✓ Analyzed
@@ -236,7 +236,7 @@ export default function Dashboard() {
               <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
                 <p style={{ marginBottom: "1rem" }}>No files uploaded yet</p>
                 <a href="/upload" style={{ color: "#6aa6ff", textDecoration: "none" }}>
-                  Upload your first file →
+                  Upload your first file &rarr;
                 </a>
               </div>
             )}
@@ -249,12 +249,11 @@ export default function Dashboard() {
                 fontSize: "0.9rem",
                 color: "#888"
               }}>
-                {overview.stats.total_files} total files • {overview.stats.this_week} this week
+                {overview.stats.total_files} total files &bull; {overview.stats.this_week} this week
               </div>
             )}
           </div>
 
-          {/* Quick Actions */}
           <div style={{ 
             background: "#1a1a1a", 
             padding: "1.5rem", 
@@ -341,14 +340,7 @@ function ActionButton({ href, icon, title, description }) {
         border: "1px solid transparent",
         borderRadius: "6px",
         textDecoration: "none",
-        color: "inherit",
-        transition: "border-color 0.2s"
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.borderColor = "#6aa6ff";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.borderColor = "transparent";
+        color: "inherit"
       }}
     >
       <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
@@ -361,7 +353,7 @@ function ActionButton({ href, icon, title, description }) {
             {description}
           </div>
         </div>
-        <div style={{ color: "#6aa6ff" }}>→</div>
+        <div style={{ color: "#6aa6ff" }}>&rarr;</div>
       </div>
     </a>
   );
