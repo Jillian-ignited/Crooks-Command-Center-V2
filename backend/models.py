@@ -330,3 +330,76 @@ class ShopifyMetrics(Base):
     
     # Timestamps
     calculated_at = Column(DateTime(timezone=True), server_default=func.now())
+class ShopifyOrder(Base):
+    """Individual Shopify orders for detailed tracking"""
+    __tablename__ = "shopify_orders"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String(100), unique=True, index=True)
+    order_number = Column(String(50))
+    
+    # Order details
+    created_at = Column(DateTime(timezone=True))
+    total_price = Column(Float)
+    subtotal_price = Column(Float)
+    total_tax = Column(Float)
+    total_discounts = Column(Float)
+    
+    # Customer
+    customer_email = Column(String(255))
+    customer_id = Column(String(100))
+    
+    # Fulfillment
+    financial_status = Column(String(50))
+    fulfillment_status = Column(String(50))
+    
+    # Products
+    line_items = Column(JSON)
+    
+    # Marketing
+    referring_site = Column(String(255))
+    landing_site = Column(String(512))
+    source_name = Column(String(100))
+    
+    # Location
+    shipping_city = Column(String(100))
+    shipping_province = Column(String(100))
+    shipping_country = Column(String(100))
+    
+    # Metadata
+    tags = Column(String(512))
+    note = Column(Text)
+    
+    # Timestamps
+    updated_at = Column(DateTime(timezone=True))
+    imported_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShopifyMetrics(Base):
+    """Aggregated Shopify metrics by day/week/month"""
+    __tablename__ = "shopify_metrics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    period_type = Column(String(20), nullable=False)
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    
+    # Revenue metrics
+    total_revenue = Column(Float, default=0)
+    total_orders = Column(Integer, default=0)
+    avg_order_value = Column(Float, default=0)
+    
+    # Customer metrics
+    total_customers = Column(Integer, default=0)
+    new_customers = Column(Integer, default=0)
+    returning_customers = Column(Integer, default=0)
+    
+    # Product metrics
+    total_items_sold = Column(Integer, default=0)
+    
+    # Conversion metrics
+    total_sessions = Column(Integer, default=0)
+    conversion_rate = Column(Float, default=0)
+    
+    # Timestamps
+    calculated_at = Column(DateTime(timezone=True), server_default=func.now())
