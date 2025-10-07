@@ -1,34 +1,14 @@
-// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',     // ensures build generates static HTML in /out
-  distDir: 'out',       // optional: explicitly use 'out' for clarity
-  reactStrictMode: true, // safe default
-  trailingSlash: true,  // ensures all routes end with / for static hosting
+  output: 'export',  // Enable static HTML export
   images: {
-    unoptimized: true   // required for static export
+    unoptimized: true  // Required for static export
   },
-  // Force static generation of all pages
-  exportPathMap: async function (
-    defaultPathMap,
-    { dev, dir, outDir, distDir, buildId }
-  ) {
-    return {
-      '/': { page: '/' },
-      '/agency': { page: '/agency' },
-      '/api-check': { page: '/api-check' },
-      '/calendar': { page: '/calendar' },
-      '/competitive': { page: '/competitive' },
-      '/content': { page: '/content' },
-      '/executive': { page: '/executive' },
-      '/ingest': { page: '/ingest' },
-      '/intelligence': { page: '/intelligence' },
-      '/media': { page: '/media' },
-      '/shopify': { page: '/shopify' },
-      '/summary': { page: '/summary' },
-      '/upload': { page: '/upload' }
-    }
-  }
+  // API calls should point to your Render backend
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://crooks-command-center-v2.onrender.com/api'
+  },
+  trailingSlash: true,  // Helps with static file serving
 }
 
 module.exports = nextConfig
