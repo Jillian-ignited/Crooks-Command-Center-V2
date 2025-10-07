@@ -12,7 +12,7 @@ export default function Layout({ children }) {
             <Link href="/upload">Upload</Link>
             <Link href="/campaigns">Campaigns</Link>
             <Link href="/deliverables">Deliverables</Link>
-            <Link href="/shopify" style={{ color: '#888' }}>Shopify (Soon)</Link>
+            <Link href="/shopify">Shopify</Link>
             <Link href="/competitive" style={{ color: '#888' }}>Competitive (Soon)</Link>
           </nav>
         </div>
