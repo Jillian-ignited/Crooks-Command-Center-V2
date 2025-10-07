@@ -63,6 +63,8 @@ with engine.connect() as conn:
                 new_customers INTEGER DEFAULT 0,
                 returning_customers INTEGER DEFAULT 0,
                 total_items_sold INTEGER DEFAULT 0,
+                total_sessions INTEGER DEFAULT 0,
+                conversion_rate FLOAT DEFAULT 0,
                 calculated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         """))
