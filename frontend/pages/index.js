@@ -48,15 +48,15 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: "2rem" }}>
       <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-        <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>Crooks Command Center</h1>
+        <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem", color: "#e9edf2" }}>Crooks Command Center</h1>
         <p style={{ color: "#888", marginBottom: "2rem" }}>Intelligence-driven brand management for Crooks & Castles</p>
         
         <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", marginBottom: "2rem" }}>
-          <h2>🎯 Priorities</h2>
+          <h2 style={{ color: "#e9edf2", marginBottom: "1rem" }}>🎯 Priorities</h2>
           {priorities.length > 0 ? (
             priorities.map((p, i) => (
               <div key={p.id} style={{ background: "#0a0b0d", padding: "1rem", borderRadius: "8px", marginBottom: "1rem" }}>
-                <h3>{i + 1}. {p.title}</h3>
+                <h3 style={{ color: "#e9edf2" }}>{i + 1}. {p.title}</h3>
                 <p style={{ color: "#888" }}>{p.description}</p>
                 <a href={p.link} style={{ color: "#6aa6ff" }}>{p.action}</a>
               </div>
@@ -70,30 +70,30 @@ export default function Dashboard() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
             <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
               <div style={{ color: "#888", marginBottom: "0.5rem" }}>💰 Revenue</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>${quickStats.revenue.current.toLocaleString()}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>${quickStats.revenue.current.toLocaleString()}</div>
             </div>
             <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
               <div style={{ color: "#888", marginBottom: "0.5rem" }}>👥 Customers</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{quickStats.customers.current.toLocaleString()}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>{quickStats.customers.current.toLocaleString()}</div>
             </div>
             <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
               <div style={{ color: "#888", marginBottom: "0.5rem" }}>📦 Orders</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{quickStats.orders.current.toLocaleString()}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>{quickStats.orders.current.toLocaleString()}</div>
             </div>
             <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
               <div style={{ color: "#888", marginBottom: "0.5rem" }}>💵 AOV</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold" }}>${quickStats.avg_order_value.current}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>${quickStats.avg_order_value.current}</div>
             </div>
           </div>
         )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
           <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
-            <h2 style={{ marginBottom: "1rem" }}>📊 Recent Intelligence</h2>
+            <h2 style={{ marginBottom: "1rem", color: "#e9edf2" }}>📊 Recent Intelligence</h2>
             {overview && overview.recent_files && overview.recent_files.length > 0 ? (
               overview.recent_files.map(f => (
                 <div key={f.id} style={{ padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem" }}>
-                  <div style={{ fontWeight: "600" }}>{f.filename}</div>
+                  <div style={{ fontWeight: "600", color: "#e9edf2" }}>{f.filename}</div>
                   <div style={{ fontSize: "0.85rem", color: "#888" }}>{f.source}</div>
                 </div>
               ))
@@ -103,17 +103,17 @@ export default function Dashboard() {
           </div>
 
           <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "8px" }}>
-            <h2 style={{ marginBottom: "1rem" }}>⚡ Quick Actions</h2>
-            <a href="/upload" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "inherit", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
+            <h2 style={{ marginBottom: "1rem", color: "#e9edf2" }}>⚡ Quick Actions</h2>
+            <a href="/upload" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
               <div>📤 Upload Intelligence</div>
             </a>
-            <a href="/intelligence" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "inherit", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
+            <a href="/intelligence" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
               <div>📊 View Files</div>
             </a>
-            <a href="/campaigns" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "inherit", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
+            <a href="/campaigns" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
               <div>🎯 Campaigns</div>
             </a>
-            <a href="/deliverables" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", textDecoration: "none", color: "inherit", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
+            <a href="/deliverables" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
               <div>📋 Deliverables</div>
             </a>
           </div>
