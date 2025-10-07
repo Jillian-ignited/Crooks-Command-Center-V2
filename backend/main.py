@@ -11,7 +11,7 @@ from .routers import agency
 from .routers import campaigns  # NEW: Replaces calendar
 from .routers import shopify
 from .routers import summary
-
+from .routers import deliverables
 from .database import init_db
 
 app = FastAPI(
