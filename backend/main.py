@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
 
-from .routers import intelligence, campaigns, deliverables, executive, shopify
+from .routers import intelligence, campaigns, deliverables, executive, shopify, competitive
 from .database import engine, get_db
 from .models import Base
 
@@ -40,6 +40,7 @@ app.include_router(campaigns.router, prefix="/api/campaigns", tags=["campaigns"]
 app.include_router(deliverables.router, prefix="/api/deliverables", tags=["deliverables"])
 app.include_router(executive.router, prefix="/api/executive", tags=["executive"])
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
+app.include_router(competitive.router, prefix="/api/competitive", tags=["competitive"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -82,6 +83,7 @@ def api_root():
             "deliverables": "/api/deliverables",
             "executive": "/api/executive",
             "shopify": "/api/shopify",
+            "competitive": "/api/competitive",
             "docs": "/docs"
         }
     }
