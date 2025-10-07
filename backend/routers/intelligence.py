@@ -14,12 +14,20 @@ from ..models import IntelligenceFile
 
 router = APIRouter()
 
-# OpenAI setup
+# OpenAI setup - FIXED IMPORTS
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AI_AVAILABLE = bool(OPENAI_API_KEY)
 
+# Import OpenAI at module level
+OpenAIClient = None
 if AI_AVAILABLE:
-    print("[Intelligence] ✅ OpenAI API key configured")
+    try:
+        from openai import OpenAI as OpenAIClient
+        print("[Intelligence] ✅ OpenAI module imported successfully")
+    except Exception as e:
+        print(f"[Intelligence] ❌ OpenAI import failed: {e}")
+        AI_AVAILABLE = False
+        OpenAIClient = None
 else:
     print("[Intelligence] ⚠️ No OpenAI API key - AI analysis disabled")
 
@@ -41,18 +49,15 @@ def analyze_large_file(file_path: str, filename: str, source: str) -> dict:
     Optimized AI analysis for large files (up to 70MB)
     Uses intelligent sampling instead of reading entire file
     """
-    if not AI_AVAILABLE:
+    if not AI_AVAILABLE or OpenAIClient is None:
         return {
             "error": "OpenAI not configured",
             "analysis": "AI analysis unavailable - please configure OPENAI_API_KEY"
         }
     
     try:
-        # Import here to avoid initialization issues
-        import openai
-        
-        # Create client with ONLY api_key parameter
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        # Create client instance with only api_key
+        client = OpenAIClient(api_key=OPENAI_API_KEY)
         
         print(f"[Analysis] Reading file: {filename}")
         
@@ -129,6 +134,7 @@ Provide:
 
         # Call OpenAI API
         print(f"[Analysis] Calling OpenAI API...")
+        
         response = client.chat.completions.create(
             model="gpt-3.5-turbo-16k",
             messages=[
@@ -154,9 +160,11 @@ Provide:
         
     except Exception as e:
         print(f"[Analysis] AI error: {e}")
+        print(f"[Analysis] Error type: {type(e).__name__}")
         traceback.print_exc()
         return {
             "error": str(e),
+            "error_type": type(e).__name__,
             "analysis": "AI analysis failed - please try again or review manually"
         }
 
@@ -167,6 +175,7 @@ def health():
     return {
         "status": "healthy",
         "ai_available": AI_AVAILABLE,
+        "openai_client_loaded": OpenAIClient is not None,
         "database_available": DB_AVAILABLE,
         "upload_directory": UPLOAD_DIR,
         "max_file_size_mb": MAX_FILE_SIZE // (1024 * 1024)
@@ -176,7 +185,7 @@ def health():
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    source: str = "manual_upload",  # apify, shopify, manus, manual_upload
+    source: str = "manual_upload",
     brand: str = "Crooks & Castles",
     description: str = "",
     db: Session = Depends(get_db)
@@ -215,10 +224,12 @@ async def upload_file(
         
         # Generate AI analysis (synchronous - user waits)
         analysis_results = None
-        if AI_AVAILABLE:
+        if AI_AVAILABLE and OpenAIClient is not None:
             print(f"[Upload] Starting AI analysis...")
             analysis_results = analyze_large_file(file_path, file.filename, source)
             print(f"[Upload] AI analysis complete")
+        else:
+            print(f"[Upload] Skipping AI analysis - OpenAI not available")
         
         # Create database record using ORM
         file_record = IntelligenceFile(
@@ -231,7 +242,7 @@ async def upload_file(
             file_size=total_size,
             file_type=file_ext,
             analysis_results=analysis_results,
-            status="processed" if analysis_results else "uploaded",
+            status="processed" if (analysis_results and "error" not in analysis_results) else "uploaded",
             processed_at=datetime.utcnow() if analysis_results else None
         )
         
@@ -248,8 +259,8 @@ async def upload_file(
             "size_mb": round(total_size / 1024 / 1024, 2),
             "source": source,
             "status": file_record.status,
-            "ai_analysis_complete": bool(analysis_results),
-            "message": "Upload and analysis complete!" if analysis_results else "Upload complete (AI unavailable)"
+            "ai_analysis_complete": bool(analysis_results and "error" not in analysis_results),
+            "message": "Upload and analysis complete!" if (analysis_results and "error" not in analysis_results) else "Upload complete (AI unavailable or failed)"
         }
         
     except HTTPException:
@@ -286,7 +297,7 @@ def list_files(
                 "size_mb": round(f.file_size / 1024 / 1024, 2) if f.file_size else 0,
                 "status": f.status,
                 "uploaded_at": f.uploaded_at.isoformat(),
-                "has_analysis": bool(f.analysis_results)
+                "has_analysis": bool(f.analysis_results and isinstance(f.analysis_results, dict) and "analysis" in f.analysis_results)
             }
             for f in files
         ],
