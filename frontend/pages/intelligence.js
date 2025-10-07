@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (typeof window !== 'undefined' && window.location.origin.includes('localhost')
+    ? 'http://localhost:8000/api'
+    : 'https://crooks-command-center-v2.onrender.com/api'
+  );
 
 export default function Intelligence() {
   const [files, setFiles] = useState([]);
@@ -14,7 +19,8 @@ export default function Intelligence() {
   async function loadFiles() {
     try {
       setLoading(true);
-      const data = await api.getFiles();
+      const response = await fetch(`${API_BASE_URL}/intelligence/files`);
+      const data = await response.json();
       setFiles(data.files || []);
       setError("");
     } catch (err) {
@@ -28,7 +34,8 @@ export default function Intelligence() {
   async function viewFile(fileId) {
     try {
       setLoading(true);
-      const data = await api.getFileAnalysis(fileId);
+      const response = await fetch(`${API_BASE_URL}/intelligence/files/${fileId}`);
+      const data = await response.json();
       setSelectedFile(data);
       setError("");
     } catch (err) {
@@ -56,8 +63,6 @@ export default function Intelligence() {
     }
 
     const analysisText = analysisData.analysis || "";
-    
-    // Split by numbered sections or headers
     const sections = analysisText.split(/\n(?=\d+\.|#{1,3}\s|\*\*)/);
 
     return (
@@ -88,7 +93,6 @@ export default function Intelligence() {
       padding: "2rem"
     }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        {/* Header */}
         <div style={{ 
           display: "flex", 
           justifyContent: "space-between", 
@@ -130,7 +134,6 @@ export default function Intelligence() {
           </div>
         )}
 
-        {/* Files List */}
         {loading && files.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "#888" }}>
             Loading files...
@@ -145,7 +148,7 @@ export default function Intelligence() {
             <p style={{ color: "#888", marginBottom: "1rem" }}>
               No files uploaded yet
             </p>
-            <a href="/upload" style={{ color: "#6aa6ff" }}>
+            <a href="/upload" style={{ color: "#6aa6ff", textDecoration: "none" }}>
               Upload your first file →
             </a>
           </div>
@@ -158,8 +161,7 @@ export default function Intelligence() {
                   background: "#1a1a1a", 
                   padding: "1.5rem", 
                   borderRadius: "8px",
-                  border: "1px solid #2a2a2a",
-                  transition: "border-color 0.2s"
+                  border: "1px solid #2a2a2a"
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
@@ -219,11 +221,8 @@ export default function Intelligence() {
                         border: "1px solid #6aa6ff",
                         borderRadius: "6px",
                         cursor: "pointer",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
+                        fontWeight: "600"
                       }}
-                      onMouseOver={(e) => e.target.style.background = "#6aa6ff"}
-                      onMouseOut={(e) => e.target.style.background = "#2a2a2a"}
                     >
                       📊 View Analysis
                     </button>
@@ -234,7 +233,6 @@ export default function Intelligence() {
           </div>
         )}
 
-        {/* Analysis Modal */}
         {selectedFile && (
           <div style={{ 
             position: "fixed", 
@@ -260,7 +258,6 @@ export default function Intelligence() {
               overflow: "auto",
               border: "1px solid #2a2a2a"
             }}>
-              {/* Header */}
               <div style={{ 
                 display: "flex", 
                 justifyContent: "space-between", 
@@ -295,7 +292,6 @@ export default function Intelligence() {
                 </button>
               </div>
 
-              {/* Analysis Content */}
               <div>
                 {formatAnalysis(selectedFile.analysis)}
               </div>
