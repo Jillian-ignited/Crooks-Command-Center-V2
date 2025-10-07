@@ -1,201 +1,55 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, and_, or_
+from sqlalchemy import desc, func, and_
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional
 import json
 
 from ..database import get_db
-from ..models import CompetitiveIntel
+from ..models import CompetitiveData
 
 router = APIRouter()
 
-# Competitor brands organized by threat level
-COMPETITOR_BRANDS = {
-    "high_threat": [
-        "Hellstar",
-        "Memory Lane",
-        "Smoke Rise",
-        "Reason Clothing",
-        "Purple Brand",
-        "Amiri"
-    ],
-    "medium_threat": [
-        "Aimé Leon Dore (ALD)",
-        "Kith",
-        "Supreme",
-        "Fear of God",
-        "Off-White",
-        "BAPE",
-        "Palace",
-        "Godspeed"
-    ],
-    "low_threat": [
-        "LRG",
-        "Ecko Unlimited",
-        "Sean John",
-        "Rocawear",
-        "Von Dutch",
-        "Ed Hardy",
-        "Affliction"
+
+def classify_threat_level(competitor: str) -> str:
+    """Classify competitor threat level based on brand"""
+    
+    competitor_lower = competitor.lower()
+    
+    # High threat - direct streetwear competitors
+    high_threat = [
+        'supreme', 'bape', 'stussy', 'the hundreds', 'diamond supply',
+        'huf', 'obey', 'mishka', 'been trill', 'pyrex', 'hood by air',
+        'off-white', 'vlone', 'antisocialsocialclub', 'ftp', 'palace'
     ]
-}
-
-# Flat list of all competitors
-ALL_COMPETITORS = (
-    COMPETITOR_BRANDS["high_threat"] + 
-    COMPETITOR_BRANDS["medium_threat"] + 
-    COMPETITOR_BRANDS["low_threat"]
-)
-
-
-@router.get("/brands")
-def get_competitor_brands():
-    """Get list of tracked competitor brands organized by threat level"""
-    return {
-        "brands": COMPETITOR_BRANDS,
-        "all_brands": ALL_COMPETITORS,
-        "total": len(ALL_COMPETITORS),
-        "threat_levels": {
-            "high": len(COMPETITOR_BRANDS["high_threat"]),
-            "medium": len(COMPETITOR_BRANDS["medium_threat"]),
-            "low": len(COMPETITOR_BRANDS["low_threat"])
-        }
-    }
-
-
-@router.get("/dashboard")
-def get_competitive_dashboard(
-    days: int = 30,
-    threat_level: Optional[str] = None,  # high_threat, medium_threat, low_threat
-    db: Session = Depends(get_db)
-):
-    """Get competitive intelligence dashboard overview"""
     
-    now = datetime.now(timezone.utc)
-    start_date = now - timedelta(days=days)
+    # Medium threat - lifestyle/fashion brands
+    medium_threat = [
+        'nike', 'adidas', 'vans', 'converse', 'puma', 'reebok',
+        'champion', 'carhartt', 'dickies', 'levis', 'guess',
+        'tommy hilfiger', 'ralph lauren', 'lacoste'
+    ]
     
-    # Filter by threat level if specified
-    if threat_level and threat_level in COMPETITOR_BRANDS:
-        competitor_filter = COMPETITOR_BRANDS[threat_level]
-        intel = db.query(CompetitiveIntel).filter(
-            and_(
-                CompetitiveIntel.collected_at >= start_date,
-                CompetitiveIntel.competitor.in_(competitor_filter)
-            )
-        ).all()
-    else:
-        # Get all competitive data in period
-        intel = db.query(CompetitiveIntel).filter(
-            CompetitiveIntel.collected_at >= start_date
-        ).all()
+    # Low threat - casual/mass market
+    low_threat = [
+        'hm', 'zara', 'uniqlo', 'gap', 'forever21', 'urban outfitters',
+        'pacsun', 'tillys', 'zumiez', 'shein', 'fashion nova'
+    ]
     
-    # Aggregate by competitor
-    by_competitor = {}
-    for item in intel:
-        comp = item.competitor
-        if comp not in by_competitor:
-            # Determine threat level
-            threat = "unknown"
-            if comp in COMPETITOR_BRANDS["high_threat"]:
-                threat = "high"
-            elif comp in COMPETITOR_BRANDS["medium_threat"]:
-                threat = "medium"
-            elif comp in COMPETITOR_BRANDS["low_threat"]:
-                threat = "low"
-            
-            by_competitor[comp] = {
-                "competitor": comp,
-                "threat_level": threat,
-                "total_posts": 0,
-                "avg_engagement": 0,
-                "sentiment_breakdown": {"positive": 0, "neutral": 0, "negative": 0},
-                "sources": set(),
-                "latest_activity": None
-            }
-        
-        by_competitor[comp]["total_posts"] += 1
-        by_competitor[comp]["sources"].add(item.data_source)
-        
-        if item.engagement_score:
-            by_competitor[comp]["avg_engagement"] += item.engagement_score
-        
-        if item.sentiment:
-            sentiment = item.sentiment.lower()
-            if sentiment in by_competitor[comp]["sentiment_breakdown"]:
-                by_competitor[comp]["sentiment_breakdown"][sentiment] += 1
-        
-        if not by_competitor[comp]["latest_activity"] or item.collected_at > by_competitor[comp]["latest_activity"]:
-            by_competitor[comp]["latest_activity"] = item.collected_at
+    for brand in high_threat:
+        if brand in competitor_lower:
+            return "high"
     
-    # Calculate averages
-    competitors_list = []
-    for comp_data in by_competitor.values():
-        if comp_data["total_posts"] > 0:
-            comp_data["avg_engagement"] = round(comp_data["avg_engagement"] / comp_data["total_posts"], 2)
-        comp_data["sources"] = list(comp_data["sources"])
-        comp_data["latest_activity"] = comp_data["latest_activity"].isoformat() if comp_data["latest_activity"] else None
-        competitors_list.append(comp_data)
+    for brand in medium_threat:
+        if brand in competitor_lower:
+            return "medium"
     
-    # Sort by threat level first, then by total posts
-    threat_order = {"high": 0, "medium": 1, "low": 2, "unknown": 3}
-    competitors_list.sort(key=lambda x: (threat_order.get(x["threat_level"], 3), -x["total_posts"]))
+    for brand in low_threat:
+        if brand in competitor_lower:
+            return "low"
     
-    return {
-        "period_days": days,
-        "total_data_points": len(intel),
-        "competitors_tracked": len(by_competitor),
-        "competitors": competitors_list,
-        "available_brands": COMPETITOR_BRANDS
-    }
-
-
-@router.get("/data")
-def get_competitive_data(
-    competitor: Optional[str] = None,
-    data_source: Optional[str] = None,
-    threat_level: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
-    """Get competitive intelligence data with filters"""
-    
-    query = db.query(CompetitiveIntel)
-    
-    if competitor:
-        query = query.filter(CompetitiveIntel.competitor == competitor)
-    
-    if data_source:
-        query = query.filter(CompetitiveIntel.data_source == data_source)
-    
-    if threat_level and threat_level in COMPETITOR_BRANDS:
-        competitor_filter = COMPETITOR_BRANDS[threat_level]
-        query = query.filter(CompetitiveIntel.competitor.in_(competitor_filter))
-    
-    total = query.count()
-    
-    intel = query.order_by(desc(CompetitiveIntel.collected_at)).limit(limit).offset(offset).all()
-    
-    return {
-        "data": [
-            {
-                "id": item.id,
-                "competitor": item.competitor,
-                "data_source": item.data_source,
-                "content_type": item.content_type,
-                "raw_data": item.raw_data,
-                "analysis": item.analysis,
-                "sentiment": item.sentiment,
-                "engagement_score": item.engagement_score,
-                "collected_at": item.collected_at.isoformat() if item.collected_at else None
-            }
-            for item in intel
-        ],
-        "total": total,
-        "limit": limit,
-        "offset": offset
-    }
+    # Default to medium if unknown
+    return "medium"
 
 
 @router.post("/import-json")
@@ -203,72 +57,119 @@ async def import_competitive_json(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Import competitive intelligence from JSON (Apify exports)"""
+    """Import competitive intelligence from JSON or JSONL file (Apify export)"""
     
-    if not file.filename.endswith('.json'):
-        raise HTTPException(400, "File must be a JSON")
+    if not (file.filename.endswith('.json') or file.filename.endswith('.jsonl')):
+        raise HTTPException(400, "File must be JSON or JSONL")
     
     try:
         contents = await file.read()
-        data = json.loads(contents)
+        text_content = contents.decode('utf-8')
         
-        # Handle both single object and array
-        if not isinstance(data, list):
-            data = [data]
+        # Parse based on file type
+        if file.filename.endswith('.jsonl'):
+            # JSONL: Each line is a separate JSON object
+            data_items = []
+            for line in text_content.split('\n'):
+                line = line.strip()
+                if line:
+                    try:
+                        data_items.append(json.loads(line))
+                    except:
+                        continue
+        else:
+            # JSON: Single object or array
+            parsed = json.loads(text_content)
+            if isinstance(parsed, list):
+                data_items = parsed
+            else:
+                data_items = [parsed]
         
         imported = 0
-        errors = []
         
-        for item in data:
+        for item in data_items:
             try:
-                # Extract competitor info
-                competitor = item.get('competitor') or item.get('brand') or item.get('username') or 'Unknown'
-                data_source = item.get('source') or item.get('platform') or 'manual_import'
-                content_type = item.get('type') or item.get('contentType') or 'post'
+                # Determine platform and extract data
+                platform = "unknown"
+                competitor = None
+                engagement = 0
+                content_type = None
+                post_url = None
+                caption = None
+                hashtags = []
+                post_date = None
                 
-                # Extract engagement metrics
-                engagement_score = 0
-                if 'likes' in item:
-                    engagement_score += item.get('likes', 0)
-                if 'comments' in item:
-                    engagement_score += item.get('comments', 0) * 2  # Comments worth 2x
-                if 'shares' in item:
-                    engagement_score += item.get('shares', 0) * 3  # Shares worth 3x
-                if 'engagement' in item:
-                    engagement_score = item.get('engagement', 0)
-                
-                # Basic sentiment analysis from text
-                sentiment = None
-                text = item.get('text') or item.get('caption') or item.get('description') or ''
-                if text:
-                    text_lower = text.lower()
-                    positive_words = ['great', 'love', 'amazing', 'awesome', 'excellent', 'best', 'fire', '🔥']
-                    negative_words = ['bad', 'terrible', 'worst', 'hate', 'disappointing']
+                # Instagram detection
+                if 'ownerUsername' in item or 'username' in item:
+                    platform = "instagram"
+                    competitor = item.get('ownerUsername') or item.get('username')
+                    engagement = (item.get('likesCount', 0) or 0) + (item.get('commentsCount', 0) or 0)
+                    content_type = item.get('type', 'post')
+                    post_url = item.get('url')
+                    caption = item.get('caption')
+                    hashtags = item.get('hashtags', [])
                     
-                    pos_count = sum(1 for word in positive_words if word in text_lower)
-                    neg_count = sum(1 for word in negative_words if word in text_lower)
-                    
-                    if pos_count > neg_count:
-                        sentiment = "positive"
-                    elif neg_count > pos_count:
-                        sentiment = "negative"
-                    else:
-                        sentiment = "neutral"
+                    # Parse date
+                    timestamp = item.get('timestamp')
+                    if timestamp:
+                        try:
+                            post_date = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                        except:
+                            pass
                 
-                intel_data = CompetitiveIntel(
+                # TikTok detection
+                elif 'authorMeta' in item or 'author' in item:
+                    platform = "tiktok"
+                    author = item.get('authorMeta') or item.get('author', {})
+                    competitor = author.get('name') if isinstance(author, dict) else str(author)
+                    engagement = (item.get('diggCount', 0) or 0) + (item.get('commentCount', 0) or 0) + (item.get('shareCount', 0) or 0)
+                    content_type = "video"
+                    post_url = item.get('webVideoUrl') or item.get('videoUrl')
+                    caption = item.get('text')
+                    hashtags = [h.get('name') for h in item.get('hashtags', []) if isinstance(h, dict) and h.get('name')]
+                    
+                    # Parse date
+                    create_time = item.get('createTime')
+                    if create_time:
+                        try:
+                            post_date = datetime.fromtimestamp(int(create_time), tz=timezone.utc)
+                        except:
+                            pass
+                
+                # Generic social media detection
+                elif 'likes' in item or 'comments' in item or 'shares' in item:
+                    platform = item.get('platform', 'social_media')
+                    competitor = item.get('account') or item.get('user') or item.get('brand')
+                    engagement = (item.get('likes', 0) or 0) + (item.get('comments', 0) or 0) + (item.get('shares', 0) or 0)
+                    content_type = item.get('type', 'post')
+                    post_url = item.get('url') or item.get('link')
+                    caption = item.get('text') or item.get('caption') or item.get('description')
+                    hashtags = item.get('hashtags', [])
+                
+                if not competitor:
+                    continue
+                
+                # Classify threat level
+                threat_level = classify_threat_level(competitor)
+                
+                # Create competitive data record
+                comp_data = CompetitiveData(
                     competitor=competitor,
-                    data_source=data_source,
+                    platform=platform,
                     content_type=content_type,
-                    raw_data=item,
-                    sentiment=sentiment,
-                    engagement_score=float(engagement_score) if engagement_score else None
+                    engagement_count=engagement,
+                    post_url=post_url,
+                    caption=caption[:500] if caption else None,
+                    hashtags=hashtags[:20] if hashtags else None,
+                    post_date=post_date,
+                    threat_level=threat_level,
+                    raw_data=item
                 )
                 
-                db.add(intel_data)
+                db.add(comp_data)
                 imported += 1
                 
             except Exception as e:
-                errors.append(f"Item error: {str(e)}")
                 continue
         
         db.commit()
@@ -276,100 +177,198 @@ async def import_competitive_json(
         return {
             "success": True,
             "imported": imported,
-            "errors": errors[:10] if errors else [],
-            "message": f"Imported {imported} competitive intelligence data points"
+            "message": f"Imported {imported} competitive data points"
         }
         
-    except json.JSONDecodeError:
-        raise HTTPException(400, "Invalid JSON file")
+    except json.JSONDecodeError as e:
+        raise HTTPException(400, f"Invalid JSON/JSONL format: {str(e)}")
     except Exception as e:
-        raise HTTPException(400, f"Error importing data: {str(e)}")
+        raise HTTPException(400, f"Error importing file: {str(e)}")
 
 
-@router.post("/manual-entry")
-def create_manual_entry(
-    competitor: str,
-    data_source: str,
-    content_type: str,
-    raw_data: dict,
-    sentiment: Optional[str] = None,
-    engagement_score: Optional[float] = None,
+@router.get("/dashboard")
+def get_competitive_dashboard(
+    days: int = 30,
+    threat_level: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Manually add competitive intelligence data point"""
+    """Get competitive intelligence dashboard"""
     
-    intel = CompetitiveIntel(
-        competitor=competitor,
-        data_source=data_source,
-        content_type=content_type,
-        raw_data=raw_data,
-        sentiment=sentiment,
-        engagement_score=engagement_score
+    now = datetime.now(timezone.utc)
+    start_date = now - timedelta(days=days)
+    
+    query = db.query(CompetitiveData).filter(
+        CompetitiveData.scraped_at >= start_date
     )
     
-    db.add(intel)
-    db.commit()
-    db.refresh(intel)
+    if threat_level:
+        query = query.filter(CompetitiveData.threat_level == threat_level)
+    
+    data = query.all()
+    
+    # Aggregate by competitor
+    competitor_stats = {}
+    for item in data:
+        if item.competitor not in competitor_stats:
+            competitor_stats[item.competitor] = {
+                "competitor": item.competitor,
+                "threat_level": item.threat_level,
+                "total_posts": 0,
+                "total_engagement": 0,
+                "avg_engagement": 0,
+                "platforms": set()
+            }
+        
+        competitor_stats[item.competitor]["total_posts"] += 1
+        competitor_stats[item.competitor]["total_engagement"] += item.engagement_count or 0
+        competitor_stats[item.competitor]["platforms"].add(item.platform)
+    
+    # Calculate averages
+    competitors = []
+    for comp_name, stats in competitor_stats.items():
+        stats["avg_engagement"] = int(stats["total_engagement"] / stats["total_posts"]) if stats["total_posts"] > 0 else 0
+        stats["platforms"] = list(stats["platforms"])
+        competitors.append(stats)
+    
+    # Sort by total engagement
+    competitors.sort(key=lambda x: x["total_engagement"], reverse=True)
     
     return {
-        "success": True,
-        "id": intel.id,
-        "message": "Competitive intelligence data added"
+        "period_days": days,
+        "total_data_points": len(data),
+        "competitors_tracked": len(competitors),
+        "competitors": competitors
     }
 
 
-@router.get("/competitors")
-def list_competitors(db: Session = Depends(get_db)):
-    """Get list of all tracked competitors with data"""
+@router.get("/data")
+def get_competitive_data(
+    limit: int = 50,
+    offset: int = 0,
+    competitor: Optional[str] = None,
+    platform: Optional[str] = None,
+    threat_level: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get competitive data with filters"""
+    
+    query = db.query(CompetitiveData)
+    
+    if competitor:
+        query = query.filter(CompetitiveData.competitor == competitor)
+    
+    if platform:
+        query = query.filter(CompetitiveData.platform == platform)
+    
+    if threat_level:
+        query = query.filter(CompetitiveData.threat_level == threat_level)
+    
+    total = query.count()
+    
+    data = query.order_by(desc(CompetitiveData.scraped_at)).limit(limit).offset(offset).all()
+    
+    return {
+        "data": [
+            {
+                "id": d.id,
+                "competitor": d.competitor,
+                "platform": d.platform,
+                "content_type": d.content_type,
+                "engagement_count": d.engagement_count,
+                "post_url": d.post_url,
+                "caption": d.caption,
+                "hashtags": d.hashtags,
+                "post_date": d.post_date.isoformat() if d.post_date else None,
+                "threat_level": d.threat_level,
+                "scraped_at": d.scraped_at.isoformat() if d.scraped_at else None
+            }
+            for d in data
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+@router.get("/brands")
+def get_competitor_brands(db: Session = Depends(get_db)):
+    """Get list of all competitor brands with threat levels"""
     
     competitors = db.query(
-        CompetitiveIntel.competitor,
-        func.count(CompetitiveIntel.id).label('data_points')
-    ).group_by(CompetitiveIntel.competitor).all()
+        CompetitiveData.competitor,
+        CompetitiveData.threat_level,
+        func.count(CompetitiveData.id).label('data_points')
+    ).group_by(
+        CompetitiveData.competitor,
+        CompetitiveData.threat_level
+    ).all()
+    
+    # Organize by threat level
+    brands_by_threat = {
+        "high_threat": [],
+        "medium_threat": [],
+        "low_threat": [],
+        "unknown": []
+    }
+    
+    threat_counts = {
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "unknown": 0
+    }
+    
+    for comp, threat, count in competitors:
+        if threat == "high":
+            brands_by_threat["high_threat"].append(comp)
+            threat_counts["high"] += 1
+        elif threat == "medium":
+            brands_by_threat["medium_threat"].append(comp)
+            threat_counts["medium"] += 1
+        elif threat == "low":
+            brands_by_threat["low_threat"].append(comp)
+            threat_counts["low"] += 1
+        else:
+            brands_by_threat["unknown"].append(comp)
+            threat_counts["unknown"] += 1
     
     return {
-        "competitors": [
-            {
-                "name": comp,
-                "data_points": count
-            }
-            for comp, count in competitors
-        ],
-        "available_brands": COMPETITOR_BRANDS,
-        "all_brands": ALL_COMPETITORS
+        "total": len(competitors),
+        "threat_levels": threat_counts,
+        "brands": brands_by_threat
     }
 
 
-@router.get("/sources")
-def list_sources(db: Session = Depends(get_db)):
-    """Get list of all data sources"""
+@router.get("/platforms")
+def get_platforms(db: Session = Depends(get_db)):
+    """Get list of platforms being tracked"""
     
-    sources = db.query(
-        CompetitiveIntel.data_source,
-        func.count(CompetitiveIntel.id).label('data_points')
-    ).group_by(CompetitiveIntel.data_source).all()
+    platforms = db.query(
+        CompetitiveData.platform,
+        func.count(CompetitiveData.id).label('count')
+    ).group_by(CompetitiveData.platform).all()
     
     return {
-        "sources": [
+        "platforms": [
             {
-                "name": source,
-                "data_points": count
+                "name": platform,
+                "count": count
             }
-            for source, count in sources
+            for platform, count in platforms
         ]
     }
 
 
-@router.delete("/data/{intel_id}")
-def delete_intel(intel_id: int, db: Session = Depends(get_db)):
-    """Delete a competitive intelligence data point"""
+@router.delete("/data/{data_id}")
+def delete_competitive_data(data_id: int, db: Session = Depends(get_db)):
+    """Delete a competitive data point"""
     
-    intel = db.query(CompetitiveIntel).filter(CompetitiveIntel.id == intel_id).first()
+    data = db.query(CompetitiveData).filter(CompetitiveData.id == data_id).first()
     
-    if not intel:
-        raise HTTPException(404, "Data point not found")
+    if not data:
+        raise HTTPException(404, "Data not found")
     
-    db.delete(intel)
+    db.delete(data)
     db.commit()
     
     return {"success": True}
