@@ -39,9 +39,9 @@ app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
 
 # CORS configuration
 ALLOWED_ORIGINS = [
+    "https://your-frontend.vercel.app",  # Add your Vercel URL
     "https://crooks-command-center-v2.onrender.com",
     "http://localhost:3000",
-    "http://localhost:8000",
 ]
 
 if os.getenv("ENVIRONMENT") == "development":
