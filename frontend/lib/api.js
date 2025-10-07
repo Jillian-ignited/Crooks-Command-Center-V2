@@ -1,4 +1,4 @@
-// frontend/lib/api.js - PURE JAVASCRIPT VERSION
+// frontend/lib/api.js - COMPLETE VERSION
 
 // API configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
@@ -56,6 +56,64 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/health`);
     return response.json();
   }
+};
+
+// Generic POST helper function
+export const apiPost = async (endpoint, data) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${endpoint} failed: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+// Generic GET helper function
+export const apiGet = async (endpoint) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`);
+  
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+// Generic PUT helper function
+export const apiPut = async (endpoint, data) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`PUT ${endpoint} failed: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+// Generic DELETE helper function
+export const apiDelete = async (endpoint) => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(`DELETE ${endpoint} failed: ${response.statusText}`);
+  }
+
+  return response.json();
 };
 
 export default api;
