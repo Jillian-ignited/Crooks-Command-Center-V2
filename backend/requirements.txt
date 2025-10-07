@@ -8,8 +8,8 @@ aiofiles==23.2.1
 sqlalchemy==2.0.43
 psycopg==3.1.12
 
-# OpenAI - UPDATED to v1.x
-openai==1.54.0
+# OpenAI - LATEST STABLE VERSION
+openai==1.54.3
 
 # Data processing
 pandas==2.2.2
