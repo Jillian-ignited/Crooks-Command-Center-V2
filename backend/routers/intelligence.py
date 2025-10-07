@@ -1,318 +1,209 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from pathlib import Path
+from sqlalchemy import desc
+from datetime import datetime, timezone
+from typing import Optional
 import os
 import json
-import hashlib
-import aiofiles
-from datetime import datetime
-import traceback
-import re
+import PyPDF2
+from anthropic import Anthropic
 
-from ..database import get_db, DB_AVAILABLE
+from ..database import get_db
 from ..models import IntelligenceFile
 
 router = APIRouter()
 
-# OpenAI setup - FIXED IMPORTS
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-AI_AVAILABLE = bool(OPENAI_API_KEY)
+# File upload directory
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Import OpenAI at module level
-OpenAIClient = None
-if AI_AVAILABLE:
-    try:
-        from openai import OpenAI as OpenAIClient
-        print("[Intelligence] ✅ OpenAI module imported successfully")
-    except Exception as e:
-        print(f"[Intelligence] ❌ OpenAI import failed: {e}")
-        AI_AVAILABLE = False
-        OpenAIClient = None
-else:
-    print("[Intelligence] ⚠️ No OpenAI API key - AI analysis disabled")
-
-# File storage
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads/intelligence")
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-
-ALLOWED_EXTENSIONS = {'.jsonl', '.json', '.csv', '.txt', '.xlsx', '.xls'}
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+# Initialize Anthropic client
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
-def sanitize_filename(filename: str) -> str:
-    """Secure filename sanitization"""
-    return re.sub(r'[^\w\-.]', '_', os.path.basename(filename))
-
-
-def analyze_large_file(file_path: str, filename: str, source: str) -> dict:
-    """
-    Optimized AI analysis for large files (up to 70MB)
-    Uses intelligent sampling instead of reading entire file
-    """
-    if not AI_AVAILABLE or OpenAIClient is None:
-        return {
-            "error": "OpenAI not configured",
-            "analysis": "AI analysis unavailable - please configure OPENAI_API_KEY"
-        }
+async def analyze_intelligence(text_content: str, filename: str):
+    """Analyze intelligence content using Claude AI"""
     
     try:
-        # Create client with explicit error handling
-        try:
-            client = OpenAIClient(api_key=OPENAI_API_KEY)
-            use_legacy_api = False
-        except TypeError as te:
-            # If proxies error, try alternative initialization
-            print(f"[Analysis] ⚠️ Client init error: {te}, trying legacy API")
-            import openai
-            openai.api_key = OPENAI_API_KEY
-            use_legacy_api = True
-        except Exception as e:
-            print(f"[Analysis] ❌ Failed to create OpenAI client: {e}")
-            return {
-                "error": f"OpenAI client creation failed: {str(e)}",
-                "analysis": "Could not initialize AI - please check API configuration"
-            }
-        
-        print(f"[Analysis] Reading file: {filename}")
-        
-        # Read and sample file
-        with open(file_path, 'r', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            total_lines = len(all_lines)
-            print(f"[Analysis] Total records: {total_lines}")
-            
-            # Intelligent sampling: beginning, middle, end
-            sample_lines = []
-            
-            # First 5 records
-            for line in all_lines[:5]:
-                try:
-                    sample_lines.append(json.loads(line.strip()))
-                except:
-                    continue
-            
-            # Middle 5 records
-            if total_lines > 20:
-                middle_start = total_lines // 2
-                for line in all_lines[middle_start:middle_start+5]:
-                    try:
-                        sample_lines.append(json.loads(line.strip()))
-                    except:
-                        continue
-            
-            # Last 5 records
-            if total_lines > 10:
-                for line in all_lines[-5:]:
-                    try:
-                        sample_lines.append(json.loads(line.strip()))
-                    except:
-                        continue
-        
-        if not sample_lines:
-            return {
-                "error": "No valid JSON data",
-                "analysis": "Could not parse file - please check format"
-            }
-        
-        print(f"[Analysis] Sampled {len(sample_lines)} records from {total_lines} total")
-        
-        # Streetwear-specific AI prompt
-        system_prompt = """You are a streetwear brand strategist analyzing competitive intelligence data.
+        prompt = f"""Analyze this intelligence file for Crooks & Castles streetwear brand.
 
-Focus on:
-1. Cultural moments & trends (music, sports, art, subcultures)
-2. Product drops & release strategies
-3. Influencer/celebrity mentions
-4. Aesthetic trends (Y2K, techwear, vintage, gorpcore, etc.)
-5. Engagement tactics (giveaways, limited drops, community building)
-6. Sentiment and audience reactions
-7. Pricing strategies and positioning
+Filename: {filename}
 
-Provide actionable insights for Crooks & Castles to compete effectively."""
+Content:
+{text_content[:8000]}
 
-        user_prompt = f"""Analyze this {source} competitive intelligence data from {filename}.
+Provide a structured analysis covering:
+1. Key insights and trends
+2. Competitive intelligence (if any)
+3. Market opportunities
+4. Customer/audience insights
+5. Actionable recommendations
 
-Dataset: {total_lines} total records (sampled {len(sample_lines)} for analysis)
+Focus on insights relevant to hip-hop culture, streetwear, and urban fashion."""
 
-Sample data:
-{json.dumps(sample_lines[:5], indent=2)}
-
-Provide:
-1. **Key Cultural Trends**: What's resonating in streetwear culture?
-2. **Top Content Themes**: What content performs best?
-3. **Engagement Patterns**: When/how is audience most engaged?
-4. **Competitive Moves**: What are competitors doing well?
-5. **Strategic Opportunities**: Specific actions for Crooks & Castles
-6. **Sentiment Overview**: Brand perception and audience mood
-7. **Timing Insights**: Best times for content and campaigns"""
-
-        # Call OpenAI API
-        print(f"[Analysis] Calling OpenAI API...")
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
         
-        if not use_legacy_api:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo-16k",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=2000,
-                temperature=0.3
-            )
-            analysis_text = response.choices[0].message.content
-        else:
-            # Fallback to legacy API if needed
-            import openai
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=2000,
-                temperature=0.3
-            )
-            analysis_text = response.choices[0].message.content
-        
-        print(f"[Analysis] ✅ AI analysis complete")
+        analysis_text = message.content[0].text
         
         return {
-            "analysis": analysis_text,
-            "sample_size": len(sample_lines),
-            "total_records": total_lines,
-            "sampling_method": "intelligent (beginning, middle, end)",
-            "model": "gpt-3.5-turbo-16k",
-            "timestamp": datetime.utcnow().isoformat()
+            "summary": analysis_text,
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "model": "claude-sonnet-4-20250514"
         }
         
     except Exception as e:
-        print(f"[Analysis] AI error: {e}")
-        print(f"[Analysis] Error type: {type(e).__name__}")
-        traceback.print_exc()
         return {
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "analysis": "AI analysis failed - please try again or review manually"
+            "summary": f"Analysis failed: {str(e)}",
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "error": True
         }
-
-
-@router.get("/health")
-def health():
-    """Health check for intelligence module"""
-    return {
-        "status": "healthy",
-        "ai_available": AI_AVAILABLE,
-        "openai_client_loaded": OpenAIClient is not None,
-        "database_available": DB_AVAILABLE,
-        "upload_directory": UPLOAD_DIR,
-        "max_file_size_mb": MAX_FILE_SIZE // (1024 * 1024)
-    }
 
 
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    source: str = "manual_upload",
-    brand: str = "Crooks & Castles",
-    description: str = "",
+    source: str = Form("manual_upload"),
+    description: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """
-    Upload intelligence file (up to 100MB)
-    Analysis runs synchronously - will take 30-60 seconds for large files
-    """
-    
-    # Validate file type
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    if file_ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(400, f"Invalid file type: {file_ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
-    
-    # Generate secure filename
-    file_hash = hashlib.md5(file.filename.encode()).hexdigest()[:8]
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    safe_name = f"{timestamp}_{file_hash}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, safe_name)
+    """Upload intelligence file with AI analysis"""
     
     try:
+        # Validate file type
+        allowed_extensions = ['.pdf', '.txt', '.csv', '.json', '.jsonl', '.md', '.doc', '.docx']
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                400, 
+                f"File type {file_ext} not supported. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{timestamp}_{file.filename}"
+        file_path = os.path.join(UPLOAD_DIR, safe_filename)
+        
         # Save file
-        total_size = 0
-        print(f"[Upload] Receiving: {file.filename}")
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
         
-        async with aiofiles.open(file_path, 'wb') as f:
-            while chunk := await file.read(8192):
-                total_size += len(chunk)
-                if total_size > MAX_FILE_SIZE:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                    raise HTTPException(413, "File exceeds 100MB limit")
-                await f.write(chunk)
+        file_size = len(contents)
         
-        print(f"[Upload] Saved: {total_size / 1024 / 1024:.2f} MB")
+        # Extract text based on file type
+        text_content = ""
         
-        # Generate AI analysis (synchronous - user waits)
-        analysis_results = None
-        if AI_AVAILABLE and OpenAIClient is not None:
-            print(f"[Upload] Starting AI analysis...")
-            analysis_results = analyze_large_file(file_path, file.filename, source)
-            print(f"[Upload] AI analysis complete")
+        if file_ext == '.pdf':
+            # PDF extraction
+            try:
+                pdf_file = open(file_path, 'rb')
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                for page in pdf_reader.pages:
+                    text_content += page.extract_text()
+                pdf_file.close()
+            except Exception as e:
+                text_content = f"Error extracting PDF: {str(e)}"
+        
+        elif file_ext == '.json':
+            # JSON extraction
+            try:
+                json_data = json.loads(contents.decode('utf-8'))
+                text_content = json.dumps(json_data, indent=2)
+            except Exception as e:
+                text_content = f"Error parsing JSON: {str(e)}"
+        
+        elif file_ext == '.jsonl':
+            # JSONL extraction (JSON Lines)
+            try:
+                lines = contents.decode('utf-8').split('\n')
+                json_objects = []
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        try:
+                            json_objects.append(json.loads(line))
+                        except:
+                            continue
+                text_content = json.dumps(json_objects, indent=2)
+            except Exception as e:
+                text_content = f"Error parsing JSONL: {str(e)}"
+        
+        elif file_ext in ['.txt', '.md', '.csv']:
+            # Plain text extraction
+            try:
+                text_content = contents.decode('utf-8')
+            except:
+                text_content = contents.decode('latin-1')
+        
+        elif file_ext in ['.doc', '.docx']:
+            # Word document extraction (basic)
+            try:
+                text_content = contents.decode('utf-8', errors='ignore')
+            except:
+                text_content = "Word document uploaded (full text extraction not available)"
+        
         else:
-            print(f"[Upload] Skipping AI analysis - OpenAI not available")
+            text_content = "File uploaded (text extraction not available for this type)"
         
-        # Create database record using ORM
-        file_record = IntelligenceFile(
-            filename=safe_name,
-            original_filename=sanitize_filename(file.filename),
+        # Perform AI analysis
+        analysis_results = await analyze_intelligence(text_content, file.filename)
+        
+        # Create database record
+        intelligence_file = IntelligenceFile(
+            filename=safe_filename,
+            original_filename=file.filename,
             source=source,
-            brand=brand,
-            description=description,
             file_path=file_path,
-            file_size=total_size,
+            file_size=file_size,
             file_type=file_ext,
+            description=description,
             analysis_results=analysis_results,
-            status="processed" if (analysis_results and "error" not in analysis_results) else "uploaded",
-            processed_at=datetime.utcnow() if analysis_results else None
+            status="processed",
+            processed_at=datetime.now(timezone.utc)
         )
         
-        db.add(file_record)
+        db.add(intelligence_file)
         db.commit()
-        db.refresh(file_record)
-        
-        print(f"[Upload] ✅ Complete - ID: {file_record.id}")
+        db.refresh(intelligence_file)
         
         return {
             "success": True,
-            "file_id": file_record.id,
-            "filename": file_record.original_filename,
-            "size_mb": round(total_size / 1024 / 1024, 2),
-            "source": source,
-            "status": file_record.status,
-            "ai_analysis_complete": bool(analysis_results and "error" not in analysis_results),
-            "message": "Upload and analysis complete!" if (analysis_results and "error" not in analysis_results) else "Upload complete (AI unavailable or failed)"
+            "file_id": intelligence_file.id,
+            "filename": file.filename,
+            "analysis": analysis_results,
+            "message": "File uploaded and analyzed successfully"
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        print(f"[Upload] ❌ Error: {e}")
-        traceback.print_exc()
         raise HTTPException(500, f"Upload failed: {str(e)}")
 
 
 @router.get("/files")
-def list_files(
-    source: str = None,
+def get_intelligence_files(
     limit: int = 50,
+    offset: int = 0,
+    source: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """List uploaded intelligence files"""
+    """Get list of intelligence files"""
+    
     query = db.query(IntelligenceFile)
     
     if source:
         query = query.filter(IntelligenceFile.source == source)
     
-    files = query.order_by(IntelligenceFile.uploaded_at.desc()).limit(limit).all()
+    total = query.count()
+    
+    files = query.order_by(desc(IntelligenceFile.uploaded_at)).limit(limit).offset(offset).all()
     
     return {
         "files": [
@@ -320,81 +211,85 @@ def list_files(
                 "id": f.id,
                 "filename": f.original_filename,
                 "source": f.source,
-                "brand": f.brand,
-                "size_mb": round(f.file_size / 1024 / 1024, 2) if f.file_size else 0,
+                "file_type": f.file_type,
+                "file_size": f.file_size,
+                "description": f.description,
                 "status": f.status,
-                "uploaded_at": f.uploaded_at.isoformat(),
-                "has_analysis": bool(f.analysis_results and isinstance(f.analysis_results, dict) and "analysis" in f.analysis_results and "error" not in f.analysis_results)
+                "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
+                "processed_at": f.processed_at.isoformat() if f.processed_at else None,
+                "has_analysis": bool(f.analysis_results)
             }
             for f in files
         ],
-        "total": len(files)
+        "total": total,
+        "limit": limit,
+        "offset": offset
     }
 
 
 @router.get("/files/{file_id}")
-def get_file(file_id: int, db: Session = Depends(get_db)):
-    """Get file details with AI analysis"""
-    file_record = db.query(IntelligenceFile).filter(
-        IntelligenceFile.id == file_id
-    ).first()
+def get_file_detail(file_id: int, db: Session = Depends(get_db)):
+    """Get detailed information about a specific file"""
     
-    if not file_record:
+    file = db.query(IntelligenceFile).filter(IntelligenceFile.id == file_id).first()
+    
+    if not file:
         raise HTTPException(404, "File not found")
     
     return {
-        "id": file_record.id,
-        "filename": file_record.original_filename,
-        "source": file_record.source,
-        "brand": file_record.brand,
-        "description": file_record.description,
-        "size_mb": round(file_record.file_size / 1024 / 1024, 2) if file_record.file_size else 0,
-        "status": file_record.status,
-        "uploaded_at": file_record.uploaded_at.isoformat(),
-        "processed_at": file_record.processed_at.isoformat() if file_record.processed_at else None,
-        "analysis": file_record.analysis_results
+        "id": file.id,
+        "filename": file.original_filename,
+        "source": file.source,
+        "brand": file.brand,
+        "file_type": file.file_type,
+        "file_size": file.file_size,
+        "description": file.description,
+        "analysis_results": file.analysis_results,
+        "status": file.status,
+        "uploaded_at": file.uploaded_at.isoformat() if file.uploaded_at else None,
+        "processed_at": file.processed_at.isoformat() if file.processed_at else None,
+        "created_by": file.created_by
     }
 
 
-@router.get("/insights")
-def get_insights(
-    source: str = None,
-    days: int = 30,
-    db: Session = Depends(get_db)
-):
-    """Get aggregated insights from recent files"""
-    from datetime import timedelta
+@router.delete("/files/{file_id}")
+def delete_file(file_id: int, db: Session = Depends(get_db)):
+    """Delete an intelligence file"""
     
-    since = datetime.utcnow() - timedelta(days=days)
+    file = db.query(IntelligenceFile).filter(IntelligenceFile.id == file_id).first()
     
-    query = db.query(IntelligenceFile).filter(
-        IntelligenceFile.uploaded_at >= since,
-        IntelligenceFile.analysis_results.isnot(None)
-    )
+    if not file:
+        raise HTTPException(404, "File not found")
     
-    if source:
-        query = query.filter(IntelligenceFile.source == source)
+    # Delete physical file
+    try:
+        if os.path.exists(file.file_path):
+            os.remove(file.file_path)
+    except Exception as e:
+        print(f"Error deleting physical file: {e}")
     
-    files = query.order_by(IntelligenceFile.uploaded_at.desc()).all()
+    # Delete database record
+    db.delete(file)
+    db.commit()
+    
+    return {"success": True, "message": "File deleted"}
+
+
+@router.get("/sources")
+def get_sources(db: Session = Depends(get_db)):
+    """Get list of intelligence sources"""
+    
+    sources = db.query(
+        IntelligenceFile.source,
+        func.count(IntelligenceFile.id).label('count')
+    ).group_by(IntelligenceFile.source).all()
     
     return {
-        "period": f"Last {days} days",
-        "total_files": len(files),
-        "sources": list(set(f.source for f in files)),
-        "files": [
+        "sources": [
             {
-                "id": f.id,
-                "filename": f.original_filename,
-                "source": f.source,
-                "uploaded_at": f.uploaded_at.isoformat(),
-                "analysis_preview": (
-                    f.analysis_results.get("analysis", "")[:200] + "..."
-                    if isinstance(f.analysis_results, dict) and "analysis" in f.analysis_results
-                    else str(f.analysis_results)[:200] + "..."
-                    if f.analysis_results
-                    else "No analysis available"
-                )
+                "name": source,
+                "count": count
             }
-            for f in files
+            for source, count in sources
         ]
     }
