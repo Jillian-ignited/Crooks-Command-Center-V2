@@ -1,4 +1,4 @@
-# CRITICAL FIX #6: Create proper database models (Final import fix)
+# backend/models.py
 from sqlalchemy import Column, Integer, String, DateTime, Float, Text, JSON, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
@@ -20,11 +20,43 @@ class IntelligenceFile(Base):
     file_size = Column(Integer)
     file_type = Column(String(50))
     description = Column(Text)
-    analysis_results = Column(JSON)  # Store AI analysis as JSON
+    analysis_results = Column(JSON)
     status = Column(String(50), default="processed")
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     processed_at = Column(DateTime(timezone=True))
     created_by = Column(String(100))
+
+
+class Campaign(Base):
+    """Marketing campaigns with AI content suggestions"""
+    __tablename__ = "campaigns"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    theme = Column(String(255))
+    
+    # Dates
+    launch_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Status
+    status = Column(String(50), default="planning")
+    
+    # Cultural context
+    cultural_moment = Column(String(255))
+    target_audience = Column(Text)
+    
+    # AI suggestions
+    content_suggestions = Column(JSON)
+    
+    # Brand
+    brand = Column(String(100), default="Crooks & Castles")
+    
+    # Notes
+    notes = Column(Text)
+
 
 class MediaFile(Base):
     """Media file uploads"""
@@ -42,17 +74,19 @@ class MediaFile(Base):
     uploaded_by = Column(String(100))
     file_metadata = Column(JSON, default={})
 
+
 class ExecutiveMetric(Base):
     """Executive dashboard metrics"""
     __tablename__ = "executive_metrics"
     
     id = Column(Integer, primary_key=True, index=True)
     brand = Column(String(100), nullable=False)
-    metric_type = Column(String(100), nullable=False)  # sales, orders, engagement, etc.
+    metric_type = Column(String(100), nullable=False)
     value = Column(Float, nullable=False)
-    period = Column(String(50), default="30d")  # 1d, 7d, 30d, 90d
+    period = Column(String(50), default="30d")
     recorded_at = Column(DateTime(timezone=True), server_default=func.now())
     metric_metadata = Column(JSON, default={})
+
 
 class ContentBrief(Base):
     """Content creation briefs"""
@@ -64,10 +98,11 @@ class ContentBrief(Base):
     objective = Column(Text)
     audience = Column(String(255))
     tone = Column(String(100))
-    channels = Column(JSON, default=[])  # social platforms
+    channels = Column(JSON, default=[])
     status = Column(String(50), default="draft")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
 
 class CalendarEvent(Base):
     """Cultural calendar events"""
@@ -76,21 +111,23 @@ class CalendarEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     event_date = Column(DateTime(timezone=True), nullable=False)
-    event_type = Column(String(100), default="cultural")  # cultural, holiday, brand, etc.
+    event_type = Column(String(100), default="cultural")
     description = Column(Text)
-    relevance = Column(String(50), default="medium")  # low, medium, high
+    relevance = Column(String(50), default="medium")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 
 class ShopifyData(Base):
     """Shopify analytics data"""
     __tablename__ = "shopify_data"
     
     id = Column(Integer, primary_key=True, index=True)
-    data_type = Column(String(100), nullable=False)  # orders, products, customers
+    data_type = Column(String(100), nullable=False)
     raw_data = Column(JSON, nullable=False)
     processed_data = Column(JSON)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     processed_at = Column(DateTime(timezone=True))
+
 
 class CompetitiveIntel(Base):
     """Competitive intelligence data"""
@@ -98,13 +135,14 @@ class CompetitiveIntel(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     competitor = Column(String(100), nullable=False)
-    data_source = Column(String(100), nullable=False)  # instagram, tiktok, manual
-    content_type = Column(String(100))  # post, story, ad, etc.
+    data_source = Column(String(100), nullable=False)
+    content_type = Column(String(100))
     raw_data = Column(JSON, nullable=False)
     analysis = Column(JSON)
     sentiment = Column(String(50))
     engagement_score = Column(Float)
     collected_at = Column(DateTime(timezone=True), server_default=func.now())
+
 
 class AgencyProject(Base):
     """Agency project management"""
@@ -113,7 +151,7 @@ class AgencyProject(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_name = Column(String(255), nullable=False)
     client = Column(String(100), nullable=False)
-    status = Column(String(50), default="active")  # active, completed, paused
+    status = Column(String(50), default="active")
     budget = Column(Float)
     start_date = Column(DateTime(timezone=True))
     end_date = Column(DateTime(timezone=True))
