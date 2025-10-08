@@ -300,7 +300,16 @@ def get_intelligence(
         "limit": limit,
         "offset": offset
     }
-
+@router.get("/files")
+def get_intelligence_files(
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    """Get all intelligence files - alias for root endpoint"""
+    return get_intelligence(category=category, status=status, limit=limit, offset=offset, db=db)
 
 @router.get("/{intelligence_id}")
 def get_intelligence_detail(intelligence_id: int, db: Session = Depends(get_db)):
