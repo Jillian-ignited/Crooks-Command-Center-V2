@@ -16,12 +16,13 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS Configuration
+# CORS Configuration - FIXED
 ALLOWED_ORIGINS = [
+    "https://crookscommandcenter.netlify.app",  # YOUR NETLIFY DOMAIN
+    "http://crookscommandcenter.netlify.app",   # HTTP version
     "https://crooks-command-center-v2-1d5b.vercel.app",
     "http://crooks-command-center-v2-1d5b.vercel.app",
     "https://crooks-command-center-v2.onrender.com",
-    "https://crookscommandcenter.netlify.app",
     "http://localhost:3000",
     "http://localhost:8000",
 ]
