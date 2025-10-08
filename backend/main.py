@@ -16,10 +16,10 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS Configuration - FIXED
+# CORS Configuration - Allow Netlify and other frontends
 ALLOWED_ORIGINS = [
-    "https://crookscommandcenter.netlify.app",  # YOUR NETLIFY DOMAIN
-    "http://crookscommandcenter.netlify.app",   # HTTP version
+    "https://crookscommandcenter.netlify.app",
+    "http://crookscommandcenter.netlify.app",
     "https://crooks-command-center-v2-1d5b.vercel.app",
     "http://crooks-command-center-v2-1d5b.vercel.app",
     "https://crooks-command-center-v2.onrender.com",
@@ -31,8 +31,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Include routers
@@ -43,17 +45,18 @@ app.include_router(executive.router, prefix="/api/executive", tags=["executive"]
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(competitive.router, prefix="/api/competitive", tags=["competitive"])
 
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
     print("[Database] Initializing connection...")
     try:
-        # Test database connection
         db = next(get_db())
         print("[Database] ✅ Connection established")
     except Exception as e:
         print(f"[Database] ❌ Connection failed: {e}")
         raise
+
 
 @app.get("/")
 def root():
@@ -65,6 +68,7 @@ def root():
         "docs": "/docs"
     }
 
+
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
@@ -72,6 +76,7 @@ def health_check():
         "status": "healthy",
         "database": "connected"
     }
+
 
 @app.get("/api")
 def api_root():
@@ -88,6 +93,7 @@ def api_root():
             "docs": "/docs"
         }
     }
+
 
 if __name__ == "__main__":
     import uvicorn
