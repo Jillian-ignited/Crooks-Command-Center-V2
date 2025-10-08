@@ -41,11 +41,14 @@ def extract_brand_from_url(url: str) -> str:
         return None
     
     # Match instagram.com/BRANDNAME/
-    match = re.search(r'instagram\.com/([^/]+)/?', url)
+    match = re.search(r'instagram\.com/([^/\?]+)', url)
     if match:
         username = match.group(1)
+        # Filter out Instagram path segments
+        if username.lower() in ['p', 'reel', 'tv', 'stories', 'explore']:
+            return None
         # Clean up the username
-        username = username.replace('_', ' ').replace('.', ' ')
+        username = username.replace('_', ' ').replace('.', ' ').strip()
         return username.title()
     
     return None
@@ -60,23 +63,61 @@ def extract_competitor_name_from_data(data: list, filename: str) -> str:
                 # Check for Instagram URL
                 if 'url' in item and item['url'] and 'instagram.com' in str(item['url']):
                     brand = extract_brand_from_url(item['url'])
-                    if brand and brand.lower() not in ['p', 'reel', 'tv']:
+                    if brand:
                         return brand
                 
-                # Check for ownerUsername (but only if no URL found)
+                # Check for ownerUsername
                 if 'ownerUsername' in item and item['ownerUsername']:
-                    username = item['ownerUsername'].replace('_', ' ').replace('.', ' ')
+                    username = item['ownerUsername'].replace('_', ' ').replace('.', ' ').strip()
                     return username.title()
+                
+                # Check for displayName or name fields
+                for field in ['displayName', 'name', 'username', 'accountName']:
+                    if field in item and item[field]:
+                        name = str(item[field]).replace('_', ' ').replace('.', ' ').strip()
+                        return name.title()
     
     # Fallback to filename extraction
-    name = filename.replace('.jsonl', '').replace('.json', '').replace('.csv', '').replace('.txt', '')
+    name = filename
+    
+    # Remove file extensions
+    name = re.sub(r'\.(jsonl|json|csv|txt)$', '', name, flags=re.IGNORECASE)
+    
+    # Remove common Apify/timestamp patterns
+    # Matches patterns like: 2025-10-06, 11-58-18, 20251006, etc.
+    name = re.sub(r'[-_]\d{4}[-_]\d{2}[-_]\d{2}', '', name)  # Date: 2025-10-06
+    name = re.sub(r'[-_]\d{2}[-_]\d{2}[-_]\d{2}', '', name)  # Time: 11-58-18
+    name = re.sub(r'[-_]\d{3,}', '', name)  # Milliseconds or long numbers
+    name = re.sub(r'\d{8,}', '', name)  # Long timestamp strings
+    
+    # Replace separators with spaces
     name = name.replace('_', ' ').replace('-', ' ')
     
-    # Remove common prefixes
-    for prefix in ['instagram', 'scrape', 'data', 'competitor', 'intel', 'apify']:
-        name = name.replace(prefix, '').strip()
+    # Remove common prefixes/suffixes
+    remove_terms = ['instagram', 'scrape', 'data', 'competitor', 'intel', 'apify', 
+                    'export', 'dataset', 'posts', 'feed', 'profile', 'set', 'hashtag', 'r']
+    for term in remove_terms:
+        name = re.sub(r'\b' + term + r'\b', '', name, flags=re.IGNORECASE)
     
-    return name.title() if name else 'Unknown Competitor'
+    # Clean up extra spaces
+    name = ' '.join(name.split())
+    
+    # If nothing left, return Unknown
+    if not name or len(name) < 2:
+        return 'Unknown Competitor'
+    
+    return name.title()
+
+def is_own_brand(competitor_name: str) -> bool:
+    """Check if the competitor name is actually our own brand"""
+    if not competitor_name:
+        return False
+    
+    own_brand_keywords = ['crooks', 'castles', 'crooks and castles', 'crooks & castles', 
+                          'crooks brand', 'deliverables', 'deliverable']
+    
+    name_lower = competitor_name.lower()
+    return any(keyword in name_lower for keyword in own_brand_keywords)
 
 def determine_threat_level(intel_count: int) -> str:
     """Determine threat level based on intel count"""
@@ -129,6 +170,20 @@ async def upload_competitive_intel(
     # Determine competitor name
     if not competitor_name:
         competitor_name = extract_competitor_name_from_data(parsed_data, file.filename)
+    
+    # Validate that it's not our own brand
+    if is_own_brand(competitor_name):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot add '{competitor_name}' as a competitor - this appears to be your own brand. Please rename the file or provide a competitor name."
+        )
+    
+    # Validate competitor name is not generic/invalid
+    if competitor_name in ['Unknown Competitor', 'Set', 'Hashtag', 'R'] or len(competitor_name) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not determine competitor name from file '{file.filename}'. Please provide a competitor name manually."
+        )
     
     # Determine source
     if not source:
@@ -230,6 +285,13 @@ def add_competitive_intel(
     db: Session = Depends(get_db)
 ):
     """Manually add competitive intelligence entry"""
+    
+    # Validate not own brand
+    if is_own_brand(competitor_name):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot add '{competitor_name}' as a competitor - this is your own brand."
+        )
     
     summary = ai_processor.generate_summary(content)
     insights = ai_processor.extract_insights(content)
@@ -462,7 +524,7 @@ def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
         "source": intel.data_type,
         "content": intel.content,
         "summary": intel.ai_analysis,
-        "key_insights": intel.tags if isinstance(intel.tags, (list, dict)) else (json.loads(intel.tags) if i.tags else []),
+        "key_insights": intel.tags if isinstance(intel.tags, (list, dict)) else (json.loads(intel.tags) if intel.tags else []),
         "priority": intel.priority,
         "sentiment": intel.sentiment,
         "created_at": intel.created_at.isoformat()
