@@ -613,25 +613,32 @@ def cleanup_bad_competitor_entries(db: Session = Depends(get_db)):
     """Remove entries with bad competitor names - accessible via browser"""
     
     try:
-        # Define bad patterns
-        bad_patterns = [
-            'Set Hashtag R 2025',
-            'Set R 2025',
-            'Crooks Brand Deliverables',
-            'Unknown Competitor',
-            'Set Hashtag',
-        ]
+        # Get ALL competitors
+        all_entries = db.query(CompetitorIntel).all()
         
         deleted_entries = []
         deleted_count = 0
         
-        # Find and delete all bad entries
-        for pattern in bad_patterns:
-            entries = db.query(CompetitorIntel).filter(
-                CompetitorIntel.competitor_name.like(f'%{pattern}%')
-            ).all()
+        # Check each entry for bad patterns
+        for entry in all_entries:
+            name = entry.competitor_name
+            should_delete = False
             
-            for entry in entries:
+            # Check if name contains timestamps or bad patterns
+            if re.search(r'\d{4}[-_]\d{2}[-_]\d{2}', name):  # Has date pattern
+                should_delete = True
+            elif re.search(r'\d{2}[-_]\d{2}[-_]\d{2}', name):  # Has time pattern
+                should_delete = True
+            elif re.search(r'\d{3,}', name):  # Has 3+ consecutive digits
+                should_delete = True
+            elif 'crooks' in name.lower() and 'deliverable' in name.lower():
+                should_delete = True
+            elif name.lower().startswith('set '):  # Starts with "Set "
+                should_delete = True
+            elif name == 'Unknown Competitor':
+                should_delete = True
+            
+            if should_delete:
                 deleted_entries.append({
                     "id": entry.id,
                     "name": entry.competitor_name,
