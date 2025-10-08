@@ -207,17 +207,58 @@ def list_intelligence_files(
         "files": [
             {
                 "id": e.id,
+                "filename": e.title,  # Frontend expects 'filename'
                 "title": e.title,
                 "source": e.source_type,
+                "brand": e.tags[0] if e.tags and len(e.tags) > 0 else "Crooks & Castles",  # Extract from tags
                 "category": e.category,
                 "summary": e.ai_summary,
                 "key_insights": e.ai_insights if isinstance(e.ai_insights, (list, dict)) else (json.loads(e.ai_insights) if e.ai_insights else []),
                 "created_at": e.created_at.isoformat(),
-                "status": e.status
+                "uploaded_at": e.created_at.isoformat(),  # Frontend expects 'uploaded_at'
+                "status": e.status,
+                "has_analysis": bool(e.ai_summary or e.ai_insights),  # Flag if analysis exists
+                "size_mb": round(os.path.getsize(e.file_url) / (1024 * 1024), 2) if e.file_url and os.path.exists(e.file_url) else 0
             }
             for e in entries
         ],
         "total": len(entries)
+    }
+
+@router.get("/files/{file_id}")
+def get_intelligence_file(file_id: int, db: Session = Depends(get_db)):
+    """Get detailed intelligence file with analysis"""
+    
+    entry = db.query(Intelligence).filter(Intelligence.id == file_id).first()
+    
+    if not entry:
+        raise HTTPException(status_code=404, detail="Intelligence file not found")
+    
+    # Get file size
+    size_mb = 0
+    if entry.file_url and os.path.exists(entry.file_url):
+        size_mb = round(os.path.getsize(entry.file_url) / (1024 * 1024), 2)
+    
+    return {
+        "id": entry.id,
+        "filename": entry.title,
+        "title": entry.title,
+        "source": entry.source_type,
+        "brand": entry.tags[0] if entry.tags and len(entry.tags) > 0 else "Crooks & Castles",
+        "category": entry.category,
+        "size_mb": size_mb,
+        "uploaded_at": entry.created_at.isoformat(),
+        "created_at": entry.created_at.isoformat(),
+        "status": entry.status,
+        "has_analysis": bool(entry.ai_summary or entry.ai_insights),
+        "analysis": {
+            "summary": entry.ai_summary,
+            "insights": entry.ai_insights if isinstance(entry.ai_insights, (list, dict)) else (json.loads(entry.ai_insights) if entry.ai_insights else []),
+            "analysis": entry.ai_summary,  # For frontend compatibility
+            "sample_size": 100,  # Placeholder
+            "total_records": 100,  # Placeholder
+            "model": "claude-sonnet-4"
+        }
     }
 
 @router.get("/summary")
