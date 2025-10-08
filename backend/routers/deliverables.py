@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, or_
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from datetime import datetime, timezone
+from typing import Optional
 import csv
-import io
+from io import StringIO
 
 from ..database import get_db
-from ..models import Deliverable, Campaign
+from ..models import Deliverable
 
 router = APIRouter()
 
@@ -16,11 +16,13 @@ router = APIRouter()
 def get_deliverables(
     phase: Optional[str] = None,
     status: Optional[str] = None,
-    category: Optional[str] = None,
-    upcoming_days: Optional[int] = None,
+    deliverable_type: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db)
 ):
-    """Get all deliverables with filters"""
+    """Get all deliverables with optional filters"""
+    
     query = db.query(Deliverable)
     
     if phase:
@@ -29,170 +31,75 @@ def get_deliverables(
     if status:
         query = query.filter(Deliverable.status == status)
     
-    if category:
-        query = query.filter(Deliverable.category == category)
+    if deliverable_type:
+        query = query.filter(Deliverable.deliverable_type == deliverable_type)
     
-    if upcoming_days:
-        now = datetime.now(timezone.utc)
-        cutoff = now + timedelta(days=upcoming_days)
-        query = query.filter(
-            and_(
-                Deliverable.due_date.isnot(None),
-                Deliverable.due_date <= cutoff,
-                Deliverable.status != "complete"
-            )
-        )
-    
-    deliverables = query.order_by(Deliverable.due_date).all()
+    total = query.count()
+    deliverables = query.order_by(Deliverable.due_date).limit(limit).offset(offset).all()
     
     return {
         "deliverables": [
             {
                 "id": d.id,
-                "phase": d.phase,
-                "phase_name": d.phase_name,
-                "category": d.category,
-                "task": d.task,
-                "due_date": d.due_date.isoformat() if d.due_date else None,
+                "title": d.title,
+                "description": d.description,
+                "type": d.type,
+                "deliverable_type": d.deliverable_type,
                 "status": d.status,
-                "owner": d.owner,
-                "campaign_id": d.campaign_id,
-                "asset_requirements": d.asset_requirements
+                "priority": d.priority,
+                "assigned_to": d.assigned_to,
+                "due_date": d.due_date.isoformat() if d.due_date else None,
+                "completed_at": d.completed_at.isoformat() if d.completed_at else None,
+                "phase": d.phase,
+                "dependencies": d.dependencies,
+                "blocks": d.blocks,
+                "created_at": d.created_at.isoformat() if d.created_at else None
             }
             for d in deliverables
         ],
-        "total": len(deliverables)
-    }
-
-
-@router.get("/dashboard")
-def get_deliverables_dashboard(db: Session = Depends(get_db)):
-    """Get dashboard overview of deliverables"""
-    
-    all_deliverables = db.query(Deliverable).all()
-    
-    # Group by status
-    by_status = {
-        "not_started": len([d for d in all_deliverables if d.status == "not_started"]),
-        "in_progress": len([d for d in all_deliverables if d.status == "in_progress"]),
-        "complete": len([d for d in all_deliverables if d.status == "complete"]),
-        "blocked": len([d for d in all_deliverables if d.status == "blocked"])
-    }
-    
-    # Group by phase
-    by_phase = {
-        "Phase 1": len([d for d in all_deliverables if d.phase == "Phase 1"]),
-        "Phase 2": len([d for d in all_deliverables if d.phase == "Phase 2"]),
-        "Phase 3": len([d for d in all_deliverables if d.phase == "Phase 3"])
-    }
-    
-    # Upcoming (next 7 days)
-    now = datetime.now(timezone.utc)
-    upcoming = [
-        d for d in all_deliverables 
-        if d.due_date and d.due_date <= now + timedelta(days=7) and d.status != "complete"
-    ]
-    
-    # Overdue
-    overdue = [
-        d for d in all_deliverables
-        if d.due_date and d.due_date < now and d.status != "complete"
-    ]
-    
-    return {
-        "total_deliverables": len(all_deliverables),
-        "by_status": by_status,
-        "by_phase": by_phase,
-        "upcoming_count": len(upcoming),
-        "overdue_count": len(overdue),
-        "upcoming": [
-            {
-                "id": d.id,
-                "task": d.task,
-                "due_date": d.due_date.isoformat(),
-                "phase": d.phase,
-                "category": d.category,
-                "days_until_due": (d.due_date - now).days
-            }
-            for d in sorted(upcoming, key=lambda x: x.due_date)[:5]
-        ],
-        "overdue": [
-            {
-                "id": d.id,
-                "task": d.task,
-                "due_date": d.due_date.isoformat(),
-                "phase": d.phase,
-                "category": d.category,
-                "days_overdue": (now - d.due_date).days
-            }
-            for d in sorted(overdue, key=lambda x: x.due_date)[:5]
-        ]
-    }
-
-
-@router.get("/by-phase/{phase}")
-def get_deliverables_by_phase(phase: str, db: Session = Depends(get_db)):
-    """Get all deliverables for a specific phase"""
-    deliverables = db.query(Deliverable).filter(
-        Deliverable.phase == phase
-    ).order_by(Deliverable.due_date).all()
-    
-    if not deliverables:
-        return {"phase": phase, "deliverables": [], "total": 0}
-    
-    return {
-        "phase": phase,
-        "phase_name": deliverables[0].phase_name if deliverables else None,
-        "deliverables": [
-            {
-                "id": d.id,
-                "category": d.category,
-                "task": d.task,
-                "due_date": d.due_date.isoformat() if d.due_date else None,
-                "status": d.status,
-                "owner": d.owner,
-                "asset_requirements": d.asset_requirements,
-                "campaign_id": d.campaign_id
-            }
-            for d in deliverables
-        ],
-        "total": len(deliverables),
-        "completion_rate": len([d for d in deliverables if d.status == "complete"]) / len(deliverables) * 100 if deliverables else 0
+        "total": total,
+        "limit": limit,
+        "offset": offset
     }
 
 
 @router.post("/")
 def create_deliverable(
-    phase: str,
-    category: str,
-    task: str,
-    phase_name: str = "",
+    title: str,
+    description: Optional[str] = None,
+    type: str = "other",
+    deliverable_type: str = "agency_output",
+    status: str = "not_started",
+    priority: str = "medium",
+    assigned_to: Optional[str] = None,
     due_date: Optional[str] = None,
-    asset_requirements: str = "",
-    owner: str = "High Voltage Digital",
+    phase: Optional[str] = None,
+    dependencies: Optional[list] = None,
+    blocks: Optional[list] = None,
     db: Session = Depends(get_db)
 ):
     """Create a new deliverable"""
     
-    due_dt = None
+    # Parse due date
+    parsed_due_date = None
     if due_date:
         try:
-            due_dt = datetime.fromisoformat(due_date)
-            # Make sure it's timezone-aware
-            if due_dt.tzinfo is None:
-                due_dt = due_dt.replace(tzinfo=timezone.utc)
+            parsed_due_date = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
         except:
             pass
     
     deliverable = Deliverable(
+        title=title,
+        description=description,
+        type=type,
+        deliverable_type=deliverable_type,
+        status=status,
+        priority=priority,
+        assigned_to=assigned_to,
+        due_date=parsed_due_date,
         phase=phase,
-        phase_name=phase_name,
-        category=category,
-        task=task,
-        due_date=due_dt,
-        asset_requirements=asset_requirements,
-        owner=owner,
-        status="not_started"
+        dependencies=dependencies,
+        blocks=blocks
     )
     
     db.add(deliverable)
@@ -200,119 +107,199 @@ def create_deliverable(
     db.refresh(deliverable)
     
     return {
-        "success": True,
-        "deliverable_id": deliverable.id,
-        "task": deliverable.task
+        "id": deliverable.id,
+        "title": deliverable.title,
+        "status": deliverable.status,
+        "created_at": deliverable.created_at.isoformat()
+    }
+
+
+@router.get("/dashboard")
+def get_deliverables_dashboard(db: Session = Depends(get_db)):
+    """Get deliverables dashboard with stats and upcoming items"""
+    
+    # Get all deliverables
+    all_deliverables = db.query(Deliverable).all()
+    
+    # Calculate stats
+    total = len(all_deliverables)
+    brand_inputs = [d for d in all_deliverables if d.deliverable_type == "brand_input"]
+    agency_outputs = [d for d in all_deliverables if d.deliverable_type == "agency_output"]
+    
+    # Status counts
+    not_started = len([d for d in all_deliverables if d.status == "not_started"])
+    in_progress = len([d for d in all_deliverables if d.status == "in_progress"])
+    completed = len([d for d in all_deliverables if d.status == "completed"])
+    blocked = len([d for d in all_deliverables if d.status == "blocked"])
+    
+    # Priority counts
+    high_priority = len([d for d in all_deliverables if d.priority == "high"])
+    
+    # Overdue items
+    today = datetime.now(timezone.utc)
+    overdue = [
+        d for d in all_deliverables 
+        if d.due_date and d.due_date < today and d.status != "completed"
+    ]
+    
+    # Upcoming (next 7 days)
+    from datetime import timedelta
+    next_week = today + timedelta(days=7)
+    upcoming = [
+        d for d in all_deliverables 
+        if d.due_date and today <= d.due_date <= next_week and d.status != "completed"
+    ]
+    
+    # Phase breakdown
+    phases = {}
+    for d in all_deliverables:
+        if d.phase:
+            if d.phase not in phases:
+                phases[d.phase] = {"total": 0, "completed": 0, "in_progress": 0}
+            phases[d.phase]["total"] += 1
+            if d.status == "completed":
+                phases[d.phase]["completed"] += 1
+            elif d.status == "in_progress":
+                phases[d.phase]["in_progress"] += 1
+    
+    return {
+        "stats": {
+            "total": total,
+            "brand_inputs": len(brand_inputs),
+            "agency_outputs": len(agency_outputs),
+            "not_started": not_started,
+            "in_progress": in_progress,
+            "completed": completed,
+            "blocked": blocked,
+            "high_priority": high_priority,
+            "overdue_count": len(overdue),
+            "upcoming_count": len(upcoming)
+        },
+        "overdue": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "deliverable_type": d.deliverable_type,
+                "due_date": d.due_date.isoformat(),
+                "priority": d.priority,
+                "phase": d.phase
+            }
+            for d in sorted(overdue, key=lambda x: x.due_date)[:10]
+        ],
+        "upcoming": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "deliverable_type": d.deliverable_type,
+                "due_date": d.due_date.isoformat(),
+                "priority": d.priority,
+                "phase": d.phase
+            }
+            for d in sorted(upcoming, key=lambda x: x.due_date)[:10]
+        ],
+        "phases": phases
+    }
+
+
+@router.get("/by-phase/{phase}")
+def get_deliverables_by_phase(phase: str, db: Session = Depends(get_db)):
+    """Get deliverables for a specific phase"""
+    
+    deliverables = db.query(Deliverable).filter(
+        Deliverable.phase.ilike(f"%{phase}%")
+    ).order_by(Deliverable.due_date).all()
+    
+    # Separate by deliverable type
+    brand_inputs = [d for d in deliverables if d.deliverable_type == "brand_input"]
+    agency_outputs = [d for d in deliverables if d.deliverable_type == "agency_output"]
+    
+    return {
+        "phase": phase,
+        "total": len(deliverables),
+        "brand_inputs": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "description": d.description,
+                "type": d.type,
+                "status": d.status,
+                "priority": d.priority,
+                "due_date": d.due_date.isoformat() if d.due_date else None,
+                "assigned_to": d.assigned_to,
+                "blocks": d.blocks
+            }
+            for d in sorted(brand_inputs, key=lambda x: x.due_date if x.due_date else datetime.max)
+        ],
+        "agency_outputs": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "description": d.description,
+                "type": d.type,
+                "status": d.status,
+                "priority": d.priority,
+                "due_date": d.due_date.isoformat() if d.due_date else None,
+                "assigned_to": d.assigned_to,
+                "dependencies": d.dependencies
+            }
+            for d in sorted(agency_outputs, key=lambda x: x.due_date if x.due_date else datetime.max)
+        ]
     }
 
 
 @router.put("/{deliverable_id}")
 def update_deliverable(
     deliverable_id: int,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
     status: Optional[str] = None,
-    due_date: Optional[str] = None,
-    notes: Optional[str] = None,
+    priority: Optional[str] = None,
     assigned_to: Optional[str] = None,
-    campaign_id: Optional[int] = None,
+    due_date: Optional[str] = None,
+    phase: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Update a deliverable"""
+    
     deliverable = db.query(Deliverable).filter(Deliverable.id == deliverable_id).first()
     
     if not deliverable:
         raise HTTPException(404, "Deliverable not found")
     
+    if title:
+        deliverable.title = title
+    if description:
+        deliverable.description = description
     if status:
         deliverable.status = status
-        if status == "complete" and not deliverable.completed_date:
-            deliverable.completed_date = datetime.now(timezone.utc)
-    
-    if due_date:
-        try:
-            due_dt = datetime.fromisoformat(due_date)
-            if due_dt.tzinfo is None:
-                due_dt = due_dt.replace(tzinfo=timezone.utc)
-            deliverable.due_date = due_dt
-        except:
-            pass
-    
-    if notes:
-        deliverable.notes = notes
-    
+        if status == "completed" and not deliverable.completed_at:
+            deliverable.completed_at = datetime.now(timezone.utc)
+        elif status != "completed":
+            deliverable.completed_at = None
+    if priority:
+        deliverable.priority = priority
     if assigned_to:
         deliverable.assigned_to = assigned_to
-    
-    if campaign_id is not None:
-        deliverable.campaign_id = campaign_id
+    if due_date:
+        try:
+            deliverable.due_date = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+        except:
+            pass
+    if phase:
+        deliverable.phase = phase
     
     deliverable.updated_at = datetime.now(timezone.utc)
+    
     db.commit()
+    db.refresh(deliverable)
     
-    return {"success": True}
-
-
-@router.post("/import-csv")
-async def import_deliverables_csv(
-    file: UploadFile = File(...),
-    phase_start_date: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    """Import deliverables from CSV file"""
-    
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(400, "File must be a CSV")
-    
-    try:
-        contents = await file.read()
-        csv_text = contents.decode('utf-8')
-        csv_reader = csv.DictReader(io.StringIO(csv_text))
-        
-        imported = 0
-        for row in csv_reader:
-            # Parse due date
-            due_date = None
-            if row.get('Due Date'):
-                try:
-                    due_date = datetime.fromisoformat(row['Due Date'])
-                    if due_date.tzinfo is None:
-                        due_date = due_date.replace(tzinfo=timezone.utc)
-                except:
-                    pass
-            
-            # Extract phase (e.g., "Phase 1" from "Phase 1: Foundation & Awareness")
-            phase_full = row.get('Phase', '')
-            phase = phase_full.split(':')[0].strip() if ':' in phase_full else phase_full.strip()
-            phase_name = phase_full.split(':', 1)[1].strip() if ':' in phase_full else ''
-            
-            deliverable = Deliverable(
-                phase=phase,
-                phase_name=phase_name,
-                category=row.get('Category', ''),
-                task=row.get('Task', ''),
-                asset_requirements=row.get('Asset Requirements', ''),
-                due_date=due_date,
-                status=row.get('Status', 'not_started').lower().replace(' ', '_'),
-                owner=row.get('Owner') if row.get('Owner') else 'High Voltage Digital'
-            )
-            
-            db.add(deliverable)
-            imported += 1
-        
-        db.commit()
-        
-        return {
-            "success": True,
-            "imported": imported,
-            "message": f"Successfully imported {imported} deliverables"
-        }
-        
-    except Exception as e:
-        raise HTTPException(400, f"Error importing CSV: {str(e)}")
+    return {"success": True, "deliverable_id": deliverable.id}
 
 
 @router.delete("/{deliverable_id}")
 def delete_deliverable(deliverable_id: int, db: Session = Depends(get_db)):
     """Delete a deliverable"""
+    
     deliverable = db.query(Deliverable).filter(Deliverable.id == deliverable_id).first()
     
     if not deliverable:
@@ -321,132 +308,9 @@ def delete_deliverable(deliverable_id: int, db: Session = Depends(get_db)):
     db.delete(deliverable)
     db.commit()
     
-    return {"success": True}
+    return {"success": True, "message": "Deliverable deleted"}
 
 
-@router.post("/activate-phase")
-def activate_phase(
-    phase: str,
-    start_date: str,
-    db: Session = Depends(get_db)
-):
-    """Activate a phase and set due dates relative to start date
-    
-    Example: Activate Phase 1 on 10/15/2025
-    """
-    
-    try:
-        phase_start = datetime.fromisoformat(start_date)
-        if phase_start.tzinfo is None:
-            phase_start = phase_start.replace(tzinfo=timezone.utc)
-    except:
-        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
-    
-    # Get all deliverables for this phase
-    deliverables = db.query(Deliverable).filter(Deliverable.phase == phase).all()
-    
-    if not deliverables:
-        raise HTTPException(404, f"No deliverables found for {phase}")
-    
-    # Update status and calculate due dates
-    updated = 0
-    for d in deliverables:
-        if d.status == "not_started":
-            d.status = "in_progress"
-        
-        # If deliverable doesn't have a due date yet, calculate one
-        if not d.due_date:
-            # Example: Ad creative due 2 weeks after phase start
-            if "creative" in d.category.lower():
-                d.due_date = phase_start + timedelta(days=14)
-            # Social posts due weekly
-            elif "social" in d.category.lower():
-                d.due_date = phase_start + timedelta(days=7)
-            # Reporting due end of month
-            elif "report" in d.category.lower():
-                d.due_date = phase_start + timedelta(days=30)
-            # Email/SMS due bi-weekly
-            elif "email" in d.category.lower() or "sms" in d.category.lower():
-                d.due_date = phase_start + timedelta(days=14)
-            else:
-                d.due_date = phase_start + timedelta(days=14)  # Default 2 weeks
-        
-        updated += 1
-    
-    db.commit()
-    
-    return {
-        "success": True,
-        "phase": phase,
-        "start_date": start_date,
-        "deliverables_updated": updated,
-        "message": f"{phase} activated starting {start_date}"
-    }
-
-
-@router.get("/upcoming")
-def get_upcoming_deliverables(days: int = 7, db: Session = Depends(get_db)):
-    """Get deliverables due in the next X days"""
-    
-    now = datetime.now(timezone.utc)
-    cutoff = now + timedelta(days=days)
-    
-    deliverables = db.query(Deliverable).filter(
-        and_(
-            Deliverable.due_date.isnot(None),
-            Deliverable.due_date <= cutoff,
-            Deliverable.due_date >= now,
-            Deliverable.status != "complete"
-        )
-    ).order_by(Deliverable.due_date).all()
-    
-    return {
-        "upcoming_days": days,
-        "count": len(deliverables),
-        "deliverables": [
-            {
-                "id": d.id,
-                "task": d.task,
-                "due_date": d.due_date.isoformat(),
-                "phase": d.phase,
-                "category": d.category,
-                "status": d.status,
-                "days_until_due": (d.due_date - now).days
-            }
-            for d in deliverables
-        ]
-    }
-
-
-@router.get("/overdue")
-def get_overdue_deliverables(db: Session = Depends(get_db)):
-    """Get all overdue deliverables"""
-    
-    now = datetime.now(timezone.utc)
-    
-    deliverables = db.query(Deliverable).filter(
-        and_(
-            Deliverable.due_date.isnot(None),
-            Deliverable.due_date < now,
-            Deliverable.status != "complete"
-        )
-    ).order_by(Deliverable.due_date).all()
-    
-    return {
-        "count": len(deliverables),
-        "deliverables": [
-            {
-                "id": d.id,
-                "task": d.task,
-                "due_date": d.due_date.isoformat(),
-                "phase": d.phase,
-                "category": d.category,
-                "status": d.status,
-                "days_overdue": (now - d.due_date).days
-            }
-            for d in deliverables
-        ]
-    }
 @router.post("/import-agency-csv")
 async def import_agency_deliverables_csv(
     file: UploadFile = File(...),
@@ -457,9 +321,6 @@ async def import_agency_deliverables_csv(
     try:
         contents = await file.read()
         decoded = contents.decode('utf-8')
-        
-        import csv
-        from io import StringIO
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
@@ -479,7 +340,7 @@ async def import_agency_deliverables_csv(
                 title=row.get('Task', ''),
                 description=f"Phase: {row.get('Phase', '')}\nCategory: {row.get('Category', '')}",
                 type=row.get('Category', 'other').lower().replace(' ', '_').replace('&', 'and'),
-                deliverable_type="agency_output",  # These are what HVA delivers
+                deliverable_type="agency_output",
                 status=row.get('Status', 'Not Started').lower().replace(' ', '_'),
                 phase=row.get('Phase', ''),
                 assigned_to=row.get('Owner', None) if row.get('Owner') else None,
@@ -499,3 +360,459 @@ async def import_agency_deliverables_csv(
         
     except Exception as e:
         raise HTTPException(500, f"Import failed: {str(e)}")
+
+
+@router.post("/generate-brand-inputs")
+def generate_brand_input_deliverables(db: Session = Depends(get_db)):
+    """Generate brand input deliverables (what Crooks provides to HVA)"""
+    
+    brand_inputs = [
+        # PHASE 1: Foundation & Awareness
+        {
+            "title": "Product Photography (3-4 hero products)",
+            "description": "High-res product shots for ad creative. Include hero shots, detail shots, and lifestyle if possible.",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-05",
+            "priority": "high",
+            "blocks": ["Develop 3–4 ad creatives/month"]
+        },
+        {
+            "title": "Brand Guidelines Document",
+            "description": "Logo files, fonts, colors, brand voice, messaging guidelines",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-05",
+            "priority": "high",
+            "blocks": ["Develop 3–4 ad creatives/month", "Create & publish 8–12 posts/month"]
+        },
+        {
+            "title": "Target Audience Profile",
+            "description": "Demographics, psychographics, pain points, desires. The Rebel, Ruler, Creator archetypes.",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-05",
+            "priority": "high",
+            "blocks": ["Set up low-spend campaigns", "Provide overarching paid/social/email strategy"]
+        },
+        {
+            "title": "Meta Business Manager Admin Access",
+            "description": "Add HVA as admin to Meta Business Manager for ad account access",
+            "type": "access_and_setup",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "high",
+            "blocks": ["Set up low-spend campaigns on Meta & Google"]
+        },
+        {
+            "title": "Google Ads Account Admin Access",
+            "description": "Grant HVA admin access to Google Ads account",
+            "type": "access_and_setup",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "high",
+            "blocks": ["Set up low-spend campaigns on Meta & Google"]
+        },
+        {
+            "title": "Social Media Account Credentials",
+            "description": "Admin access to Instagram, TikTok, Facebook, Twitter",
+            "type": "access_and_setup",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "high",
+            "blocks": ["Create & publish 8–12 posts/month"]
+        },
+        {
+            "title": "Email Platform Access (Klaviyo)",
+            "description": "Admin access to email marketing platform",
+            "type": "access_and_setup",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "high",
+            "blocks": ["Send 2 emails/month"]
+        },
+        {
+            "title": "Shopify Admin Access",
+            "description": "Grant HVA staff account access to Shopify",
+            "type": "access_and_setup",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "high",
+            "blocks": ["Begin uploading products"]
+        },
+        {
+            "title": "Phase 1 Ad Spend Budget Approval",
+            "description": "Approve monthly ad spend budget for Meta & Google",
+            "type": "budget_and_approvals",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "high",
+            "blocks": ["Set up low-spend campaigns on Meta & Google"]
+        },
+        {
+            "title": "Google Analytics Access",
+            "description": "Grant admin access to GA4 for tracking and reporting",
+            "type": "tracking_and_data",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-06",
+            "priority": "medium",
+            "blocks": ["Deliver weekly performance reports"]
+        },
+        {
+            "title": "Lifestyle Content for Social",
+            "description": "Brand imagery, behind-the-scenes, street culture content for social posts",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 1: Foundation & Awareness (Sep - Oct 2025)",
+            "due_date": "2025-10-10",
+            "priority": "medium",
+            "blocks": ["Create & publish 8–12 posts/month"]
+        },
+        
+        # PHASE 2: Growth & Q4 Push
+        {
+            "title": "Product Photography (15-20 products for BFCM)",
+            "description": "Expanded product photography for Q4 campaigns. Include all colorways and angles.",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-01",
+            "priority": "high",
+            "blocks": ["Produce 6–8 creatives/month", "Launch dedicated BFCM campaigns"]
+        },
+        {
+            "title": "BFCM Discount Strategy & Approval",
+            "description": "Black Friday / Cyber Monday discount structure, codes, exclusions",
+            "type": "budget_and_approvals",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-10",
+            "priority": "high",
+            "blocks": ["Launch dedicated BFCM campaigns", "Send 4–6 emails/month"]
+        },
+        {
+            "title": "Holiday Promotional Calendar",
+            "description": "Key dates, themes, promotions for Nov-Dec period",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-01",
+            "priority": "high",
+            "blocks": ["Conduct campaign-specific strategy sessions"]
+        },
+        {
+            "title": "Gift Guide Product Selection",
+            "description": "Curated list of products for holiday gift guides with pricing",
+            "type": "product_information",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-05",
+            "priority": "high",
+            "blocks": ["Send 4–6 emails/month", "Publish 12–16 posts/month"]
+        },
+        {
+            "title": "Holiday-Themed Lifestyle Content",
+            "description": "Seasonal imagery, gift-giving scenarios, holiday vibes",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-03",
+            "priority": "medium",
+            "blocks": ["Publish 12–16 posts/month", "Produce 6–8 creatives/month"]
+        },
+        {
+            "title": "Product Information Sheets (Batch 1)",
+            "description": "SKU details, specs, materials, sizing, pricing for first batch of products",
+            "type": "product_information",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-10",
+            "priority": "high",
+            "blocks": ["Begin uploading products & writing descriptions"]
+        },
+        {
+            "title": "Increased Q4 Ad Spend Approval",
+            "description": "Approve increased budget for Q4 push period",
+            "type": "budget_and_approvals",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-01",
+            "priority": "high",
+            "blocks": ["Run full-funnel campaigns", "Launch dedicated BFCM campaigns"]
+        },
+        {
+            "title": "Shipping & Return Policies (Holiday)",
+            "description": "Updated policies for holiday season with cutoff dates",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-05",
+            "priority": "medium",
+            "blocks": ["Send 4–6 emails/month"]
+        },
+        {
+            "title": "UGC Content or Creator Briefs",
+            "description": "User-generated content sourcing or creator partnership briefs",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 2: Growth & Q4 Push (Nov - Dec 2025)",
+            "due_date": "2025-11-01",
+            "priority": "medium",
+            "blocks": ["Produce 6–8 creatives/month"]
+        },
+        
+        # PHASE 3: Full Retainer
+        {
+            "title": "Monthly Product Photography (8-12 products)",
+            "description": "Ongoing monthly product shoots for new releases and seasonal updates",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-15",
+            "priority": "high",
+            "blocks": ["Produce 8–12 new creatives/month"]
+        },
+        {
+            "title": "New Site Architecture & Sitemap",
+            "description": "Post-relaunch site structure for SEO audit",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-10",
+            "priority": "high",
+            "blocks": ["Conduct technical SEO audit"]
+        },
+        {
+            "title": "SEO Keyword Priorities & Goals",
+            "description": "Target keywords, search volume priorities, competitive landscape",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-15",
+            "priority": "high",
+            "blocks": ["Develop keyword strategy & content plan"]
+        },
+        {
+            "title": "Conversion Goals & KPIs",
+            "description": "Define success metrics for CRO testing",
+            "type": "tracking_and_data",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-10",
+            "priority": "high",
+            "blocks": ["Run A/B testing for PDPs, landing pages, checkout"]
+        },
+        {
+            "title": "Video Content or Shoot Coordination",
+            "description": "Video assets for ads, social, and site. Either provide or coordinate shoots.",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-20",
+            "priority": "medium",
+            "blocks": ["Produce 8–12 new creatives/month"]
+        },
+        {
+            "title": "Brand Refresh Assets (Post-Rebrand)",
+            "description": "Updated logos, brand guidelines, visual identity if rebrand is complete",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-05",
+            "priority": "high",
+            "blocks": ["Produce 8–12 new creatives/month", "Publish 16–20 posts/month"]
+        },
+        {
+            "title": "Welcome Series Brand Story & Copy Direction",
+            "description": "Brand narrative for email welcome flow",
+            "type": "brand_strategy",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-10",
+            "priority": "medium",
+            "blocks": ["Launch full program (flows: welcome, abandoned cart, post-purchase)"]
+        },
+        {
+            "title": "Abandoned Cart Incentive Approval",
+            "description": "Approve discount/incentive strategy for cart abandonment flow",
+            "type": "budget_and_approvals",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-10",
+            "priority": "medium",
+            "blocks": ["Launch full program (flows: welcome, abandoned cart, post-purchase)"]
+        },
+        {
+            "title": "Full Backend Site Access for CRO",
+            "description": "Theme editor access for A/B testing and optimization",
+            "type": "access_and_setup",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-05",
+            "priority": "high",
+            "blocks": ["Run A/B testing for PDPs, landing pages, checkout"]
+        },
+        {
+            "title": "Seasonal Lookbook Content",
+            "description": "Seasonal brand photography for campaigns and site merchandising",
+            "type": "creative_assets",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-31",
+            "priority": "medium",
+            "blocks": ["Publish 16–20 posts/month"]
+        },
+        {
+            "title": "New SKU Launch Calendar",
+            "description": "Product release schedule for upcoming quarter",
+            "type": "product_information",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-15",
+            "priority": "high",
+            "blocks": ["Manage ongoing SKU uploads"]
+        },
+        {
+            "title": "Quarterly Budget & Scaling Approval",
+            "description": "Q1 2026 budget approval and scaling strategy",
+            "type": "budget_and_approvals",
+            "deliverable_type": "brand_input",
+            "phase": "Phase 3: Full Retainer (Jan 2026 onward)",
+            "due_date": "2026-01-05",
+            "priority": "high",
+            "blocks": ["Scale budget allocations"]
+        },
+    ]
+    
+    created = 0
+    for item in brand_inputs:
+        due_date = None
+        if item.get('due_date'):
+            try:
+                due_date = datetime.strptime(item['due_date'], '%Y-%m-%d')
+            except:
+                pass
+        
+        deliverable = Deliverable(
+            title=item['title'],
+            description=item['description'],
+            type=item['type'],
+            deliverable_type=item['deliverable_type'],
+            phase=item['phase'],
+            due_date=due_date,
+            priority=item['priority'],
+            status="not_started",
+            blocks=item.get('blocks')
+        )
+        
+        db.add(deliverable)
+        created += 1
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Created {created} brand input deliverables"
+    }
+
+
+@router.post("/activate-phase")
+def activate_phase(phase: str, db: Session = Depends(get_db)):
+    """Activate a phase - useful for moving from planning to execution"""
+    
+    deliverables = db.query(Deliverable).filter(
+        Deliverable.phase.ilike(f"%{phase}%")
+    ).all()
+    
+    updated = 0
+    for d in deliverables:
+        if d.status == "not_started":
+            d.status = "ready"
+            updated += 1
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Activated {updated} deliverables in {phase}"
+    }
+
+
+@router.get("/upcoming")
+def get_upcoming_deliverables(days: int = 7, db: Session = Depends(get_db)):
+    """Get deliverables due in the next X days"""
+    
+    from datetime import timedelta
+    
+    today = datetime.now(timezone.utc)
+    end_date = today + timedelta(days=days)
+    
+    deliverables = db.query(Deliverable).filter(
+        and_(
+            Deliverable.due_date >= today,
+            Deliverable.due_date <= end_date,
+            Deliverable.status != "completed"
+        )
+    ).order_by(Deliverable.due_date).all()
+    
+    return {
+        "upcoming": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "deliverable_type": d.deliverable_type,
+                "type": d.type,
+                "status": d.status,
+                "priority": d.priority,
+                "due_date": d.due_date.isoformat(),
+                "phase": d.phase,
+                "assigned_to": d.assigned_to
+            }
+            for d in deliverables
+        ],
+        "total": len(deliverables),
+        "days_ahead": days
+    }
+
+
+@router.get("/overdue")
+def get_overdue_deliverables(db: Session = Depends(get_db)):
+    """Get overdue deliverables"""
+    
+    today = datetime.now(timezone.utc)
+    
+    deliverables = db.query(Deliverable).filter(
+        and_(
+            Deliverable.due_date < today,
+            Deliverable.status != "completed"
+        )
+    ).order_by(Deliverable.due_date).all()
+    
+    return {
+        "overdue": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "deliverable_type": d.deliverable_type,
+                "type": d.type,
+                "status": d.status,
+                "priority": d.priority,
+                "due_date": d.due_date.isoformat(),
+                "phase": d.phase,
+                "assigned_to": d.assigned_to,
+                "days_overdue": (today - d.due_date).days
+            }
+            for d in deliverables
+        ],
+        "total": len(deliverables)
+    }
