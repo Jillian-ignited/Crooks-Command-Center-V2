@@ -7,6 +7,7 @@ import json
 import csv
 from io import StringIO
 import os
+import re
 from backend.database import get_db
 from backend.models import CompetitorIntel
 from backend.ai_processor import AIProcessor
@@ -34,18 +35,45 @@ def parse_csv(content: str) -> list:
     reader = csv.DictReader(StringIO(content))
     return list(reader)
 
-def extract_competitor_name_from_data(data: dict, filename: str) -> str:
-    """Extract competitor name from data object or filename"""
-    # Try common field names
-    for field in ['competitor', 'brand', 'account_name', 'username', 'company', 'competitor_name']:
-        if field in data and data[field]:
-            return str(data[field])
+def extract_brand_from_url(url: str) -> str:
+    """Extract brand name from Instagram URL"""
+    if not url:
+        return None
     
-    # Extract from filename
+    # Match instagram.com/BRANDNAME/
+    match = re.search(r'instagram\.com/([^/]+)/?', url)
+    if match:
+        username = match.group(1)
+        # Clean up the username
+        username = username.replace('_', ' ').replace('.', ' ')
+        return username.title()
+    
+    return None
+
+def extract_competitor_name_from_data(data: list, filename: str) -> str:
+    """Extract competitor name from Apify data or filename"""
+    
+    # Try to find URL in the data (Apify Instagram scrapes have this)
+    if data and isinstance(data, list):
+        for item in data[:5]:  # Check first few items
+            if isinstance(item, dict):
+                # Check for Instagram URL
+                if 'url' in item and item['url'] and 'instagram.com' in str(item['url']):
+                    brand = extract_brand_from_url(item['url'])
+                    if brand and brand.lower() not in ['p', 'reel', 'tv']:
+                        return brand
+                
+                # Check for ownerUsername (but only if no URL found)
+                if 'ownerUsername' in item and item['ownerUsername']:
+                    username = item['ownerUsername'].replace('_', ' ').replace('.', ' ')
+                    return username.title()
+    
+    # Fallback to filename extraction
     name = filename.replace('.jsonl', '').replace('.json', '').replace('.csv', '').replace('.txt', '')
     name = name.replace('_', ' ').replace('-', ' ')
     
-    for prefix in ['instagram', 'scrape', 'data', 'competitor', 'intel']:
+    # Remove common prefixes
+    for prefix in ['instagram', 'scrape', 'data', 'competitor', 'intel', 'apify']:
         name = name.replace(prefix, '').strip()
     
     return name.title() if name else 'Unknown Competitor'
@@ -68,7 +96,7 @@ async def upload_competitive_intel(
     notes: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Upload competitive intelligence file (JSONL, JSON, CSV)"""
+    """Upload competitive intelligence file (JSONL, JSON, CSV) - ONE entry per file"""
     
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
@@ -100,14 +128,7 @@ async def upload_competitive_intel(
     
     # Determine competitor name
     if not competitor_name:
-        if parsed_data and len(parsed_data) > 0:
-            competitor_name = extract_competitor_name_from_data(parsed_data[0], file.filename)
-        else:
-            competitor_name = extract_competitor_name_from_data({}, file.filename)
-    
-    # Generate AI summary and insights
-    summary = ai_processor.generate_summary(raw_content)
-    insights = ai_processor.extract_insights(raw_content)
+        competitor_name = extract_competitor_name_from_data(parsed_data, file.filename)
     
     # Determine source
     if not source:
@@ -118,41 +139,78 @@ async def upload_competitive_intel(
         elif 'tiktok' in file.filename.lower():
             source = 'tiktok'
         else:
-            source = 'manual_upload'
+            source = 'apify'
     
-    # Create competitive intel entry
-    intel_entry = CompetitorIntel(
-        competitor_name=competitor_name,
-        category=category,
-        data_type=source,
-        content=raw_content,
-        ai_analysis=summary,
-        tags=insights,
-        source_url=file_path,
-        priority='medium',
-        sentiment='neutral'
-    )
+    # Check if this competitor already has an entry - if so, update it
+    existing = db.query(CompetitorIntel).filter(
+        CompetitorIntel.competitor_name == competitor_name,
+        CompetitorIntel.data_type == source
+    ).first()
     
-    db.add(intel_entry)
-    db.commit()
-    db.refresh(intel_entry)
+    # Count posts for summary
+    post_count = len(parsed_data) if parsed_data else 0
     
-    return {
-        "success": True,
-        "message": "Competitive intelligence uploaded successfully",
-        "id": intel_entry.id,
-        "competitor_name": competitor_name,
-        "summary": summary,
-        "insights": insights,
-        "records_parsed": len(parsed_data) if parsed_data else 0
-    }
+    # Generate AI summary and insights
+    summary = ai_processor.generate_summary(raw_content[:5000])  # Limit to first 5000 chars for AI
+    insights = ai_processor.extract_insights(raw_content[:5000])
+    
+    # Add post count to summary
+    summary_with_count = f"{post_count} posts analyzed. {summary}"
+    
+    if existing:
+        # Update existing entry
+        existing.content = raw_content
+        existing.ai_analysis = summary_with_count
+        existing.tags = insights
+        existing.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing)
+        
+        return {
+            "success": True,
+            "message": f"Updated competitive intelligence for {competitor_name}",
+            "id": existing.id,
+            "competitor_name": competitor_name,
+            "summary": summary_with_count,
+            "insights": insights,
+            "records_parsed": post_count,
+            "action": "updated"
+        }
+    else:
+        # Create new intel entry - ONE per competitor/source
+        intel_entry = CompetitorIntel(
+            competitor_name=competitor_name,
+            category=category,
+            data_type=source,
+            content=raw_content,
+            ai_analysis=summary_with_count,
+            tags=insights,
+            source_url=file_path,
+            priority='medium',
+            sentiment='neutral'
+        )
+        
+        db.add(intel_entry)
+        db.commit()
+        db.refresh(intel_entry)
+        
+        return {
+            "success": True,
+            "message": f"Competitive intelligence uploaded for {competitor_name}",
+            "id": intel_entry.id,
+            "competitor_name": competitor_name,
+            "summary": summary_with_count,
+            "insights": insights,
+            "records_parsed": post_count,
+            "action": "created"
+        }
 
 @router.post("/import-json")
 async def import_json_competitive(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Import competitive intelligence from JSON/JSONL (alias for /upload)"""
+    """Import competitive intelligence from JSON/JSONL (used by frontend)"""
     return await upload_competitive_intel(
         file=file,
         competitor_name=None,
@@ -253,6 +311,16 @@ def get_competitive_data(
     
     intel = query.order_by(desc(CompetitorIntel.created_at)).limit(limit).all()
     
+    # Parse post count from content
+    def get_post_count(content_str):
+        try:
+            data = json.loads(content_str)
+            if isinstance(data, list):
+                return len(data)
+            return 1
+        except:
+            return 1
+    
     return {
         "data": [
             {
@@ -260,7 +328,8 @@ def get_competitive_data(
                 "competitor": i.competitor_name,
                 "category": i.category,
                 "source": i.data_type,
-                "content": i.content[:500] if i.content else "",  # Truncate for list view
+                "post_count": get_post_count(i.content),
+                "content": i.content[:500] if i.content else "",
                 "summary": i.ai_analysis,
                 "insights": i.tags if isinstance(i.tags, (list, dict)) else (json.loads(i.tags) if i.tags else []),
                 "created_at": i.created_at.isoformat(),
@@ -322,42 +391,55 @@ def get_competitive_dashboard(
     end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=days)
     
-    # Get competitor summary with intel counts
-    competitors_query = db.query(
-        CompetitorIntel.competitor_name,
-        func.count(CompetitorIntel.id).label('intel_count')
-    ).filter(
+    # Get all intel entries
+    intel_entries = db.query(CompetitorIntel).filter(
         CompetitorIntel.created_at >= start_date
-    ).group_by(CompetitorIntel.competitor_name)
+    ).all()
     
-    competitors_data = competitors_query.all()
+    # Count posts per competitor
+    competitor_posts = {}
+    total_posts = 0
+    
+    for entry in intel_entries:
+        # Parse post count from content
+        try:
+            data = json.loads(entry.content)
+            post_count = len(data) if isinstance(data, list) else 1
+        except:
+            post_count = 1
+        
+        if entry.competitor_name not in competitor_posts:
+            competitor_posts[entry.competitor_name] = {
+                'total_posts': 0,
+                'entries': 0
+            }
+        
+        competitor_posts[entry.competitor_name]['total_posts'] += post_count
+        competitor_posts[entry.competitor_name]['entries'] += 1
+        total_posts += post_count
     
     # Build competitor list with threat levels
     competitors_list = []
-    for comp in competitors_data:
-        threat = determine_threat_level(comp.intel_count)
+    for comp_name, data in competitor_posts.items():
+        threat = determine_threat_level(data['entries'])
         
         # Filter by threat level if specified
         if threat_level and threat != threat_level:
             continue
         
         competitors_list.append({
-            "competitor": comp.competitor_name,
-            "total_posts": comp.intel_count,
-            "avg_engagement": comp.intel_count * 100,  # Placeholder calculation
+            "competitor": comp_name,
+            "total_posts": data['total_posts'],
+            "avg_engagement": data['total_posts'] * 50,  # Placeholder calculation
             "threat_level": threat
         })
     
     # Sort by total_posts descending
     competitors_list.sort(key=lambda x: x['total_posts'], reverse=True)
     
-    # Calculate totals
-    total_data_points = sum(c['total_posts'] for c in competitors_list)
-    competitors_tracked = len(competitors_list)
-    
     return {
-        "total_data_points": total_data_points,
-        "competitors_tracked": competitors_tracked,
+        "total_data_points": total_posts,
+        "competitors_tracked": len(competitors_list),
         "competitors": competitors_list,
         "period_days": days,
         "start_date": start_date.isoformat(),
@@ -380,7 +462,7 @@ def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
         "source": intel.data_type,
         "content": intel.content,
         "summary": intel.ai_analysis,
-        "key_insights": intel.tags if isinstance(intel.tags, (list, dict)) else (json.loads(intel.tags) if intel.tags else []),
+        "key_insights": intel.tags if isinstance(intel.tags, (list, dict)) else (json.loads(intel.tags) if i.tags else []),
         "priority": intel.priority,
         "sentiment": intel.sentiment,
         "created_at": intel.created_at.isoformat()
