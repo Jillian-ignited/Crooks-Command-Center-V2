@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, text
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+import csv
+from io import StringIO
 
 from ..database import get_db
 from ..models import ShopifyMetric
@@ -176,6 +178,148 @@ def get_recent_orders(limit: int = 10, db: Session = Depends(get_db)):
             for i in range(limit)
         ]
     }
+
+
+@router.post("/import-csv")
+async def import_shopify_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import Shopify data from CSV"""
+    
+    try:
+        contents = await file.read()
+        decoded = contents.decode('utf-8-sig')  # Handle BOM
+        
+        csv_file = StringIO(decoded)
+        reader = csv.DictReader(csv_file)
+        
+        created = 0
+        errors = []
+        
+        for idx, row in enumerate(reader, start=2):
+            try:
+                # Expected columns: Date, Orders, Revenue, Sessions
+                # Flexible column name matching
+                date_str = (row.get('Date') or row.get('date') or row.get('Day') or 
+                           row.get('day') or row.get('DATE'))
+                
+                if not date_str or not date_str.strip():
+                    errors.append(f"Row {idx}: Missing date")
+                    continue
+                
+                # Parse date - try multiple formats
+                period_start = None
+                date_formats = ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
+                
+                for fmt in date_formats:
+                    try:
+                        period_start = datetime.strptime(date_str.strip(), fmt)
+                        break
+                    except:
+                        continue
+                
+                if not period_start:
+                    errors.append(f"Row {idx}: Invalid date format: {date_str}")
+                    continue
+                
+                period_end = period_start + timedelta(days=1)
+                
+                # Extract metrics - flexible column names
+                orders_str = (row.get('Orders') or row.get('orders') or 
+                             row.get('Total Orders') or row.get('ORDER_COUNT') or '0')
+                revenue_str = (row.get('Revenue') or row.get('revenue') or 
+                              row.get('Total Sales') or row.get('Sales') or 
+                              row.get('REVENUE') or '0')
+                sessions_str = (row.get('Sessions') or row.get('sessions') or 
+                               row.get('Visits') or row.get('visits') or 
+                               row.get('SESSIONS') or '0')
+                
+                # Clean and convert
+                orders = int(float(orders_str.replace('$', '').replace(',', '') if orders_str else 0))
+                revenue = float(revenue_str.replace('$', '').replace(',', '') if revenue_str else 0)
+                sessions = int(float(sessions_str.replace(',', '') if sessions_str else 0))
+                
+                # Calculate AOV
+                aov = revenue / orders if orders > 0 else 0
+                
+                # Calculate conversion rate
+                conversion = (orders / sessions * 100) if sessions > 0 else 0
+                
+                metric = ShopifyMetric(
+                    period_type="daily",
+                    period_start=period_start,
+                    period_end=period_end,
+                    total_orders=orders,
+                    total_revenue=revenue,
+                    avg_order_value=aov,
+                    total_sessions=sessions,
+                    conversion_rate=conversion
+                )
+                
+                db.add(metric)
+                created += 1
+                
+            except Exception as e:
+                errors.append(f"Row {idx}: {str(e)}")
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"✅ Imported {created} Shopify metrics",
+            "created": created,
+            "errors": errors[:10] if errors else []
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Import failed: {str(e)}")
+
+
+@router.post("/generate-sample-data")
+def generate_sample_shopify_data(days: int = 30, db: Session = Depends(get_db)):
+    """Generate sample Shopify data for testing"""
+    
+    try:
+        import random
+        
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        created = 0
+        
+        for i in range(days):
+            date = today - timedelta(days=days - i - 1)
+            
+            # Generate realistic-looking data
+            base_orders = random.randint(15, 45)
+            base_revenue = base_orders * random.uniform(60, 120)
+            base_sessions = base_orders * random.randint(25, 50)
+            
+            metric = ShopifyMetric(
+                period_type="daily",
+                period_start=date,
+                period_end=date + timedelta(days=1),
+                total_orders=base_orders,
+                total_revenue=round(base_revenue, 2),
+                avg_order_value=round(base_revenue / base_orders, 2),
+                total_sessions=base_sessions,
+                conversion_rate=round((base_orders / base_sessions * 100), 2)
+            )
+            
+            db.add(metric)
+            created += 1
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"✅ Generated {created} days of sample data",
+            "created": created
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Generation failed: {str(e)}")
 
 
 @router.post("/metrics")
