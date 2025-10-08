@@ -1,264 +1,166 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from datetime import datetime, timezone
 from typing import Optional
 import json
 import csv
 from io import StringIO
-
-from ..database import get_db
-from ..models import CompetitorIntel
+import os
+from backend.database import get_db
+from backend.models import CompetitorIntel
+from backend.ai_processor import AIProcessor
 
 router = APIRouter()
+ai_processor = AIProcessor()
 
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads", "competitive")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.get("/")
-def get_competitive_intel(
-    competitor: Optional[str] = None,
-    category: Optional[str] = None,
-    sentiment: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
-    """Get competitive intelligence entries"""
-    
-    query = db.query(CompetitorIntel)
-    
-    if competitor:
-        query = query.filter(CompetitorIntel.competitor_name.ilike(f"%{competitor}%"))
-    
-    if category:
-        query = query.filter(CompetitorIntel.category == category)
-    
-    if sentiment:
-        query = query.filter(CompetitorIntel.sentiment == sentiment)
-    
-    total = query.count()
-    intel = query.order_by(desc(CompetitorIntel.created_at)).limit(limit).offset(offset).all()
-    
-    return {
-        "competitive_intel": [
-            {
-                "id": i.id,
-                "competitor_name": i.competitor_name,
-                "category": i.category,
-                "data_type": i.data_type,
-                "content": i.content[:200] + "..." if i.content and len(i.content) > 200 else i.content,
-                "source_url": i.source_url,
-                "sentiment": i.sentiment,
-                "priority": i.priority,
-                "tags": i.tags,
-                "created_at": i.created_at.isoformat() if i.created_at else None
-            }
-            for i in intel
-        ],
-        "total": total,
-        "limit": limit,
-        "offset": offset
-    }
+def parse_jsonl(content: str) -> list:
+    """Parse JSONL format (one JSON object per line)"""
+    lines = content.strip().split('\n')
+    data = []
+    for line in lines:
+        if line.strip():
+            try:
+                data.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return data
 
+def parse_csv(content: str) -> list:
+    """Parse CSV format"""
+    reader = csv.DictReader(StringIO(content))
+    return list(reader)
+
+def extract_competitor_name_from_data(data: dict, filename: str) -> str:
+    """Extract competitor name from data object or filename"""
+    # Try common field names
+    for field in ['competitor', 'brand', 'account_name', 'username', 'company', 'competitor_name']:
+        if field in data and data[field]:
+            return str(data[field])
+    
+    # Extract from filename
+    name = filename.replace('.jsonl', '').replace('.json', '').replace('.csv', '').replace('.txt', '')
+    name = name.replace('_', ' ').replace('-', ' ')
+    
+    for prefix in ['instagram', 'scrape', 'data', 'competitor', 'intel']:
+        name = name.replace(prefix, '').strip()
+    
+    return name.title() if name else 'Unknown Competitor'
 
 @router.post("/upload")
 async def upload_competitive_intel(
     file: UploadFile = File(...),
-    competitor_name: str = Form(...),
-    category: str = Form(None),
-    tags: str = Form(None),
+    competitor_name: Optional[str] = Form(None),
+    category: str = Form('social_media'),
+    source: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Upload competitive intelligence file (CSV, JSON, JSONL, TXT)"""
+    """Upload competitive intelligence file (JSONL, JSON, CSV)"""
     
-    try:
-        content = await file.read()
-        file_extension = file.filename.split('.')[-1].lower()
-        
-        print(f"[Competitive] Received file: {file.filename} ({file_extension})")
-        
-        # Parse tags
-        tag_list = []
-        if tags:
-            tag_list = [t.strip() for t in tags.split(',') if t.strip()]
-        
-        created_count = 0
-        
-        # Handle JSONL/JSON files
-        if file_extension in ['jsonl', 'json']:
-            text_content = content.decode('utf-8')
-            entries = []
-            
-            # Try parsing as JSONL
-            for line in text_content.strip().split('\n'):
-                if line.strip():
-                    try:
-                        entries.append(json.loads(line.strip()))
-                    except:
-                        continue
-            
-            if not entries:
-                # Try as single JSON
-                try:
-                    entries = json.loads(text_content)
-                    if not isinstance(entries, list):
-                        entries = [entries]
-                except:
-                    raise HTTPException(400, "Could not parse JSON/JSONL")
-            
-            print(f"[Competitive] Found {len(entries)} entries")
-            
-            # Process each entry
-            for idx, entry in enumerate(entries, 1):
-                try:
-                    # Extract content
-                    content_parts = []
-                    url = entry.get('url', '')
-                    
-                    if url:
-                        content_parts.append(f"URL: {url}")
-                    
-                    for key in ['text', 'content', 'description', 'caption']:
-                        if entry.get(key):
-                            content_parts.append(str(entry[key]))
-                    
-                    entry_content = "\n\n".join(content_parts)
-                    
-                    if not entry_content.strip():
-                        continue
-                    
-                    # Create competitor intel entry
-                    intel = CompetitorIntel(
-                        competitor_name=competitor_name,
-                        category=category or "social_media",
-                        data_type="social_post" if url else "data",
-                        content=entry_content[:10000],
-                        source_url=url or None,
-                        sentiment="neutral",
-                        ai_analysis=None,
-                        priority="medium",
-                        tags=tag_list + ["file_upload"]
-                    )
-                    
-                    db.add(intel)
-                    created_count += 1
-                    
-                except Exception as e:
-                    print(f"[Competitive] Entry {idx} error: {e}")
-                    continue
-            
-            db.commit()
-            
-            return {
-                "success": True,
-                "message": f"✅ Imported {created_count} competitive intel entries",
-                "created": created_count
-            }
-        
-        # Handle CSV files
-        elif file_extension == 'csv':
-            text_content = content.decode('utf-8')
-            csv_file = StringIO(text_content)
-            reader = csv.DictReader(csv_file)
-            
-            for idx, row in enumerate(reader, 1):
-                try:
-                    # Try to extract content from common CSV columns
-                    content_text = (
-                        row.get('content') or 
-                        row.get('text') or 
-                        row.get('description') or 
-                        row.get('caption') or 
-                        ""
-                    )
-                    
-                    url = row.get('url') or row.get('link') or row.get('source_url')
-                    
-                    if not content_text.strip():
-                        continue
-                    
-                    intel = CompetitorIntel(
-                        competitor_name=competitor_name,
-                        category=category or "data",
-                        data_type="csv_import",
-                        content=content_text[:10000],
-                        source_url=url,
-                        sentiment="neutral",
-                        priority="medium",
-                        tags=tag_list + ["csv_upload"]
-                    )
-                    
-                    db.add(intel)
-                    created_count += 1
-                    
-                except Exception as e:
-                    print(f"[Competitive] CSV row {idx} error: {e}")
-                    continue
-            
-            db.commit()
-            
-            return {
-                "success": True,
-                "message": f"✅ Imported {created_count} entries from CSV",
-                "created": created_count
-            }
-        
-        # Handle TXT files
-        elif file_extension in ['txt', 'md']:
-            text_content = content.decode('utf-8')
-            
-            intel = CompetitorIntel(
-                competitor_name=competitor_name,
-                category=category or "document",
-                data_type=file_extension,
-                content=text_content[:10000],
-                source_url=None,
-                sentiment="neutral",
-                priority="medium",
-                tags=tag_list + ["file_upload"]
-            )
-            
-            db.add(intel)
-            db.commit()
-            
-            return {
-                "success": True,
-                "message": f"✅ Imported competitive intel document",
-                "created": 1
-            }
-        
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+    
+    # Read file content
+    content = await file.read()
+    raw_content = content.decode('utf-8')
+    
+    # Save file
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Parse based on file type
+    parsed_data = None
+    if file.filename.endswith('.jsonl'):
+        parsed_data = parse_jsonl(raw_content)
+    elif file.filename.endswith('.json'):
+        try:
+            parsed_data = json.loads(raw_content)
+            if not isinstance(parsed_data, list):
+                parsed_data = [parsed_data]
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON format")
+    elif file.filename.endswith('.csv'):
+        parsed_data = parse_csv(raw_content)
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported file format. Use .jsonl, .json, or .csv")
+    
+    # Determine competitor name
+    if not competitor_name:
+        if parsed_data and len(parsed_data) > 0:
+            competitor_name = extract_competitor_name_from_data(parsed_data[0], file.filename)
         else:
-            raise HTTPException(400, f"Unsupported file type: {file_extension}. Use JSON, JSONL, CSV, or TXT")
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(500, f"Upload failed: {str(e)}")
+            competitor_name = extract_competitor_name_from_data({}, file.filename)
+    
+    # Generate AI summary and insights
+    summary = ai_processor.generate_summary(raw_content)
+    insights = ai_processor.extract_insights(raw_content)
+    
+    # Determine source
+    if not source:
+        if 'instagram' in file.filename.lower():
+            source = 'instagram'
+        elif 'facebook' in file.filename.lower():
+            source = 'facebook'
+        elif 'tiktok' in file.filename.lower():
+            source = 'tiktok'
+        else:
+            source = 'manual_upload'
+    
+    # Create competitive intel entry
+    intel_entry = CompetitorIntel(
+        competitor_name=competitor_name,
+        category=category,
+        data_type=source,
+        content=raw_content,
+        ai_analysis=summary,
+        tags=insights if isinstance(insights, list) else [],
+        source_url=file_path,
+        priority='medium',
+        sentiment='neutral'
+    )
+    
+    db.add(intel_entry)
+    db.commit()
+    db.refresh(intel_entry)
+    
+    return {
+        "success": True,
+        "message": "Competitive intelligence uploaded successfully",
+        "id": intel_entry.id,
+        "competitor_name": competitor_name,
+        "summary": summary,
+        "insights": insights,
+        "records_parsed": len(parsed_data) if parsed_data else 0
+    }
 
-
-@router.post("/")
-def create_competitive_intel(
+@router.post("/manual")
+def add_competitive_intel(
     competitor_name: str,
+    category: str,
+    source: str,
     content: str,
-    category: Optional[str] = None,
-    data_type: Optional[str] = None,
-    source_url: Optional[str] = None,
-    sentiment: Optional[str] = "neutral",
-    priority: Optional[str] = "medium",
-    tags: Optional[list] = None,
+    notes: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Create a new competitive intelligence entry manually"""
+    """Manually add competitive intelligence entry"""
+    
+    summary = ai_processor.generate_summary(content)
+    insights = ai_processor.extract_insights(content)
     
     intel = CompetitorIntel(
         competitor_name=competitor_name,
         category=category,
-        data_type=data_type,
+        data_type=source,
         content=content,
-        source_url=source_url,
-        sentiment=sentiment,
-        priority=priority,
-        tags=tags
+        ai_analysis=summary,
+        tags=insights if isinstance(insights, list) else [],
+        priority='medium',
+        sentiment='neutral'
     )
     
     db.add(intel)
@@ -266,97 +168,89 @@ def create_competitive_intel(
     db.refresh(intel)
     
     return {
+        "success": True,
+        "message": "Competitive intel added successfully",
         "id": intel.id,
-        "competitor_name": intel.competitor_name,
-        "sentiment": intel.sentiment,
-        "created_at": intel.created_at.isoformat()
+        "summary": summary,
+        "insights": insights
     }
 
+@router.get("/intel")
+def get_competitive_intel(
+    limit: int = 50,
+    competitor: Optional[str] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get competitive intelligence entries"""
+    
+    query = db.query(CompetitorIntel)
+    
+    if competitor:
+        query = query.filter(CompetitorIntel.competitor_name == competitor)
+    
+    if category:
+        query = query.filter(CompetitorIntel.category == category)
+    
+    intel = query.order_by(desc(CompetitorIntel.created_at)).limit(limit).all()
+    
+    return {
+        "intel": [
+            {
+                "id": i.id,
+                "competitor_name": i.competitor_name,
+                "category": i.category,
+                "source": i.data_type,
+                "summary": i.ai_analysis,
+                "key_insights": i.tags if isinstance(i.tags, list) else [],
+                "created_at": i.created_at.isoformat()
+            }
+            for i in intel
+        ],
+        "total": len(intel)
+    }
 
-@router.get("/{intel_id}")
-def get_competitive_intel_detail(intel_id: int, db: Session = Depends(get_db)):
-    """Get detailed competitive intelligence entry"""
+@router.get("/intel/{intel_id}")
+def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
+    """Get detailed competitive intel entry"""
     
     intel = db.query(CompetitorIntel).filter(CompetitorIntel.id == intel_id).first()
     
     if not intel:
-        raise HTTPException(404, "Competitive intel entry not found")
+        raise HTTPException(status_code=404, detail="Competitive intel entry not found")
     
     return {
         "id": intel.id,
         "competitor_name": intel.competitor_name,
         "category": intel.category,
-        "data_type": intel.data_type,
+        "source": intel.data_type,
         "content": intel.content,
-        "source_url": intel.source_url,
-        "sentiment": intel.sentiment,
-        "ai_analysis": intel.ai_analysis,
-        "priority": intel.priority,
-        "tags": intel.tags,
-        "created_at": intel.created_at.isoformat(),
-        "updated_at": intel.updated_at.isoformat()
+        "summary": intel.ai_analysis,
+        "key_insights": intel.tags if isinstance(intel.tags, list) else [],
+        "created_at": intel.created_at.isoformat()
     }
 
-
-@router.put("/{intel_id}")
-def update_competitive_intel(
-    intel_id: int,
-    competitor_name: Optional[str] = None,
-    category: Optional[str] = None,
-    content: Optional[str] = None,
-    sentiment: Optional[str] = None,
-    priority: Optional[str] = None,
-    tags: Optional[list] = None,
-    db: Session = Depends(get_db)
-):
-    """Update competitive intelligence entry"""
-    
-    intel = db.query(CompetitorIntel).filter(CompetitorIntel.id == intel_id).first()
-    
-    if not intel:
-        raise HTTPException(404, "Competitive intel entry not found")
-    
-    if competitor_name:
-        intel.competitor_name = competitor_name
-    if category:
-        intel.category = category
-    if content:
-        intel.content = content
-    if sentiment:
-        intel.sentiment = sentiment
-    if priority:
-        intel.priority = priority
-    if tags is not None:
-        intel.tags = tags
-    
-    intel.updated_at = datetime.now(timezone.utc)
-    
-    db.commit()
-    db.refresh(intel)
-    
-    return {"success": True, "intel_id": intel.id}
-
-
-@router.delete("/{intel_id}")
+@router.delete("/intel/{intel_id}")
 def delete_competitive_intel(intel_id: int, db: Session = Depends(get_db)):
-    """Delete competitive intelligence entry"""
+    """Delete competitive intel entry"""
     
     intel = db.query(CompetitorIntel).filter(CompetitorIntel.id == intel_id).first()
     
     if not intel:
-        raise HTTPException(404, "Competitive intel entry not found")
+        raise HTTPException(status_code=404, detail="Competitive intel entry not found")
+    
+    # Delete file if exists
+    if intel.source_url and os.path.exists(intel.source_url):
+        os.remove(intel.source_url)
     
     db.delete(intel)
     db.commit()
     
     return {"success": True, "message": "Competitive intel entry deleted"}
 
-
 @router.get("/competitors/list")
 def get_competitors_list(db: Session = Depends(get_db)):
     """Get list of all tracked competitors with intel counts"""
-    
-    from sqlalchemy import func
     
     competitors = db.query(
         CompetitorIntel.competitor_name,
@@ -374,12 +268,9 @@ def get_competitors_list(db: Session = Depends(get_db)):
         "total_competitors": len(competitors)
     }
 
-
 @router.get("/summary/by-competitor")
 def get_competitive_summary(db: Session = Depends(get_db)):
     """Get competitive intelligence summary grouped by competitor"""
-    
-    from sqlalchemy import func
     
     summary = db.query(
         CompetitorIntel.competitor_name,
