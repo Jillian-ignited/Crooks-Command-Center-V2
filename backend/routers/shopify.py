@@ -13,6 +13,18 @@ from ..models import ShopifyMetric, ShopifyProduct, ShopifyOrder, ShopifyCustome
 router = APIRouter()
 
 
+def try_decode(contents: bytes) -> str:
+    """Try to decode bytes with multiple encodings"""
+    for encoding in ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+        try:
+            decoded = contents.decode(encoding)
+            print(f"[Shopify] Successfully decoded with {encoding}")
+            return decoded
+        except:
+            continue
+    raise ValueError("Could not decode file with any supported encoding")
+
+
 @router.get("/dashboard")
 def get_shopify_dashboard(
     period: str = "30d",
@@ -172,9 +184,9 @@ async def import_shopify_csv(
     
     try:
         contents = await file.read()
-        decoded = contents.decode('utf-8-sig')
+        decoded = try_decode(contents)
         
-        print(f"[Shopify Import] File received: {file.filename}")
+        print(f"[Shopify Import] File received: {file.filename}, Size: {len(contents)} bytes")
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
@@ -242,8 +254,6 @@ async def import_shopify_csv(
                     metric.total_orders = orders
                     metric.total_revenue = revenue
                     metric.avg_order_value = revenue / orders if orders > 0 else 0
-                    
-                    print(f"[Shopify] Row {idx}: Orders={orders}, Revenue=${revenue}")
                 
                 if is_conversion_export:
                     sessions_str = row.get('Sessions', '0')
@@ -254,8 +264,6 @@ async def import_shopify_csv(
                     
                     metric.total_sessions = sessions
                     metric.conversion_rate = conversion
-                    
-                    print(f"[Shopify] Row {idx}: Sessions={sessions}, Conversion={conversion}%")
                 
                 if is_orders_export:
                     orders_str = row.get('Orders', '0')
@@ -269,17 +277,13 @@ async def import_shopify_csv(
                     
                     if metric.total_revenue == 0:
                         metric.total_revenue = orders * aov
-                    
-                    print(f"[Shopify] Row {idx}: Orders={orders}, AOV=${aov}")
                 
-                # Ensure no None values
                 metric.total_orders = metric.total_orders or 0
                 metric.total_revenue = metric.total_revenue or 0.0
                 metric.total_sessions = metric.total_sessions or 0
                 metric.conversion_rate = metric.conversion_rate or 0.0
                 metric.avg_order_value = metric.avg_order_value or 0.0
                 
-                # Recalculate derived metrics
                 if metric.total_orders > 0 and metric.total_revenue > 0:
                     metric.avg_order_value = metric.total_revenue / metric.total_orders
                 
@@ -295,7 +299,8 @@ async def import_shopify_csv(
             except Exception as e:
                 error_msg = f"Row {idx}: {str(e)}"
                 errors.append(error_msg)
-                print(f"[Shopify Import] ❌ {error_msg}")
+                if len(errors) <= 5:
+                    print(f"[Shopify Import] ❌ {error_msg}")
         
         db.commit()
         print(f"[Shopify Import] ✅ Success - Created: {created}, Updated: {updated}")
@@ -325,9 +330,9 @@ async def import_products_csv(
     
     try:
         contents = await file.read()
-        decoded = contents.decode('utf-8-sig')
+        decoded = try_decode(contents)
         
-        print(f"[Products Import] File received: {file.filename}")
+        print(f"[Products Import] File received: {file.filename}, Size: {len(contents)} bytes")
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
@@ -337,6 +342,8 @@ async def import_products_csv(
         created = 0
         updated = 0
         errors = []
+        batch_size = 500
+        batch = []
         
         for idx, row in enumerate(reader, start=2):
             try:
@@ -345,14 +352,12 @@ async def import_products_csv(
                 if not title or not title.strip():
                     continue
                 
-                # Generate handle from title
                 handle = title.lower().strip().replace(' ', '-').replace('/', '-').replace('&', 'and')
                 handle = re.sub(r'[^a-z0-9-]', '', handle)
                 
                 vendor = row.get('Product vendor') or row.get('Vendor', '')
                 product_type = row.get('Product type') or row.get('Type') or row.get('Product Type', '')
                 
-                # Shopify product sales columns
                 net_items_sold = row.get('Net items sold') or row.get('Net quantity', '0')
                 net_sales_str = row.get('Net sales', '0')
                 
@@ -367,11 +372,10 @@ async def import_products_csv(
                 ).first()
                 
                 if existing:
-                    product = existing
-                    product.total_sales += sales
-                    product.units_sold += units
-                    product.vendor = vendor
-                    product.product_type = product_type
+                    existing.total_sales += sales
+                    existing.units_sold += units
+                    existing.vendor = vendor
+                    existing.product_type = product_type
                     updated += 1
                 else:
                     product = ShopifyProduct(
@@ -385,15 +389,27 @@ async def import_products_csv(
                         total_sales=sales,
                         units_sold=units
                     )
-                    db.add(product)
+                    batch.append(product)
                     created += 1
                 
-                print(f"[Products] Row {idx}: {title} - ${sales}, {units} units")
+                if len(batch) >= batch_size:
+                    db.add_all(batch)
+                    db.commit()
+                    print(f"[Products] Committed batch - Total created: {created}")
+                    batch = []
+                
+                if idx % 1000 == 0:
+                    print(f"[Products] Processed {idx} rows...")
                 
             except Exception as e:
                 error_msg = f"Row {idx}: {str(e)}"
                 errors.append(error_msg)
-                print(f"[Products Import] ❌ {error_msg}")
+                if len(errors) <= 5:
+                    print(f"[Products Import] ❌ {error_msg}")
+        
+        if batch:
+            db.add_all(batch)
+            db.commit()
         
         db.commit()
         print(f"[Products Import] ✅ Success - Created: {created}, Updated: {updated}")
@@ -423,9 +439,9 @@ async def import_orders_csv(
     
     try:
         contents = await file.read()
-        decoded = contents.decode('utf-8-sig')
+        decoded = try_decode(contents)
         
-        print(f"[Orders Import] File received: {file.filename}")
+        print(f"[Orders Import] File received: {file.filename}, Size: {len(contents)} bytes")
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
@@ -436,6 +452,8 @@ async def import_orders_csv(
         updated = 0
         skipped = 0
         errors = []
+        batch_size = 500
+        batch = []
         
         for idx, row in enumerate(reader, start=2):
             try:
@@ -508,15 +526,27 @@ async def import_orders_csv(
                         line_items_count=line_items,
                         product_titles=product_title
                     )
-                    db.add(order)
+                    batch.append(order)
                     created += 1
                 
-                print(f"[Orders] Row {idx}: {order_name} - ${total}")
+                if len(batch) >= batch_size:
+                    db.add_all(batch)
+                    db.commit()
+                    print(f"[Orders] Committed batch - Total created: {created}")
+                    batch = []
+                
+                if idx % 1000 == 0:
+                    print(f"[Orders] Processed {idx} rows...")
                 
             except Exception as e:
                 error_msg = f"Row {idx}: {str(e)}"
                 errors.append(error_msg)
-                print(f"[Orders Import] ❌ {error_msg}")
+                if len(errors) <= 5:
+                    print(f"[Orders Import] ❌ {error_msg}")
+        
+        if batch:
+            db.add_all(batch)
+            db.commit()
         
         db.commit()
         print(f"[Orders Import] ✅ Success - Created: {created}, Skipped: {skipped}")
@@ -542,13 +572,13 @@ async def import_customers_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Import Shopify customers from CSV export"""
+    """Import Shopify customers from CSV export - handles large files"""
     
     try:
         contents = await file.read()
-        decoded = contents.decode('utf-8-sig')
+        decoded = try_decode(contents)
         
-        print(f"[Customers Import] File received: {file.filename}")
+        print(f"[Customers Import] File received: {file.filename}, Size: {len(contents)} bytes")
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
@@ -558,6 +588,8 @@ async def import_customers_csv(
         created = 0
         updated = 0
         errors = []
+        batch_size = 1000
+        batch = []
         
         for idx, row in enumerate(reader, start=2):
             try:
@@ -625,15 +657,31 @@ async def import_customers_csv(
                         is_returning=is_returning,
                         accepts_marketing=accepts_marketing
                     )
-                    db.add(customer)
+                    batch.append(customer)
                     created += 1
                 
-                print(f"[Customers] Row {idx}: {email} - {orders_count} orders, ${total_spent}")
+                # Commit in batches
+                if len(batch) >= batch_size:
+                    db.add_all(batch)
+                    db.commit()
+                    print(f"[Customers] Committed batch of {len(batch)} - Total created: {created}")
+                    batch = []
+                
+                # Progress logging every 5000 rows
+                if idx % 5000 == 0:
+                    print(f"[Customers] Processed {idx} rows...")
                 
             except Exception as e:
                 error_msg = f"Row {idx}: {str(e)}"
                 errors.append(error_msg)
-                print(f"[Customers Import] ❌ {error_msg}")
+                if len(errors) <= 5:
+                    print(f"[Customers Import] ❌ {error_msg}")
+        
+        # Commit remaining batch
+        if batch:
+            db.add_all(batch)
+            db.commit()
+            print(f"[Customers] Committed final batch of {len(batch)}")
         
         db.commit()
         print(f"[Customers Import] ✅ Success - Created: {created}, Updated: {updated}")
