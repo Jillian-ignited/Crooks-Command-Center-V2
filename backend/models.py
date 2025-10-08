@@ -1,125 +1,140 @@
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Boolean, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON, ForeignKey, Boolean
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
-from .database import Base
 
-
-class IntelligenceFile(Base):
-    __tablename__ = "intelligence_files"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, unique=True, index=True)
-    original_filename = Column(String)
-    source = Column(String, index=True)
-    brand = Column(String, index=True, nullable=True)
-    file_path = Column(String)
-    file_size = Column(Integer)
-    file_type = Column(String)
-    description = Column(Text, nullable=True)
-    analysis_results = Column(JSON, nullable=True)
-    status = Column(String, default="pending")
-    uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    processed_at = Column(DateTime(timezone=True), nullable=True)
-    created_by = Column(String, nullable=True)
+Base = declarative_base()
 
 
 class Campaign(Base):
+    """Marketing campaigns with AI-generated suggestions"""
     __tablename__ = "campaigns"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+    name = Column(String, nullable=False, index=True)
     description = Column(Text)
-    status = Column(String, default="planning")
+    status = Column(String, default="planning")  # planning, active, completed, paused
     start_date = Column(DateTime(timezone=True))
-    end_date = Column(DateTime(timezone=True), nullable=True)
-    budget = Column(Float, nullable=True)
-    target_audience = Column(String, nullable=True)
-    channels = Column(JSON, nullable=True)
-    kpis = Column(JSON, nullable=True)
-    ai_suggestions = Column(JSON, nullable=True)
+    end_date = Column(DateTime(timezone=True))
+    budget = Column(Float)
+    target_audience = Column(String)
+    channels = Column(JSON)  # ['instagram', 'tiktok', 'email']
+    kpis = Column(JSON)  # Key performance indicators
+    ai_suggestions = Column(JSON)  # AI-generated campaign ideas
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Deliverable(Base):
+    """Two-way deliverable tracking: brand inputs and agency outputs"""
     __tablename__ = "deliverables"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)
-    title = Column(String, index=True)
-    description = Column(Text, nullable=True)
-    type = Column(String)  # Keep existing: ad_creative, email, social, etc.
-    deliverable_type = Column(String, default="agency_output")  # NEW: "agency_output" or "brand_input"
-    status = Column(String, default="not_started")
-    priority = Column(String, default="medium")
-    assigned_to = Column(String, nullable=True)
-    due_date = Column(DateTime(timezone=True), nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-    phase = Column(String, nullable=True)
-    dependencies = Column(JSON, nullable=True)  # IDs of deliverables that must be completed first
-    blocks = Column(JSON, nullable=True)  # IDs of deliverables this one blocks
+    title = Column(String, nullable=False, index=True)
+    description = Column(Text)
+    type = Column(String)  # ad_creative, social_content, email, etc.
+    deliverable_type = Column(String, default="agency_output", index=True)  # 'brand_input' or 'agency_output'
+    status = Column(String, default="not_started", index=True)  # not_started, in_progress, completed, blocked, ready
+    priority = Column(String, default="medium")  # high, medium, low
+    assigned_to = Column(String)
+    due_date = Column(DateTime(timezone=True))
+    completed_at = Column(DateTime(timezone=True))
+    phase = Column(String, index=True)  # Phase 1, Phase 2, Phase 3
+    dependencies = Column(JSON)  # List of deliverable IDs this depends on
+    blocks = Column(JSON)  # List of deliverable titles this unlocks
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
+
+    # Relationship
     campaign = relationship("Campaign", backref="deliverables")
 
 
-class ShopifyOrder(Base):
-    __tablename__ = "shopify_orders"
-    
+class Intelligence(Base):
+    """Intelligence uploads with Claude AI analysis"""
+    __tablename__ = "intelligence"
+
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(String, unique=True, index=True)
-    order_number = Column(String, index=True)
-    created_at = Column(DateTime(timezone=True), index=True)
-    total_price = Column(Float)
-    subtotal_price = Column(Float, nullable=True)
-    total_tax = Column(Float, nullable=True)
-    total_discounts = Column(Float, nullable=True)
-    customer_email = Column(String, index=True, nullable=True)
-    customer_id = Column(String, nullable=True)
-    financial_status = Column(String, nullable=True)
-    fulfillment_status = Column(String, nullable=True)
-    line_items = Column(JSON, nullable=True)
-    referring_site = Column(String, nullable=True)
-    landing_site = Column(String, nullable=True)
-    source_name = Column(String, nullable=True)
-    shipping_city = Column(String, nullable=True)
-    shipping_province = Column(String, nullable=True)
-    shipping_country = Column(String, nullable=True)
-    tags = Column(String, nullable=True)
-    note = Column(Text, nullable=True)
-    imported_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    title = Column(String, nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    source_type = Column(String)  # pdf, txt, csv, url, manual
+    category = Column(String, index=True)  # market_research, competitor_analysis, customer_feedback, etc.
+    tags = Column(JSON)  # ['streetwear', 'pricing', 'competitor']
+    ai_summary = Column(Text)  # Claude-generated summary
+    ai_insights = Column(JSON)  # Structured insights from Claude
+    sentiment = Column(String)  # positive, negative, neutral, mixed
+    priority = Column(String, default="medium")  # high, medium, low
+    status = Column(String, default="new")  # new, reviewed, archived
+    file_url = Column(String)  # For uploaded files
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
-class ShopifyMetrics(Base):
+class ShopifyMetric(Base):
+    """Shopify analytics metrics"""
     __tablename__ = "shopify_metrics"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    period_type = Column(String, index=True)
-    period_start = Column(DateTime(timezone=True), index=True)
-    period_end = Column(DateTime(timezone=True))
+    period_type = Column(String, nullable=False, index=True)  # 'daily', 'weekly', 'monthly'
+    period_start = Column(DateTime(timezone=True), nullable=False, index=True)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    
+    # Metrics
     total_orders = Column(Integer, default=0)
     total_revenue = Column(Float, default=0.0)
     avg_order_value = Column(Float, default=0.0)
     total_sessions = Column(Integer, default=0)
     conversion_rate = Column(Float, default=0.0)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-
-class CompetitiveData(Base):
-    __tablename__ = "competitive_data"
     
-    id = Column(Integer, primary_key=True, index=True)
-    competitor = Column(String, index=True)
-    platform = Column(String, index=True)
-    content_type = Column(String)
-    engagement_count = Column(Integer, default=0)
-    post_url = Column(String)
-    caption = Column(Text)
-    hashtags = Column(JSON)
-    post_date = Column(DateTime(timezone=True))
-    threat_level = Column(String, index=True)
-    sentiment = Column(String)
-    raw_data = Column(JSON)
-    scraped_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # Timestamps
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class CompetitorIntel(Base):
+    """Competitive intelligence tracking"""
+    __tablename__ = "competitor_intel"
+
+    id = Column(Integer, primary_key=True, index=True)
+    competitor_name = Column(String, nullable=False, index=True)
+    category = Column(String)  # pricing, product, marketing, social
+    data_type = Column(String)  # price_point, campaign, product_launch, social_post
+    content = Column(Text)
+    source_url = Column(String)
+    sentiment = Column(String)  # threat, opportunity, neutral
+    ai_analysis = Column(Text)  # Claude analysis
+    priority = Column(String, default="medium")
+    tags = Column(JSON)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class ExecutiveMetric(Base):
+    """Executive dashboard KPIs"""
+    __tablename__ = "executive_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    metric_name = Column(String, nullable=False, index=True)  # revenue, orders, aov, etc.
+    metric_value = Column(Float, nullable=False)
+    metric_change = Column(Float)  # Percentage change vs previous period
+    period_type = Column(String, default="monthly")  # daily, weekly, monthly, quarterly
+    period_start = Column(DateTime(timezone=True), nullable=False, index=True)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class Alert(Base):
+    """System alerts and notifications"""
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_type = Column(String, nullable=False)  # deliverable_overdue, budget_alert, opportunity, threat
+    severity = Column(String, default="info")  # critical, warning, info
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    related_entity_type = Column(String)  # deliverable, campaign, competitor
+    related_entity_id = Column(Integer)
+    is_read = Column(Boolean, default=False)
+    is_dismissed = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    read_at = Column(DateTime(timezone=True))
