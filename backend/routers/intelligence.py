@@ -80,12 +80,28 @@ def extract_competitor_name(content: str, filename: str) -> str:
 @router.post("/upload")
 async def upload_intelligence(
     file: UploadFile = File(...),
-    source: str = Form(...),
-    category: str = Form(...),
+    source: Optional[str] = Form(None),
+    brand: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """Upload intelligence file with auto-competitive population"""
+    
+    # Use defaults if not provided
+    if not source:
+        source = "manual_upload"
+    
+    # Infer category from source
+    if not category:
+        category_map = {
+            'apify': 'social_media',
+            'shopify': 'sales_data',
+            'manus': 'agency_report',
+            'manual_upload': 'general'
+        }
+        category = category_map.get(source, 'general')
     
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
@@ -120,11 +136,14 @@ async def upload_intelligence(
         category=category,
         content=raw_content,
         ai_summary=summary,
-        ai_insights=json.dumps(insights) if insights else None,
+        ai_insights=insights,  # PostgreSQL JSONB handles this automatically
         file_url=file_path,
-        tags=notes.split(',') if notes else [],
+        tags=[description] if description else [],
         status='new'
     )
+    
+    db.add(intel_entry)
+    db.flush()  # Get the ID without committing yet
     
     db.add(intel_entry)
     db.flush()  # Get the ID without committing yet
@@ -140,7 +159,7 @@ async def upload_intelligence(
             data_type=competitor_info['source'],
             content=raw_content,
             ai_analysis=summary,
-            tags=insights if isinstance(insights, list) else [],
+            tags=insights,  # PostgreSQL JSONB handles this automatically
             source_url=file_path,
             priority='medium',
             sentiment='neutral'
@@ -151,12 +170,21 @@ async def upload_intelligence(
     db.commit()
     db.refresh(intel_entry)
     
+    # Get file size
+    file_size_bytes = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+    file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
+    
     return {
         "success": True,
         "message": "Intelligence uploaded successfully",
         "id": intel_entry.id,
+        "filename": file.filename,
+        "size_mb": file_size_mb,
+        "source": source,
+        "status": intel_entry.status,
         "summary": summary,
         "insights": insights,
+        "ai_analysis_complete": bool(summary and insights),
         "competitor_auto_populated": competitor_info is not None
     }
 
@@ -183,7 +211,7 @@ def list_intelligence_files(
                 "source": e.source_type,
                 "category": e.category,
                 "summary": e.ai_summary,
-                "key_insights": json.loads(e.ai_insights) if e.ai_insights else [],
+                "key_insights": e.ai_insights if isinstance(e.ai_insights, (list, dict)) else (json.loads(e.ai_insights) if e.ai_insights else []),
                 "created_at": e.created_at.isoformat(),
                 "status": e.status
             }
