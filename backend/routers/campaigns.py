@@ -1,37 +1,41 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
-from datetime import datetime, timedelta
+from sqlalchemy import desc
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import os
-import json
+from openai import OpenAI
 
 from ..database import get_db
-from ..models import Campaign, IntelligenceFile
+from ..models import Campaign
 
 router = APIRouter()
 
-# OpenAI for content suggestions
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-AI_AVAILABLE = bool(OPENAI_API_KEY)
-
-if AI_AVAILABLE:
-    from openai import OpenAI as OpenAIClient
+# Initialize OpenAI client
+try:
+    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     print("[Campaigns] ✅ OpenAI available for content suggestions")
+except Exception as e:
+    openai_client = None
+    print(f"[Campaigns] ⚠️ OpenAI not available: {e}")
 
 
 @router.get("/")
 def get_campaigns(
     status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
     db: Session = Depends(get_db)
 ):
-    """Get all campaigns"""
+    """Get all campaigns with optional status filter"""
+    
     query = db.query(Campaign)
     
     if status:
         query = query.filter(Campaign.status == status)
     
-    campaigns = query.order_by(desc(Campaign.created_at)).all()
+    total = query.count()
+    campaigns = query.order_by(desc(Campaign.created_at)).limit(limit).offset(offset).all()
     
     return {
         "campaigns": [
@@ -39,467 +43,81 @@ def get_campaigns(
                 "id": c.id,
                 "name": c.name,
                 "description": c.description,
-                "theme": c.theme,
-                "launch_date": c.launch_date.isoformat() if c.launch_date else None,
-                "end_date": c.end_date.isoformat() if c.end_date else None,
                 "status": c.status,
-                "cultural_moment": c.cultural_moment,
-                "has_suggestions": bool(c.content_suggestions)
+                "start_date": c.start_date.isoformat() if c.start_date else None,
+                "end_date": c.end_date.isoformat() if c.end_date else None,
+                "budget": c.budget,
+                "target_audience": c.target_audience,
+                "channels": c.channels,
+                "kpis": c.kpis,
+                "created_at": c.created_at.isoformat() if c.created_at else None
             }
             for c in campaigns
         ],
-        "total": len(campaigns)
+        "total": total,
+        "limit": limit,
+        "offset": offset
     }
 
 
 @router.post("/")
-def create_campaign(
+async def create_campaign(
     name: str,
-    description: str = "",
-    theme: str = "",
-    launch_date: Optional[str] = None,
+    description: str,
+    start_date: str,
     end_date: Optional[str] = None,
-    cultural_moment: str = "",
-    target_audience: str = "",
-    generate_suggestions: bool = True,
+    budget: Optional[float] = None,
+    target_audience: Optional[str] = None,
+    channels: Optional[list] = None,
+    kpis: Optional[dict] = None,
     db: Session = Depends(get_db)
 ):
-    """Create a new campaign"""
+    """Create a new campaign with AI-generated suggestions"""
     
     # Parse dates
-    launch_dt = datetime.fromisoformat(launch_date) if launch_date else None
-    end_dt = datetime.fromisoformat(end_date) if end_date else None
+    start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    end = datetime.fromisoformat(end_date.replace('Z', '+00:00')) if end_date else None
     
-    # Create campaign
+    # Generate AI suggestions
+    ai_suggestions = None
+    if openai_client:
+        try:
+            ai_suggestions = await generate_campaign_suggestions(
+                name, description, target_audience, channels
+            )
+        except Exception as e:
+            print(f"[Campaigns] AI suggestion failed: {e}")
+    
     campaign = Campaign(
         name=name,
         description=description,
-        theme=theme,
-        launch_date=launch_dt,
-        end_date=end_dt,
-        cultural_moment=cultural_moment,
+        status="planning",
+        start_date=start,
+        end_date=end,
+        budget=budget,
         target_audience=target_audience,
-        status="planning"
+        channels=channels,
+        kpis=kpis,
+        ai_suggestions=ai_suggestions
     )
     
     db.add(campaign)
     db.commit()
     db.refresh(campaign)
     
-    # Generate AI content suggestions
-    if generate_suggestions and AI_AVAILABLE:
-        suggestions = generate_content_suggestions(campaign, db)
-        campaign.content_suggestions = suggestions
-        db.commit()
-    
     return {
-        "success": True,
-        "campaign_id": campaign.id,
+        "id": campaign.id,
         "name": campaign.name,
-        "has_suggestions": bool(campaign.content_suggestions)
-    }
-
-
-@router.get("/cultural-calendar")
-def get_cultural_calendar(days_ahead: int = 120, db: Session = Depends(get_db)):
-    """Get rolling cultural calendar - upcoming moments for the next 90-120 days
-    
-    Always shows relevant hip hop, urban, and streetwear moments ahead
-    """
-    
-    from datetime import datetime, timedelta
-    import calendar as cal
-    
-    now = datetime.utcnow()
-    end_date = now + timedelta(days=days_ahead)
-    
-    # Helper function for calculating Monday holidays
-    def third_monday(year, month):
-        """Get third Monday of month"""
-        first_day = datetime(year, month, 1)
-        first_monday = 1 + (7 - first_day.weekday()) % 7
-        return first_monday + 14
-    
-    # Generate ALL potential cultural moments dynamically
-    def get_all_moments_in_range(start_date, end_date):
-        moments = []
-        current = start_date
-        
-        while current <= end_date:
-            year = current.year
-            month = current.month
-            
-            # === MONTHLY RECURRING MOMENTS ===
-            
-            # January
-            if month == 1:
-                moments.append({
-                    "name": "New Year Fresh Fits Season",
-                    "date": f"{year}-01-01",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "New year, new wardrobe - fresh drop campaign",
-                    "duration_days": 14
-                })
-                moments.append({
-                    "name": "MLK Day",
-                    "date": f"{year}-01-{third_monday(year, 1):02d}",
-                    "category": "cultural",
-                    "type": "annual",
-                    "opportunity": "Honor legacy with authentic content, community focus",
-                    "duration_days": 3
-                })
-                
-            # February
-            elif month == 2:
-                moments.append({
-                    "name": "Black History Month",
-                    "date": f"{year}-02-01",
-                    "category": "cultural",
-                    "type": "recurring",
-                    "opportunity": "Month-long celebration of Black culture in streetwear & hip hop",
-                    "duration_days": 28
-                })
-                moments.append({
-                    "name": "NBA All-Star Weekend",
-                    "date": f"{year}-02-14",
-                    "category": "sports",
-                    "type": "annual",
-                    "opportunity": "Basketball culture x streetwear, celebrity fits, watch parties",
-                    "duration_days": 3
-                })
-                moments.append({
-                    "name": "Grammy Awards",
-                    "date": f"{year}-02-02",
-                    "category": "hip_hop",
-                    "type": "annual",
-                    "opportunity": "Hip hop fashion moments, red carpet street style",
-                    "duration_days": 1
-                })
-                
-            # March
-            elif month == 3:
-                moments.append({
-                    "name": "March Madness",
-                    "date": f"{year}-03-17",
-                    "category": "sports",
-                    "type": "recurring",
-                    "opportunity": "College basketball culture, campus style, tournament parties",
-                    "duration_days": 21
-                })
-                moments.append({
-                    "name": "Spring Break Season",
-                    "date": f"{year}-03-10",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Travel fits, spring collection drop",
-                    "duration_days": 14
-                })
-                
-            # April
-            elif month == 4:
-                moments.append({
-                    "name": "Coachella Season",
-                    "date": f"{year}-04-11",
-                    "category": "music",
-                    "type": "annual",
-                    "opportunity": "Festival fits (even if not attending), spring style",
-                    "duration_days": 7
-                })
-                moments.append({
-                    "name": "NBA Playoffs Begin",
-                    "date": f"{year}-04-15",
-                    "category": "sports",
-                    "type": "annual",
-                    "opportunity": "Playoff energy, team pride content, watch party fits",
-                    "duration_days": 60
-                })
-                moments.append({
-                    "name": "Record Store Day",
-                    "date": f"{year}-04-19",
-                    "category": "hip_hop",
-                    "type": "annual",
-                    "opportunity": "Music culture celebration, vinyl drops, nostalgia",
-                    "duration_days": 1
-                })
-                
-            # May
-            elif month == 5:
-                moments.append({
-                    "name": "Memorial Day Weekend",
-                    "date": f"{year}-05-26",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Unofficial start of summer, cookout season kickoff",
-                    "duration_days": 3
-                })
-                moments.append({
-                    "name": "Summer Drop Season",
-                    "date": f"{year}-05-15",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Summer collection launch, lighter fabrics, bright colors",
-                    "duration_days": 30
-                })
-                
-            # June
-            elif month == 6:
-                moments.append({
-                    "name": "Juneteenth",
-                    "date": f"{year}-06-19",
-                    "category": "cultural",
-                    "type": "annual",
-                    "opportunity": "Celebrate freedom, Black culture, authentic storytelling",
-                    "duration_days": 3
-                })
-                moments.append({
-                    "name": "BET Awards",
-                    "date": f"{year}-06-29",
-                    "category": "hip_hop",
-                    "type": "annual",
-                    "opportunity": "Hip hop's biggest night, fashion moments, artist features",
-                    "duration_days": 1
-                })
-                moments.append({
-                    "name": "NBA Finals",
-                    "date": f"{year}-06-05",
-                    "category": "sports",
-                    "type": "annual",
-                    "opportunity": "Championship energy, watch parties, team gear",
-                    "duration_days": 14
-                })
-                moments.append({
-                    "name": "Pride Month (Urban Lens)",
-                    "date": f"{year}-06-01",
-                    "category": "cultural",
-                    "type": "recurring",
-                    "opportunity": "LGBTQ+ representation in streetwear, inclusive marketing",
-                    "duration_days": 30
-                })
-                
-            # July
-            elif month == 7:
-                moments.append({
-                    "name": "Fourth of July Parties",
-                    "date": f"{year}-07-04",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Summer party fits, cookouts, day parties",
-                    "duration_days": 3
-                })
-                moments.append({
-                    "name": "Rolling Loud",
-                    "date": f"{year}-07-25",
-                    "category": "music",
-                    "type": "annual",
-                    "opportunity": "Hip hop festival fits, artist spotlights, street style",
-                    "duration_days": 3
-                })
-                moments.append({
-                    "name": "Summer Concert Season Peak",
-                    "date": f"{year}-07-01",
-                    "category": "music",
-                    "type": "recurring",
-                    "opportunity": "Tour merch, concert fits, artist collabs",
-                    "duration_days": 60
-                })
-                
-            # August
-            elif month == 8:
-                moments.append({
-                    "name": "Back to School Season",
-                    "date": f"{year}-08-15",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "College move-in, campus style, fresh semester energy",
-                    "duration_days": 21
-                })
-                moments.append({
-                    "name": "Hip Hop Anniversary (Aug 11, 1973)",
-                    "date": f"{year}-08-11",
-                    "category": "hip_hop",
-                    "type": "annual",
-                    "opportunity": "Celebrate hip hop's birthday, throwback content, history",
-                    "duration_days": 3
-                })
-                
-            # September
-            elif month == 9:
-                moments.append({
-                    "name": "Fashion Week Season",
-                    "date": f"{year}-09-08",
-                    "category": "streetwear",
-                    "type": "annual",
-                    "opportunity": "Street style (not runway), trend spotting, influencer content",
-                    "duration_days": 21
-                })
-                moments.append({
-                    "name": "Labor Day Weekend",
-                    "date": f"{year}-09-01",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "End of summer sales, last summer fits",
-                    "duration_days": 3
-                })
-                moments.append({
-                    "name": "Hispanic Heritage Month",
-                    "date": f"{year}-09-15",
-                    "category": "cultural",
-                    "type": "recurring",
-                    "opportunity": "Celebrate Latino streetwear culture, reggaeton influence",
-                    "duration_days": 45
-                })
-                
-            # October
-            elif month == 10:
-                moments.append({
-                    "name": "NBA Season Tip-Off",
-                    "date": f"{year}-10-22",
-                    "category": "sports",
-                    "type": "annual",
-                    "opportunity": "Basketball season returns, team pride, new season energy",
-                    "duration_days": 7
-                })
-                moments.append({
-                    "name": "Halloween Urban Style",
-                    "date": f"{year}-10-31",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Costume culture, nightlife fits, party szn",
-                    "duration_days": 7
-                })
-                
-            # November
-            elif month == 11:
-                moments.append({
-                    "name": "Day of the Dead",
-                    "date": f"{year}-11-01",
-                    "category": "cultural",
-                    "type": "annual",
-                    "opportunity": "Latino culture celebration, artistic storytelling",
-                    "duration_days": 2
-                })
-                moments.append({
-                    "name": "Hip Hop History Month",
-                    "date": f"{year}-11-01",
-                    "category": "hip_hop",
-                    "type": "recurring",
-                    "opportunity": "Celebrate rap pioneers, throwback content, education",
-                    "duration_days": 30
-                })
-                moments.append({
-                    "name": "Thanksgiving Weekend",
-                    "date": f"{year}-11-28",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Family fits, Black Friday alternative drops",
-                    "duration_days": 4
-                })
-                moments.append({
-                    "name": "Black Friday (Anti-Corporate)",
-                    "date": f"{year}-11-29",
-                    "category": "retail",
-                    "type": "recurring",
-                    "opportunity": "Limited street drops, exclusive releases (not corporate sales)",
-                    "duration_days": 1
-                })
-                
-            # December
-            elif month == 12:
-                moments.append({
-                    "name": "Holiday Party Season",
-                    "date": f"{year}-12-10",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Party fits, nightlife style, NYE prep",
-                    "duration_days": 21
-                })
-                moments.append({
-                    "name": "Winter Collection Drop",
-                    "date": f"{year}-12-01",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Cold weather essentials, hoodies, jackets, layering",
-                    "duration_days": 30
-                })
-                moments.append({
-                    "name": "Christmas Week",
-                    "date": f"{year}-12-25",
-                    "category": "seasonal",
-                    "type": "recurring",
-                    "opportunity": "Gift ideas, last-minute drops, family gathering fits",
-                    "duration_days": 7
-                })
-                
-            # Move to next month
-            current = current + timedelta(days=32)
-            current = current.replace(day=1)
-        
-        return moments
-    
-    # Get all moments
-    all_moments = get_all_moments_in_range(now, end_date)
-    
-    # Filter to only upcoming moments
-    upcoming = []
-    for moment in all_moments:
-        moment_date = datetime.fromisoformat(moment["date"])
-        if moment_date >= now:
-            days_away = (moment_date - now).days
-            end_of_moment = moment_date + timedelta(days=moment.get("duration_days", 1))
-            
-            upcoming.append({
-                **moment,
-                "days_away": days_away,
-                "month": moment_date.strftime("%B"),
-                "formatted_date": moment_date.strftime("%B %d, %Y"),
-                "day_of_week": moment_date.strftime("%A"),
-                "end_date": end_of_moment.strftime("%B %d, %Y"),
-                "is_upcoming_soon": days_away <= 30,
-                "planning_window": "Plan now!" if days_away <= 30 else "Start planning" if days_away <= 60 else "On radar"
-            })
-    
-    # Sort by date
-    upcoming.sort(key=lambda x: x["days_away"])
-    
-    # Group by timeframe
-    next_30_days = [m for m in upcoming if m["days_away"] <= 30]
-    next_60_days = [m for m in upcoming if 30 < m["days_away"] <= 60]
-    next_90_days = [m for m in upcoming if 60 < m["days_away"] <= 90]
-    beyond_90_days = [m for m in upcoming if m["days_away"] > 90]
-    
-    # Group by category
-    by_category = {
-        "hip_hop": [m for m in upcoming if m["category"] == "hip_hop"],
-        "sports": [m for m in upcoming if m["category"] == "sports"],
-        "cultural": [m for m in upcoming if m["category"] == "cultural"],
-        "music": [m for m in upcoming if m["category"] == "music"],
-        "seasonal": [m for m in upcoming if m["category"] == "seasonal"],
-        "streetwear": [m for m in upcoming if m["category"] == "streetwear"],
-        "retail": [m for m in upcoming if m["category"] == "retail"]
-    }
-    
-    return {
-        "all_upcoming": upcoming,
-        "by_timeframe": {
-            "next_30_days": next_30_days,
-            "next_60_days": next_60_days,
-            "next_90_days": next_90_days,
-            "beyond_90_days": beyond_90_days
-        },
-        "by_category": by_category,
-        "total_moments": len(upcoming),
-        "planning_summary": {
-            "urgent": len(next_30_days),
-            "coming_soon": len(next_60_days),
-            "on_radar": len(next_90_days) + len(beyond_90_days)
-        }
+        "status": campaign.status,
+        "ai_suggestions": campaign.ai_suggestions,
+        "created_at": campaign.created_at.isoformat()
     }
 
 
 @router.get("/{campaign_id}")
 def get_campaign(campaign_id: int, db: Session = Depends(get_db)):
-    """Get campaign details with content suggestions"""
+    """Get detailed campaign information"""
+    
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
     if not campaign:
@@ -509,36 +127,16 @@ def get_campaign(campaign_id: int, db: Session = Depends(get_db)):
         "id": campaign.id,
         "name": campaign.name,
         "description": campaign.description,
-        "theme": campaign.theme,
-        "launch_date": campaign.launch_date.isoformat() if campaign.launch_date else None,
-        "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
         "status": campaign.status,
-        "cultural_moment": campaign.cultural_moment,
+        "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
+        "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
+        "budget": campaign.budget,
         "target_audience": campaign.target_audience,
-        "content_suggestions": campaign.content_suggestions,
-        "notes": campaign.notes,
-        "created_at": campaign.created_at.isoformat()
-    }
-
-
-@router.post("/{campaign_id}/generate-suggestions")
-def regenerate_suggestions(campaign_id: int, db: Session = Depends(get_db)):
-    """Regenerate AI content suggestions for a campaign"""
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    if not AI_AVAILABLE:
-        raise HTTPException(503, "AI suggestions unavailable - OpenAI not configured")
-    
-    suggestions = generate_content_suggestions(campaign, db)
-    campaign.content_suggestions = suggestions
-    db.commit()
-    
-    return {
-        "success": True,
-        "suggestions": suggestions
+        "channels": campaign.channels,
+        "kpis": campaign.kpis,
+        "ai_suggestions": campaign.ai_suggestions,
+        "created_at": campaign.created_at.isoformat(),
+        "updated_at": campaign.updated_at.isoformat()
     }
 
 
@@ -548,10 +146,16 @@ def update_campaign(
     name: Optional[str] = None,
     description: Optional[str] = None,
     status: Optional[str] = None,
-    notes: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    budget: Optional[float] = None,
+    target_audience: Optional[str] = None,
+    channels: Optional[list] = None,
+    kpis: Optional[dict] = None,
     db: Session = Depends(get_db)
 ):
-    """Update campaign"""
+    """Update campaign details"""
+    
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
     if not campaign:
@@ -563,154 +167,280 @@ def update_campaign(
         campaign.description = description
     if status:
         campaign.status = status
-    if notes:
-        campaign.notes = notes
+    if start_date:
+        campaign.start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    if end_date:
+        campaign.end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    if budget is not None:
+        campaign.budget = budget
+    if target_audience:
+        campaign.target_audience = target_audience
+    if channels:
+        campaign.channels = channels
+    if kpis:
+        campaign.kpis = kpis
+    
+    campaign.updated_at = datetime.now(timezone.utc)
     
     db.commit()
+    db.refresh(campaign)
     
-    return {"success": True}
+    return {"success": True, "campaign_id": campaign.id}
 
 
-def generate_content_suggestions(campaign: Campaign, db: Session):
-    """Generate AI content suggestions based on campaign and intelligence data
+@router.post("/{campaign_id}/generate-suggestions")
+async def regenerate_suggestions(
+    campaign_id: int,
+    db: Session = Depends(get_db)
+):
+    """Regenerate AI suggestions for a campaign"""
     
-    Focuses on hip hop culture, urban moments, and authentic streetwear marketing
-    """
+    if not openai_client:
+        raise HTTPException(503, "AI service not available")
     
-    if not AI_AVAILABLE:
-        return {"error": "OpenAI not configured"}
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
     
     try:
-        # Get recent intelligence data for context
-        recent_intel = db.query(IntelligenceFile).filter(
-            IntelligenceFile.status == "processed",
-            IntelligenceFile.analysis_results.isnot(None)
-        ).order_by(desc(IntelligenceFile.uploaded_at)).limit(3).all()
-        
-        # Build context from intelligence
-        intel_context = ""
-        if recent_intel:
-            intel_context = "\n\nRecent competitive intelligence insights:\n"
-            for file in recent_intel:
-                if isinstance(file.analysis_results, dict) and "analysis" in file.analysis_results:
-                    analysis = file.analysis_results["analysis"]
-                    intel_context += f"- {analysis[:500]}...\n"
-        
-        # Create AI prompt with STREETWEAR/HIP HOP FOCUS
-        client = OpenAIClient(api_key=OPENAI_API_KEY)
-        
-        system_prompt = """You are a streetwear marketing strategist for Crooks & Castles, deeply embedded in hip hop and urban culture.
-
-BRAND CONTEXT:
-- Crooks & Castles is an authentic streetwear brand rooted in hip hop culture
-- Target: Gen Z and millennial streetwear enthusiasts who live and breathe hip hop
-- Values: Authenticity, rebellion, street credibility, cultural relevance
-
-CULTURAL FOCUS AREAS (prioritize these):
-**Hip Hop Culture:**
-- Album drops, mixtape releases, artist collaborations
-- Hip hop award shows (BET Awards, Hip Hop Awards, Grammys)
-- Rap battles, cyphers, freestyle culture
-- Producer beats, sampling culture
-- Hip hop fashion moments
-
-**Urban Culture & Events:**
-- Sneaker releases and drops
-- Basketball culture (NBA playoffs, All-Star, streetball)
-- Graffiti/street art exhibitions
-- Underground music scenes
-- Block parties, day parties, concert culture
-
-**National/Cultural Moments:**
-- Black History Month (authentic celebration, not performative)
-- Juneteenth
-- NBA Finals, March Madness
-- Fashion weeks (with street lens, not high fashion)
-- Music festival season (Rolling Loud, Day N Vegas, etc.)
-
-**Seasonal Urban Moments:**
-- Back to school (college move-in culture)
-- Summer cookout season
-- Winter coat season (fitted, puffer culture)
-- Holiday parties (not traditional, but urban nightlife)
-
-AVOID:
-- Generic corporate holidays
-- Inauthentic "brand voice" 
-- Surface-level trend chasing
-- Anything that feels forced or disconnected from street culture
-
-Generate content that CONNECTS to what the Crooks & Castles customer actually cares about."""
-
-        user_prompt = f"""Create content marketing suggestions for this Crooks & Castles campaign:
-
-**Campaign Details:**
-Name: {campaign.name}
-Description: {campaign.description}
-Theme: {campaign.theme}
-Launch Date: {campaign.launch_date.strftime('%B %d, %Y') if campaign.launch_date else 'TBD'}
-Cultural Moment: {campaign.cultural_moment}
-Target Audience: {campaign.target_audience}
-
-**Intelligence Context:**
-{intel_context}
-
-Provide 5-7 SPECIFIC content ideas that leverage hip hop culture, urban moments, and authentic street marketing opportunities.
-
-Return in JSON format:
-{{
-  "suggestions": [
-    {{
-      "title": "Specific content idea",
-      "description": "Detailed tactical execution (not vague)",
-      "platform": "Instagram/TikTok/Email/Twitter/IRL",
-      "content_type": "Reel/Story/Email/Event/Collab/etc",
-      "timing": "Exact timing relative to cultural moment",
-      "why_it_works": "Why this resonates with streetwear/hip hop audience",
-      "cultural_connection": "Specific hip hop/urban/cultural moment it taps into",
-      "execution_notes": "How to execute authentically"
-    }}
-  ],
-  "key_opportunities": [
-    "Upcoming hip hop moments to leverage",
-    "Urban culture connections to tap into",
-    "Authentic engagement tactics"
-  ],
-  "timing_strategy": "When and why to activate this campaign based on culture",
-  "authenticity_notes": "How to stay true to street culture and avoid looking corporate"
-}}
-
-CRITICAL: Every suggestion must connect to real hip hop/urban culture, not generic marketing."""
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-16k",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=2500,
-            temperature=0.75
+        ai_suggestions = await generate_campaign_suggestions(
+            campaign.name,
+            campaign.description,
+            campaign.target_audience,
+            campaign.channels
         )
         
-        suggestions_text = response.choices[0].message.content
+        campaign.ai_suggestions = ai_suggestions
+        campaign.updated_at = datetime.now(timezone.utc)
         
-        # Try to parse as JSON
-        try:
-            suggestions_text = suggestions_text.replace("```json", "").replace("```", "").strip()
-            suggestions = json.loads(suggestions_text)
-        except:
-            suggestions = {"raw_suggestions": suggestions_text}
+        db.commit()
+        db.refresh(campaign)
         
-        suggestions["generated_at"] = datetime.utcnow().isoformat()
-        suggestions["intelligence_sources_used"] = len(recent_intel)
-        
-        return suggestions
+        return {
+            "success": True,
+            "ai_suggestions": ai_suggestions
+        }
         
     except Exception as e:
-        print(f"[Campaigns] AI suggestion error: {e}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "error": str(e),
-            "message": "Failed to generate suggestions - check OpenAI configuration"
+        raise HTTPException(500, f"Failed to generate suggestions: {str(e)}")
+
+
+async def generate_campaign_suggestions(
+    name: str,
+    description: str,
+    target_audience: Optional[str],
+    channels: Optional[list]
+):
+    """Generate AI-powered campaign suggestions using OpenAI"""
+    
+    prompt = f"""You are a streetwear and hip-hop culture marketing expert for Crooks & Castles.
+
+Campaign: {name}
+Description: {description}
+Target Audience: {target_audience or "Urban youth 18-34, hip-hop fans, streetwear collectors, rebels/rulers/creators"}
+Channels: {', '.join(channels) if channels else "Instagram, TikTok, Email"}
+
+Generate creative campaign suggestions for authentic street culture:
+1. 3 content ideas that resonate with hustlers, rebels, and cultural architects
+2. 3 social media post concepts that feel earned, not corporate
+3. Key messaging that honors legacy + authenticity
+4. Hashtag recommendations that signal credibility
+
+Keep suggestions real to the streets. No clout-chasing. Crooks & Castles = heritage, code, loyalty."""
+
+    response = openai_client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a streetwear marketing expert who understands hip-hop culture authenticity."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=1000,
+        temperature=0.7
+    )
+    
+    suggestions_text = response.choices[0].message.content
+    
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "suggestions": suggestions_text,
+        "model": "gpt-4"
+    }
+
+
+@router.get("/cultural-calendar")
+def get_cultural_calendar(
+    days_ahead: int = 90,
+    month: Optional[int] = None,
+    year: Optional[int] = None
+):
+    """Get cultural calendar events - shows next 90 days by default for planning"""
+    
+    # Authentic cultural calendar for Crooks & Castles customers
+    annual_events = [
+        # JANUARY - New Year Hustle
+        {"month": 1, "day": 1, "name": "New Year Reset", "category": "culture", "relevance": "Fresh start drops, New Year's resolutions for hustlers"},
+        {"month": 1, "day": 8, "name": "Elvis Presley Birthday", "category": "music", "relevance": "OG rebel, rock meets street culture"},
+        {"month": 1, "day": 15, "name": "MLK Day", "category": "cultural", "relevance": "Civil rights legacy, resist authority, fight for community"},
+        {"month": 1, "day": 17, "name": "Kid Cudi Birthday", "category": "hip-hop", "relevance": "Man on the Moon - outsider anthem, mental health in hip-hop"},
+        {"month": 1, "day": 28, "name": "J. Cole Birthday", "category": "hip-hop", "relevance": "Dreamville, conscious rap, indie hustle mindset"},
+        
+        # FEBRUARY - Black Excellence
+        {"month": 2, "day": 1, "name": "Black History Month", "category": "cultural", "relevance": "Celebrate Black creators, founders, and street culture architects"},
+        {"month": 2, "day": 7, "name": "2Pac Birthday", "category": "hip-hop", "relevance": "West Coast legend, Thug Life code, outlaw authenticity"},
+        {"month": 2, "day": 9, "name": "Super Bowl", "category": "sports", "relevance": "Halftime show culture, tailgate flex, athleisure crossover"},
+        {"month": 2, "day": 14, "name": "Valentine's Day", "category": "lifestyle", "relevance": "Couples flex, gift drops for the crew"},
+        {"month": 2, "day": 16, "name": "NBA All-Star Weekend", "category": "sports", "relevance": "Sneaker culture peak, celebrity courtside flex, basketball meets fashion"},
+        {"month": 2, "day": 18, "name": "Air Jordan Birthday", "category": "streetwear", "relevance": "Jordan 1 release anniversary - sneaker royalty"},
+        {"month": 2, "day": 21, "name": "Biggie Birthday", "category": "hip-hop", "relevance": "Notorious B.I.G., Brooklyn king, East Coast crown"},
+        
+        # MARCH - Madness & Drops
+        {"month": 3, "day": 1, "name": "March Madness Begins", "category": "sports", "relevance": "College basketball culture, bracket betting, underdog stories"},
+        {"month": 3, "day": 8, "name": "International Women's Day", "category": "cultural", "relevance": "Women in streetwear, female hustlers, queens in the game"},
+        {"month": 3, "day": 17, "name": "St. Patrick's Day", "category": "culture", "relevance": "Green drops, Irish mob aesthetics, working-class pride"},
+        {"month": 3, "day": 26, "name": "Air Max Day", "category": "streetwear", "relevance": "Nike Air Max 1 anniversary, sneakerhead holiday"},
+        {"month": 3, "day": 27, "name": "Quavo Birthday", "category": "hip-hop", "relevance": "Migos, trap culture, Atlanta influence"},
+        
+        # APRIL - Spring Drops
+        {"month": 4, "day": 1, "name": "April Fools", "category": "culture", "relevance": "Surprise drops, troll marketing, chaos energy"},
+        {"month": 4, "day": 4, "name": "Beyoncé Birthday", "category": "culture", "relevance": "Queen B, Black excellence, luxury streetwear crossover"},
+        {"month": 4, "day": 7, "name": "MLB Opening Day", "category": "sports", "relevance": "Fitted cap culture, baseball heritage, stadium flex"},
+        {"month": 4, "day": 13, "name": "Record Store Day", "category": "music", "relevance": "Vinyl culture, crate diggers, music heritage"},
+        {"month": 4, "day": 14, "name": "Coachella Weekend 1", "category": "festival", "relevance": "Festival fashion, influencer culture, desert flex"},
+        {"month": 4, "day": 16, "name": "Selena Birthday", "category": "latino-culture", "relevance": "Tejano queen, Latino streetwear influence"},
+        {"month": 4, "day": 20, "name": "4/20", "category": "culture", "relevance": "Cannabis culture, counterculture codes, stoner aesthetics"},
+        
+        # MAY - Summer Season Kickoff
+        {"month": 5, "day": 1, "name": "May Day", "category": "culture", "relevance": "Workers' rights, hustle culture, independent grind"},
+        {"month": 5, "day": 5, "name": "Cinco de Mayo", "category": "latino-culture", "relevance": "Latino heritage, street party culture"},
+        {"month": 5, "day": 6, "name": "Travis Scott Birthday", "category": "hip-hop", "relevance": "Cactus Jack, Astroworld, rage culture"},
+        {"month": 5, "day": 12, "name": "Mother's Day", "category": "lifestyle", "relevance": "Honor the queens, gift season"},
+        {"month": 5, "day": 21, "name": "Biggie Death Anniversary", "category": "hip-hop", "relevance": "Remembrance, Brooklyn tribute, rap royalty"},
+        {"month": 5, "day": 23, "name": "Jordan 1 Anniversary", "category": "streetwear", "relevance": "Most iconic sneaker ever, banned story"},
+        {"month": 5, "day": 25, "name": "Memorial Day", "category": "culture", "relevance": "Summer kickoff, long weekend drops, camo heritage"},
+        
+        # JUNE - Pride & Finals
+        {"month": 6, "day": 1, "name": "Pride Month", "category": "cultural", "relevance": "LGBTQ+ representation in streetwear, inclusive crew"},
+        {"month": 6, "day": 1, "name": "NBA Finals Begin", "category": "sports", "relevance": "Championship culture, peak sneaker season, courtside fashion"},
+        {"month": 6, "day": 6, "name": "BET Awards", "category": "entertainment", "relevance": "Black entertainment celebration, red carpet street style"},
+        {"month": 6, "day": 7, "name": "Lil Baby Birthday", "category": "hip-hop", "relevance": "My Turn era, Atlanta trap, street to success"},
+        {"month": 6, "day": 13, "name": "Tupac Death Anniversary", "category": "hip-hop", "relevance": "West Coast legend, All Eyez On Me legacy"},
+        {"month": 6, "day": 16, "name": "2Pac Death Anniversary", "category": "hip-hop", "relevance": "Remembrance, outlaw code"},
+        {"month": 6, "day": 19, "name": "Juneteenth", "category": "cultural", "relevance": "Freedom Day, Black liberation, independent hustle"},
+        {"month": 6, "day": 21, "name": "Father's Day", "category": "lifestyle", "relevance": "Kings and OGs, generational codes"},
+        {"month": 6, "day": 27, "name": "XXXTentacion Death Anniversary", "category": "hip-hop", "relevance": "SoundCloud era, emo rap, Gen Z icon"},
+        
+        # JULY - Independence & Summer
+        {"month": 7, "day": 4, "name": "Independence Day", "category": "culture", "relevance": "American rebel spirit, fireworks, red/white/blue drops"},
+        {"month": 7, "day": 6, "name": "50 Cent Birthday", "category": "hip-hop", "relevance": "G-Unit, Get Rich or Die Tryin', entrepreneur code"},
+        {"month": 7, "day": 8, "name": "Mac Miller Birthday", "category": "hip-hop", "relevance": "Pittsburgh legend, artist authenticity, indie creativity"},
+        {"month": 7, "day": 21, "name": "Rolling Loud", "category": "festival", "relevance": "Hip-hop festival, rage culture, youth energy"},
+        {"month": 7, "day": 26, "name": "Mick Jagger Birthday", "category": "music", "relevance": "Rock rebel, Stones legacy, outlaw aesthetic"},
+        
+        # AUGUST - Back to Streets
+        {"month": 8, "day": 4, "name": "Megan Thee Stallion Birthday", "category": "hip-hop", "relevance": "Hot Girl Summer, female rap royalty"},
+        {"month": 8, "day": 11, "name": "Hip-Hop Birthday", "category": "hip-hop", "relevance": "1973 - Birth at 1520 Sedgwick, culture foundation"},
+        {"month": 8, "day": 15, "name": "Back to School", "category": "culture", "relevance": "Fresh gear season, youth marketing, new semester flex"},
+        {"month": 8, "day": 25, "name": "Aaliyah Death Anniversary", "category": "culture", "relevance": "R&B icon, Timberland collaboration, tomboy chic"},
+        {"month": 8, "day": 25, "name": "MTV VMAs", "category": "entertainment", "relevance": "Music video culture, viral moments, red carpet rebellion"},
+        
+        # SEPTEMBER - Fall Reset
+        {"month": 9, "day": 4, "name": "Beyoncé Birthday", "category": "culture", "relevance": "Queen energy, luxury streetwear, Black excellence"},
+        {"month": 9, "day": 7, "name": "Labor Day", "category": "culture", "relevance": "End of summer sales, hustle appreciation, workers' pride"},
+        {"month": 9, "day": 8, "name": "NFL Season Kickoff", "category": "sports", "relevance": "Football culture, tailgate fits, team pride"},
+        {"month": 9, "day": 8, "name": "NYFW", "category": "fashion", "relevance": "Fashion Week, streetwear shows, runway to streets"},
+        {"month": 9, "day": 13, "name": "Tupac Death", "category": "hip-hop", "relevance": "Makaveli legacy, conspiracy culture"},
+        {"month": 9, "day": 25, "name": "Pharrell Birthday", "category": "culture", "relevance": "Billionaire Boys Club, Ice Cream, producer king"},
+        {"month": 9, "day": 26, "name": "Lil Wayne Birthday", "category": "hip-hop", "relevance": "Weezy F Baby, Trukfit, New Orleans legend"},
+        
+        # OCTOBER - Spooky Season
+        {"month": 10, "day": 1, "name": "NBA Season Begins", "category": "sports", "relevance": "Basketball returns, sneaker releases ramp up"},
+        {"month": 10, "day": 3, "name": "Mean Girls Day", "category": "pop-culture", "relevance": "On Wednesdays we wear pink - meme culture"},
+        {"month": 10, "day": 8, "name": "Bella Hadid Birthday", "category": "culture", "relevance": "Model off-duty style, streetwear influence"},
+        {"month": 10, "day": 17, "name": "Eminem Birthday", "category": "hip-hop", "relevance": "8 Mile, Detroit grit, underdog story"},
+        {"month": 10, "day": 21, "name": "21 Savage Birthday", "category": "hip-hop", "relevance": "Zone 6, Atlanta trap, immigration story"},
+        {"month": 10, "day": 24, "name": "Drake Birthday", "category": "hip-hop", "relevance": "OVO, Toronto influence, emotional gangster"},
+        {"month": 10, "day": 31, "name": "Halloween", "category": "culture", "relevance": "Costume culture, dark aesthetics, limited drops"},
+        
+        # NOVEMBER - Gratitude & Grind
+        {"month": 11, "day": 1, "name": "Día de los Muertos", "category": "latino-culture", "relevance": "Mexican heritage, skull aesthetics, remembrance"},
+        {"month": 11, "day": 3, "name": "Kendrick Lamar Birthday", "category": "hip-hop", "relevance": "TDE, Compton king, conscious rebel"},
+        {"month": 11, "day": 8, "name": "SZA Birthday", "category": "music", "relevance": "R&B queen, TDE, vulnerable authenticity"},
+        {"month": 11, "day": 11, "name": "Veterans Day", "category": "culture", "relevance": "Military heritage, camo culture, discipline codes"},
+        {"month": 11, "day": 19, "name": "Jordan 11 Concord Season", "category": "streetwear", "relevance": "Holiday 11s tradition, December prep"},
+        {"month": 11, "day": 23, "name": "Thanksgiving", "category": "culture", "relevance": "Gratitude, family flex, Black Friday prep"},
+        {"month": 11, "day": 24, "name": "Black Friday", "category": "retail", "relevance": "Drop culture, deals, sneaker releases, chaos"},
+        {"month": 11, "day": 27, "name": "Cyber Monday", "category": "retail", "relevance": "Online cop day, digital hustle"},
+        {"month": 11, "day": 30, "name": "Juice WRLD Birthday", "category": "hip-hop", "relevance": "999, emo rap, SoundCloud legend"},
+        
+        # DECEMBER - Holiday Hustle
+        {"month": 12, "day": 4, "name": "Jay-Z Birthday", "category": "hip-hop", "relevance": "Hov, Roc-A-Fella, blueprint entrepreneur"},
+        {"month": 12, "day": 5, "name": "Offset Birthday", "category": "hip-hop", "relevance": "Migos, luxury streetwear, Atlanta culture"},
+        {"month": 12, "day": 8, "name": "Juice WRLD Death Anniversary", "category": "hip-hop", "relevance": "Legends Never Die, Gen Z mourning"},
+        {"month": 12, "day": 18, "name": "DMX Birthday", "category": "hip-hop", "relevance": "Ruff Ryders, raw energy, Yonkers legend"},
+        {"month": 12, "day": 25, "name": "Christmas", "category": "culture", "relevance": "Gift culture, NBA games, family flex"},
+        {"month": 12, "day": 26, "name": "Kwanzaa", "category": "cultural", "relevance": "Black unity, African heritage, seven principles"},
+        {"month": 12, "day": 31, "name": "New Year's Eve", "category": "culture", "relevance": "Party season, year reflection, countdown culture"},
+    ]
+    
+    # Get today and calculate date range
+    today = datetime.now(timezone.utc).date()
+    end_date = today + timedelta(days=days_ahead)
+    
+    # Convert annual events to actual dates in the rolling window
+    upcoming_events = []
+    
+    for event in annual_events:
+        # Check this year and next year to capture rolling window
+        for year_offset in [0, 1]:
+            event_year = today.year + year_offset
+            try:
+                event_date = datetime(event_year, event["month"], event["day"]).date()
+                
+                # Only include if within our date range
+                if today <= event_date <= end_date:
+                    days_until = (event_date - today).days
+                    
+                    upcoming_events.append({
+                        **event,
+                        "year": event_year,
+                        "date": event_date.isoformat(),
+                        "days_until": days_until,
+                        "planning_window": "immediate" if days_until <= 7 else "week" if days_until <= 14 else "two_weeks" if days_until <= 30 else "month" if days_until <= 60 else "future"
+                    })
+            except ValueError:
+                # Handle invalid dates
+                continue
+    
+    # Sort by date
+    upcoming_events.sort(key=lambda x: x["date"])
+    
+    # If month filter specified, filter by month
+    if month:
+        upcoming_events = [e for e in upcoming_events if e["month"] == month]
+    
+    # If year filter specified, filter by year
+    if year:
+        upcoming_events = [e for e in upcoming_events if e["year"] == year]
+    
+    # Calculate category counts
+    categories = {}
+    for event in upcoming_events:
+        cat = event["category"]
+        categories[cat] = categories.get(cat, 0) + 1
+    
+    return {
+        "start_date": today.isoformat(),
+        "end_date": end_date.isoformat(),
+        "days_ahead": days_ahead,
+        "total_events": len(upcoming_events),
+        "events": upcoming_events,
+        "categories": categories,
+        "planning_windows": {
+            "immediate": len([e for e in upcoming_events if e["planning_window"] == "immediate"]),
+            "week": len([e for e in upcoming_events if e["planning_window"] == "week"]),
+            "two_weeks": len([e for e in upcoming_events if e["planning_window"] == "two_weeks"]),
+            "month": len([e for e in upcoming_events if e["planning_window"] == "month"]),
+            "future": len([e for e in upcoming_events if e["planning_window"] == "future"])
         }
+    }
