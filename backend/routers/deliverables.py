@@ -320,45 +320,60 @@ async def import_agency_deliverables_csv(
     
     try:
         contents = await file.read()
-        decoded = contents.decode('utf-8')
+        decoded = contents.decode('utf-8-sig')  # Handle BOM
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
         
         created = 0
-        for row in reader:
-            # Parse due date
-            due_date = None
-            if row.get('Due Date'):
-                try:
-                    due_date = datetime.strptime(row['Due Date'], '%Y-%m-%d')
-                except:
-                    pass
-            
-            # Create deliverable
-            deliverable = Deliverable(
-                title=row.get('Task', ''),
-                description=f"Phase: {row.get('Phase', '')}\nCategory: {row.get('Category', '')}",
-                type=row.get('Category', 'other').lower().replace(' ', '_').replace('&', 'and'),
-                deliverable_type="agency_output",
-                status=row.get('Status', 'Not Started').lower().replace(' ', '_'),
-                phase=row.get('Phase', ''),
-                assigned_to=row.get('Owner', None) if row.get('Owner') else None,
-                due_date=due_date,
-                priority="high" if "BFCM" in row.get('Task', '') or "holiday" in row.get('Task', '') else "medium"
-            )
-            
-            db.add(deliverable)
-            created += 1
+        errors = []
+        
+        for idx, row in enumerate(reader, start=2):
+            try:
+                # Parse due date
+                due_date = None
+                if row.get('Due Date') and row.get('Due Date').strip():
+                    try:
+                        due_date = datetime.strptime(row['Due Date'].strip(), '%Y-%m-%d')
+                    except ValueError:
+                        errors.append(f"Row {idx}: Invalid date format")
+                        continue
+                
+                # Get task title
+                task = row.get('Task', '').strip()
+                if not task:
+                    errors.append(f"Row {idx}: Missing task")
+                    continue
+                
+                deliverable = Deliverable(
+                    title=task,
+                    description=f"Phase: {row.get('Phase', '')}\nCategory: {row.get('Category', '')}",
+                    type=row.get('Category', 'other').lower().replace(' ', '_').replace('&', 'and').replace('+', 'and'),
+                    deliverable_type="agency_output",
+                    status=row.get('Status', 'Not Started').lower().replace(' ', '_'),
+                    phase=row.get('Phase', '').strip(),
+                    assigned_to=row.get('Owner', '').strip() if row.get('Owner', '').strip() else None,
+                    due_date=due_date,
+                    priority="high" if any(word in task.lower() for word in ["bfcm", "holiday", "critical"]) else "medium"
+                )
+                
+                db.add(deliverable)
+                created += 1
+                
+            except Exception as e:
+                errors.append(f"Row {idx}: {str(e)}")
         
         db.commit()
         
         return {
             "success": True,
-            "message": f"Imported {created} agency deliverables"
+            "message": f"Imported {created} deliverables",
+            "created": created,
+            "errors": errors[:5] if errors else []
         }
         
     except Exception as e:
+        db.rollback()
         raise HTTPException(500, f"Import failed: {str(e)}")
 
 
