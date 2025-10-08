@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
-
-from .routers import intelligence, campaigns, deliverables, executive, shopify, competitive, migrations  # ADD migrations
+from .routers import intelligence, campaigns, deliverables, executive, shopify, competitive, summary, migrations
 from .database import engine, get_db
 from .models import Base
 
@@ -44,8 +43,8 @@ app.include_router(deliverables.router, prefix="/api/deliverables", tags=["deliv
 app.include_router(executive.router, prefix="/api/executive", tags=["executive"])
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(competitive.router, prefix="/api/competitive", tags=["competitive"])
-app.include_router(migrations.router, prefix="/api", tags=["migrations"])  # ADD THIS
-
+app.include_router(summary.router, prefix="/api/summary", tags=["summary"])
+app.include_router(migrations.router, prefix="/api", tags=["migrations"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -58,7 +57,6 @@ async def startup_event():
         print(f"[Database] ❌ Connection failed: {e}")
         raise
 
-
 @app.get("/")
 def root():
     """Root endpoint"""
@@ -69,7 +67,6 @@ def root():
         "docs": "/docs"
     }
 
-
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
@@ -77,7 +74,6 @@ def health_check():
         "status": "healthy",
         "database": "connected"
     }
-
 
 @app.get("/api")
 def api_root():
@@ -91,11 +87,11 @@ def api_root():
             "executive": "/api/executive",
             "shopify": "/api/shopify",
             "competitive": "/api/competitive",
+            "summary": "/api/summary",
             "migrations": "/api/migrate-all-tables",
             "docs": "/docs"
         }
     }
-
 
 if __name__ == "__main__":
     import uvicorn
