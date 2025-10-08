@@ -40,6 +40,68 @@ export default function ShopifyPage() {
     }
   }
 
+  async function importShopifyCSV() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/shopify/import-csv`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Import error:', errorText);
+          alert(`❌ Import failed: ${res.status}`);
+          return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          alert(`✅ ${data.message}\n\nCreated: ${data.created} metrics`);
+          loadData(); // Reload dashboard
+        } else {
+          alert(`❌ Error: ${data.message || 'Import failed'}`);
+        }
+      } catch (err) {
+        console.error('Import error:', err);
+        alert(`❌ Import failed: ${err.message}`);
+      }
+    };
+    input.click();
+  }
+
+  async function generateSampleData() {
+    if (!confirm('Generate 30 days of sample Shopify data?')) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/shopify/generate-sample-data?days=30`, {
+        method: 'POST'
+      });
+      
+      if (!res.ok) {
+        alert(`❌ Generation failed: ${res.status}`);
+        return;
+      }
+      
+      const data = await res.json();
+      alert(`✅ ${data.message}`);
+      loadData();
+    } catch (err) {
+      console.error('Generate error:', err);
+      alert(`❌ Generation failed: ${err.message}`);
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -65,6 +127,38 @@ export default function ShopifyPage() {
       </div>
 
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+          <button 
+            onClick={importShopifyCSV}
+            style={{ 
+              padding: "12px 24px", 
+              background: "#6aa6ff", 
+              color: "#fff", 
+              border: "none", 
+              borderRadius: "8px", 
+              cursor: "pointer",
+              fontWeight: "600"
+            }}
+          >
+            📊 Import Shopify CSV
+          </button>
+          <button 
+            onClick={generateSampleData}
+            style={{ 
+              padding: "12px 24px", 
+              background: "#4ade80", 
+              color: "#000", 
+              border: "none", 
+              borderRadius: "8px", 
+              cursor: "pointer",
+              fontWeight: "600"
+            }}
+          >
+            🎲 Generate Sample Data
+          </button>
+        </div>
+
         {/* Revenue Stats */}
         {dashboard && dashboard.summary && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
@@ -176,11 +270,41 @@ export default function ShopifyPage() {
         )}
 
         {/* Empty State */}
-        {(!dashboard || !dashboard.summary) && (
+        {(!dashboard || !dashboard.summary || dashboard.summary.total_orders === 0) && (
           <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🛍️</div>
             <h3 style={{ marginBottom: "0.5rem", color: "#e9edf2" }}>No Shopify Data Yet</h3>
-            <p style={{ color: "#888" }}>Connect your Shopify store or import sample data to see analytics</p>
+            <p style={{ color: "#888", marginBottom: "1.5rem" }}>Import your Shopify CSV or generate sample data to see analytics</p>
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+              <button 
+                onClick={importShopifyCSV}
+                style={{ 
+                  padding: "12px 24px", 
+                  background: "#6aa6ff", 
+                  color: "#fff", 
+                  border: "none", 
+                  borderRadius: "8px", 
+                  cursor: "pointer",
+                  fontWeight: "600"
+                }}
+              >
+                📊 Import CSV
+              </button>
+              <button 
+                onClick={generateSampleData}
+                style={{ 
+                  padding: "12px 24px", 
+                  background: "#4ade80", 
+                  color: "#000", 
+                  border: "none", 
+                  borderRadius: "8px", 
+                  cursor: "pointer",
+                  fontWeight: "600"
+                }}
+              >
+                🎲 Try Sample Data
+              </button>
+            </div>
           </div>
         )}
       </div>
