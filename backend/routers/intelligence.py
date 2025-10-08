@@ -9,7 +9,7 @@ import PyPDF2
 from anthropic import Anthropic
 
 from ..database import get_db
-from ..models import Intelligence
+from ..models import Intelligence, CompetitorIntel
 
 router = APIRouter()
 
@@ -24,6 +24,26 @@ try:
 except Exception as e:
     client = None
     print(f"[Intelligence] ⚠️ Claude AI not available: {e}")
+
+# Competitor brands to auto-detect
+COMPETITOR_BRANDS = [
+    "supreme", "palace", "bape", "stussy", "diamond supply", "the hundreds",
+    "huf", "obey", "hundreds", "undefeated", "kith", "anti social social club",
+    "assc", "off white", "fear of god", "essentials", "chrome hearts",
+    "purple brand", "true religion", "ed hardy", "affliction", "tap out"
+]
+
+
+def detect_competitor(content: str, url: str = None) -> Optional[str]:
+    """Detect if content is about a competitor brand"""
+    content_lower = content.lower() if content else ""
+    url_lower = url.lower() if url else ""
+    
+    for brand in COMPETITOR_BRANDS:
+        if brand in content_lower or brand in url_lower:
+            return brand.title()
+    
+    return None
 
 
 async def analyze_intelligence(text_content: str, filename: str):
@@ -85,7 +105,7 @@ async def upload_intelligence(
     analyze_with_ai: bool = Form(True),
     db: Session = Depends(get_db)
 ):
-    """Upload intelligence file and analyze with Claude"""
+    """Upload intelligence file and analyze with Claude - auto-feeds to competitive"""
     
     try:
         content = await file.read()
@@ -99,6 +119,7 @@ async def upload_intelligence(
             tag_list = [t.strip() for t in tags.split(',') if t.strip()]
         
         created_count = 0
+        competitor_count = 0
         
         # Handle JSONL files (Apify scrapes)
         if file_extension in ['jsonl', 'json']:
@@ -134,12 +155,13 @@ async def upload_intelligence(
                     try:
                         # Extract title and content from Apify scrape format
                         title = entry.get('title') or entry.get('name') or entry.get('url') or f"Entry {idx}"
+                        url = entry.get('url', '')
                         
                         # Build content from various fields
                         content_parts = []
                         
-                        if entry.get('url'):
-                            content_parts.append(f"URL: {entry['url']}")
+                        if url:
+                            content_parts.append(f"URL: {url}")
                         
                         if entry.get('text'):
                             content_parts.append(entry['text'])
@@ -159,11 +181,14 @@ async def upload_intelligence(
                             print(f"[Intelligence] Entry {idx}: No content, skipping")
                             continue
                         
-                        # Optional AI analysis (can be slow for many entries)
+                        # Detect if this is competitor intelligence
+                        competitor_name = detect_competitor(entry_content, url)
+                        
+                        # Optional AI analysis (only first 5 to save time/cost)
                         ai_summary = None
                         ai_insights = {"raw_data": entry}
                         
-                        if analyze_with_ai and idx <= 5:  # Only analyze first 5 to save time/cost
+                        if analyze_with_ai and idx <= 5:
                             print(f"[Intelligence] Analyzing entry {idx} with AI...")
                             analysis = await analyze_intelligence(entry_content, f"{file.filename} - {title}")
                             ai_summary = analysis.get("summary")
@@ -171,21 +196,38 @@ async def upload_intelligence(
                         
                         # Create intelligence entry
                         intelligence = Intelligence(
-                            title=title[:255],  # Limit title length
-                            content=entry_content[:50000],  # Store up to 50k chars
+                            title=title[:255],
+                            content=entry_content[:50000],
                             source_type="apify_scrape" if 'url' in entry else "json",
-                            category=category or "scrape_data",
+                            category=category or ("competitor" if competitor_name else "scrape_data"),
                             tags=tag_list,
                             ai_summary=ai_summary,
                             ai_insights=ai_insights,
                             sentiment="neutral",
                             priority="medium",
                             status="new",
-                            file_url=entry.get('url')
+                            file_url=url
                         )
                         
                         db.add(intelligence)
                         created_count += 1
+                        
+                        # AUTO-FEED TO COMPETITIVE if competitor detected
+                        if competitor_name:
+                            competitor_intel = CompetitorIntel(
+                                competitor_name=competitor_name,
+                                category="social_media" if "instagram" in url.lower() or "tiktok" in url.lower() else "content",
+                                data_type="social_post" if url else "data",
+                                content=entry_content[:10000],
+                                source_url=url,
+                                sentiment="neutral",
+                                ai_analysis=ai_summary,
+                                priority="medium",
+                                tags=tag_list + ["auto_imported"]
+                            )
+                            db.add(competitor_intel)
+                            competitor_count += 1
+                            print(f"[Intelligence] Entry {idx}: Auto-created competitive intel for {competitor_name}")
                         
                         print(f"[Intelligence] Entry {idx}: Created - {title[:50]}")
                         
@@ -197,8 +239,9 @@ async def upload_intelligence(
                 
                 return {
                     "success": True,
-                    "message": f"✅ Processed {created_count} entries from {file.filename}",
+                    "message": f"✅ Processed {created_count} entries, {competitor_count} auto-fed to competitive intel",
                     "entries_processed": created_count,
+                    "competitor_intel_created": competitor_count,
                     "ai_analyzed": min(created_count, 5) if analyze_with_ai else 0
                 }
             
@@ -219,17 +262,20 @@ async def upload_intelligence(
             else:
                 text_content = content.decode('utf-8', errors='ignore')
             
+            # Detect competitor
+            competitor_name = detect_competitor(text_content)
+            
             # Analyze with Claude
             analysis = None
             if analyze_with_ai:
                 analysis = await analyze_intelligence(text_content, file.filename)
             
-            # Create single intelligence entry
+            # Create intelligence entry
             intelligence = Intelligence(
                 title=file.filename,
                 content=text_content[:50000],
                 source_type=file_extension,
-                category=category or "uploaded_file",
+                category=category or ("competitor" if competitor_name else "uploaded_file"),
                 tags=tag_list,
                 ai_summary=analysis.get("summary") if analysis else None,
                 ai_insights={"analysis": analysis} if analysis else {},
@@ -240,6 +286,23 @@ async def upload_intelligence(
             )
             
             db.add(intelligence)
+            
+            # AUTO-FEED TO COMPETITIVE if competitor detected
+            if competitor_name:
+                competitor_intel = CompetitorIntel(
+                    competitor_name=competitor_name,
+                    category="document",
+                    data_type=file_extension,
+                    content=text_content[:10000],
+                    source_url=f"/uploads/{file.filename}",
+                    sentiment="neutral",
+                    ai_analysis=analysis.get("summary") if analysis else None,
+                    priority="medium",
+                    tags=tag_list + ["auto_imported"]
+                )
+                db.add(competitor_intel)
+                competitor_count = 1
+            
             db.commit()
             db.refresh(intelligence)
             
@@ -248,6 +311,7 @@ async def upload_intelligence(
                 "id": intelligence.id,
                 "title": intelligence.title,
                 "analysis": analysis,
+                "competitor_intel_created": competitor_count,
                 "created_at": intelligence.created_at.isoformat()
             }
         
@@ -328,13 +392,13 @@ def get_intelligence_files(
         "files": [
             {
                 "id": i.id,
-                "filename": i.title,  # Map title to filename
-                "source": i.source_type or "upload",  # Map source_type to source
-                "brand": i.category or "general",  # Map category to brand
-                "size_mb": 0.1,  # Placeholder since we don't track file size
+                "filename": i.title,
+                "source": i.source_type or "upload",
+                "brand": i.category or "general",
+                "size_mb": 0.1,
                 "uploaded_at": i.created_at.isoformat() if i.created_at else None,
-                "status": "processed",  # Always processed since it's in DB
-                "has_analysis": bool(i.ai_summary),  # True if has AI summary
+                "status": "processed",
+                "has_analysis": bool(i.ai_summary),
                 "content": i.content[:200] + "..." if i.content and len(i.content) > 200 else i.content,
                 "tags": i.tags,
                 "sentiment": i.sentiment,
@@ -367,7 +431,7 @@ def get_intelligence_file_detail(file_id: int, db: Session = Depends(get_db)):
                 analysis_data = {
                     "analysis": intel.ai_summary or "No analysis available",
                     "model": analysis_obj.get("model", "unknown"),
-                    "sample_size": 5,  # We analyze first 5 entries
+                    "sample_size": 5,
                     "total_records": 1
                 }
             else:
@@ -521,11 +585,9 @@ def migrate_intelligence_table(db: Session = Depends(get_db)):
     from sqlalchemy import text
     
     try:
-        # Drop old table
         db.execute(text("DROP TABLE IF EXISTS intelligence CASCADE"))
         db.commit()
         
-        # Create new table with correct schema
         db.execute(text("""
             CREATE TABLE intelligence (
                 id SERIAL PRIMARY KEY,
@@ -546,7 +608,6 @@ def migrate_intelligence_table(db: Session = Depends(get_db)):
         """))
         db.commit()
         
-        # Create indexes
         db.execute(text("CREATE INDEX ix_intelligence_id ON intelligence(id)"))
         db.execute(text("CREATE INDEX ix_intelligence_title ON intelligence(title)"))
         db.execute(text("CREATE INDEX ix_intelligence_category ON intelligence(category)"))
