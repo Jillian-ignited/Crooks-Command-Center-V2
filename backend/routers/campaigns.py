@@ -114,160 +114,6 @@ async def create_campaign(
     }
 
 
-@router.get("/{campaign_id}")
-def get_campaign(campaign_id: int, db: Session = Depends(get_db)):
-    """Get detailed campaign information"""
-    
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    return {
-        "id": campaign.id,
-        "name": campaign.name,
-        "description": campaign.description,
-        "status": campaign.status,
-        "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
-        "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
-        "budget": campaign.budget,
-        "target_audience": campaign.target_audience,
-        "channels": campaign.channels,
-        "kpis": campaign.kpis,
-        "ai_suggestions": campaign.ai_suggestions,
-        "created_at": campaign.created_at.isoformat(),
-        "updated_at": campaign.updated_at.isoformat()
-    }
-
-
-@router.put("/{campaign_id}")
-def update_campaign(
-    campaign_id: int,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    status: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    budget: Optional[float] = None,
-    target_audience: Optional[str] = None,
-    channels: Optional[list] = None,
-    kpis: Optional[dict] = None,
-    db: Session = Depends(get_db)
-):
-    """Update campaign details"""
-    
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    if name:
-        campaign.name = name
-    if description:
-        campaign.description = description
-    if status:
-        campaign.status = status
-    if start_date:
-        campaign.start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-    if end_date:
-        campaign.end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-    if budget is not None:
-        campaign.budget = budget
-    if target_audience:
-        campaign.target_audience = target_audience
-    if channels:
-        campaign.channels = channels
-    if kpis:
-        campaign.kpis = kpis
-    
-    campaign.updated_at = datetime.now(timezone.utc)
-    
-    db.commit()
-    db.refresh(campaign)
-    
-    return {"success": True, "campaign_id": campaign.id}
-
-
-@router.post("/{campaign_id}/generate-suggestions")
-async def regenerate_suggestions(
-    campaign_id: int,
-    db: Session = Depends(get_db)
-):
-    """Regenerate AI suggestions for a campaign"""
-    
-    if not openai_client:
-        raise HTTPException(503, "AI service not available")
-    
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(404, "Campaign not found")
-    
-    try:
-        ai_suggestions = await generate_campaign_suggestions(
-            campaign.name,
-            campaign.description,
-            campaign.target_audience,
-            campaign.channels
-        )
-        
-        campaign.ai_suggestions = ai_suggestions
-        campaign.updated_at = datetime.now(timezone.utc)
-        
-        db.commit()
-        db.refresh(campaign)
-        
-        return {
-            "success": True,
-            "ai_suggestions": ai_suggestions
-        }
-        
-    except Exception as e:
-        raise HTTPException(500, f"Failed to generate suggestions: {str(e)}")
-
-
-async def generate_campaign_suggestions(
-    name: str,
-    description: str,
-    target_audience: Optional[str],
-    channels: Optional[list]
-):
-    """Generate AI-powered campaign suggestions using OpenAI"""
-    
-    prompt = f"""You are a streetwear and hip-hop culture marketing expert for Crooks & Castles.
-
-Campaign: {name}
-Description: {description}
-Target Audience: {target_audience or "Urban youth 18-34, hip-hop fans, streetwear collectors, rebels/rulers/creators"}
-Channels: {', '.join(channels) if channels else "Instagram, TikTok, Email"}
-
-Generate creative campaign suggestions for authentic street culture:
-1. 3 content ideas that resonate with hustlers, rebels, and cultural architects
-2. 3 social media post concepts that feel earned, not corporate
-3. Key messaging that honors legacy + authenticity
-4. Hashtag recommendations that signal credibility
-
-Keep suggestions real to the streets. No clout-chasing. Crooks & Castles = heritage, code, loyalty."""
-
-    response = openai_client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a streetwear marketing expert who understands hip-hop culture authenticity."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=1000,
-        temperature=0.7
-    )
-    
-    suggestions_text = response.choices[0].message.content
-    
-    return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "suggestions": suggestions_text,
-        "model": "gpt-4"
-    }
-
-
 @router.get("/cultural-calendar")
 def get_cultural_calendar(
     days_ahead: int = 90,
@@ -443,4 +289,158 @@ def get_cultural_calendar(
             "month": len([e for e in upcoming_events if e["planning_window"] == "month"]),
             "future": len([e for e in upcoming_events if e["planning_window"] == "future"])
         }
+    }
+
+
+@router.get("/{campaign_id}")
+def get_campaign(campaign_id: int, db: Session = Depends(get_db)):
+    """Get detailed campaign information"""
+    
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    
+    return {
+        "id": campaign.id,
+        "name": campaign.name,
+        "description": campaign.description,
+        "status": campaign.status,
+        "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
+        "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
+        "budget": campaign.budget,
+        "target_audience": campaign.target_audience,
+        "channels": campaign.channels,
+        "kpis": campaign.kpis,
+        "ai_suggestions": campaign.ai_suggestions,
+        "created_at": campaign.created_at.isoformat(),
+        "updated_at": campaign.updated_at.isoformat()
+    }
+
+
+@router.put("/{campaign_id}")
+def update_campaign(
+    campaign_id: int,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    status: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    budget: Optional[float] = None,
+    target_audience: Optional[str] = None,
+    channels: Optional[list] = None,
+    kpis: Optional[dict] = None,
+    db: Session = Depends(get_db)
+):
+    """Update campaign details"""
+    
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    
+    if name:
+        campaign.name = name
+    if description:
+        campaign.description = description
+    if status:
+        campaign.status = status
+    if start_date:
+        campaign.start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    if end_date:
+        campaign.end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    if budget is not None:
+        campaign.budget = budget
+    if target_audience:
+        campaign.target_audience = target_audience
+    if channels:
+        campaign.channels = channels
+    if kpis:
+        campaign.kpis = kpis
+    
+    campaign.updated_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    db.refresh(campaign)
+    
+    return {"success": True, "campaign_id": campaign.id}
+
+
+@router.post("/{campaign_id}/generate-suggestions")
+async def regenerate_suggestions(
+    campaign_id: int,
+    db: Session = Depends(get_db)
+):
+    """Regenerate AI suggestions for a campaign"""
+    
+    if not openai_client:
+        raise HTTPException(503, "AI service not available")
+    
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(404, "Campaign not found")
+    
+    try:
+        ai_suggestions = await generate_campaign_suggestions(
+            campaign.name,
+            campaign.description,
+            campaign.target_audience,
+            campaign.channels
+        )
+        
+        campaign.ai_suggestions = ai_suggestions
+        campaign.updated_at = datetime.now(timezone.utc)
+        
+        db.commit()
+        db.refresh(campaign)
+        
+        return {
+            "success": True,
+            "ai_suggestions": ai_suggestions
+        }
+        
+    except Exception as e:
+        raise HTTPException(500, f"Failed to generate suggestions: {str(e)}")
+
+
+async def generate_campaign_suggestions(
+    name: str,
+    description: str,
+    target_audience: Optional[str],
+    channels: Optional[list]
+):
+    """Generate AI-powered campaign suggestions using OpenAI"""
+    
+    prompt = f"""You are a streetwear and hip-hop culture marketing expert for Crooks & Castles.
+
+Campaign: {name}
+Description: {description}
+Target Audience: {target_audience or "Urban youth 18-34, hip-hop fans, streetwear collectors, rebels/rulers/creators"}
+Channels: {', '.join(channels) if channels else "Instagram, TikTok, Email"}
+
+Generate creative campaign suggestions for authentic street culture:
+1. 3 content ideas that resonate with hustlers, rebels, and cultural architects
+2. 3 social media post concepts that feel earned, not corporate
+3. Key messaging that honors legacy + authenticity
+4. Hashtag recommendations that signal credibility
+
+Keep suggestions real to the streets. No clout-chasing. Crooks & Castles = heritage, code, loyalty."""
+
+    response = openai_client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a streetwear marketing expert who understands hip-hop culture authenticity."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=1000,
+        temperature=0.7
+    )
+    
+    suggestions_text = response.choices[0].message.content
+    
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "suggestions": suggestions_text,
+        "model": "gpt-4"
     }
