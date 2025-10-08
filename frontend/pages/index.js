@@ -7,8 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
   );
 
 export default function Dashboard() {
-  const [shopifyData, setShopifyData] = useState(null);
-  const [overview, setOverview] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,14 +18,11 @@ export default function Dashboard() {
     try {
       setLoading(true);
       
-      // Load REAL Shopify data + recent intelligence
-      const [shopifyRes, overviewRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/shopify/dashboard?period=30d`).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE_URL}/executive/overview`).then(r => r.json()).catch(() => null)
-      ]);
+      // Load comprehensive summary from new endpoint
+      const res = await fetch(`${API_BASE_URL}/summary/dashboard`);
+      const data = await res.json();
       
-      setShopifyData(shopifyRes);
-      setOverview(overviewRes);
+      setSummary(data);
     } catch (err) {
       console.error("Failed to load dashboard:", err);
     } finally {
@@ -39,161 +35,133 @@ export default function Dashboard() {
       <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>
-          <div>Loading dashboard...</div>
+          <div>Loading command center...</div>
         </div>
       </div>
     );
   }
 
-  // Check if we have ANY Shopify data (revenue OR sessions)
-  const hasShopifyData = shopifyData && (
-    (shopifyData.revenue && shopifyData.revenue.current > 0) ||
-    (shopifyData.sessions && shopifyData.sessions.current > 0) ||
-    (shopifyData.orders && shopifyData.orders.current > 0)
-  );
+  const shopify = summary?.shopify || {};
+  const hasShopifyData = shopify.total_orders > 0 || shopify.total_revenue > 0;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2", padding: "2rem" }}>
       <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
-          <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem", color: "#e9edf2" }}>Crooks Command Center</h1>
+          <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem", color: "#e9edf2" }}>
+            Crooks Command Center
+          </h1>
           <p style={{ color: "#888" }}>Intelligence-driven brand management for Crooks & Castles</p>
         </div>
 
-        {/* Key Metrics - REAL DATA */}
+        {/* AI Insights Banner */}
+        {summary?.insights && summary.insights.length > 0 && (
+          <div style={{ marginBottom: "2rem" }}>
+            {summary.insights.map((insight, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: insight.type === 'alert' ? '#2a1a1a' : insight.type === 'positive' ? '#1a2a1a' : '#1a1a2a',
+                  border: `1px solid ${insight.type === 'alert' ? '#ef4444' : insight.type === 'positive' ? '#4ade80' : '#6aa6ff'}`,
+                  padding: "1rem",
+                  borderRadius: "12px",
+                  marginBottom: "0.5rem"
+                }}
+              >
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "0.5rem",
+                  marginBottom: "0.25rem"
+                }}>
+                  <span style={{ fontSize: "1.2rem" }}>
+                    {insight.type === 'alert' ? '⚠️' : insight.type === 'positive' ? '✅' : 'ℹ️'}
+                  </span>
+                  <strong style={{ color: "#e9edf2" }}>{insight.title}</strong>
+                </div>
+                <div style={{ color: "#a1a8b3", fontSize: "0.9rem", marginLeft: "1.7rem" }}>
+                  {insight.description}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Key Metrics - Shopify Performance */}
         {hasShopifyData ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-            {/* Revenue */}
-            {shopifyData.revenue && shopifyData.revenue.current > 0 && (
+          <>
+            <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem", color: "#e9edf2" }}>
+              📊 Performance ({shopify.period})
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+              {/* Revenue */}
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                  <div style={{ color: "#888", fontSize: "0.9rem" }}>💰 Revenue (30d)</div>
-                  {shopifyData.revenue.growth !== 0 && (
+                  <div style={{ color: "#888", fontSize: "0.9rem" }}>💰 Revenue</div>
+                  {shopify.revenue_change_percent !== 0 && (
                     <span style={{ 
                       fontSize: "0.85rem", 
-                      color: shopifyData.revenue.growth > 0 ? "#4ade80" : "#ff6b6b",
-                      background: shopifyData.revenue.growth > 0 ? "#1a2a1a" : "#2a1a1a",
+                      color: shopify.revenue_change_percent > 0 ? "#4ade80" : "#ff6b6b",
+                      background: shopify.revenue_change_percent > 0 ? "#1a2a1a" : "#2a1a1a",
                       padding: "2px 8px",
                       borderRadius: "12px"
                     }}>
-                      {shopifyData.revenue.growth > 0 ? "↑" : "↓"} {Math.abs(shopifyData.revenue.growth)}%
+                      {shopify.revenue_change_percent > 0 ? "↑" : "↓"} {Math.abs(shopify.revenue_change_percent)}%
                     </span>
                   )}
                 </div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>
-                  ${shopifyData.revenue.current.toLocaleString()}
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.5rem" }}>
-                  vs ${shopifyData.revenue.previous.toLocaleString()} prev period
+                  ${shopify.total_revenue?.toLocaleString() || 0}
                 </div>
               </div>
-            )}
 
-            {/* Orders */}
-            {shopifyData.orders && shopifyData.orders.current > 0 && (
+              {/* Orders */}
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                   <div style={{ color: "#888", fontSize: "0.9rem" }}>📦 Orders</div>
-                  {shopifyData.orders.growth !== 0 && (
+                  {shopify.orders_change_percent !== 0 && (
                     <span style={{ 
                       fontSize: "0.85rem", 
-                      color: shopifyData.orders.growth > 0 ? "#4ade80" : "#ff6b6b",
-                      background: shopifyData.orders.growth > 0 ? "#1a2a1a" : "#2a1a1a",
+                      color: shopify.orders_change_percent > 0 ? "#4ade80" : "#ff6b6b",
+                      background: shopify.orders_change_percent > 0 ? "#1a2a1a" : "#2a1a1a",
                       padding: "2px 8px",
                       borderRadius: "12px"
                     }}>
-                      {shopifyData.orders.growth > 0 ? "↑" : "↓"} {Math.abs(shopifyData.orders.growth)}%
+                      {shopify.orders_change_percent > 0 ? "↑" : "↓"} {Math.abs(shopify.orders_change_percent)}%
                     </span>
                   )}
                 </div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>
-                  {shopifyData.orders.current.toLocaleString()}
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.5rem" }}>
-                  vs {shopifyData.orders.previous.toLocaleString()} prev period
+                  {shopify.total_orders?.toLocaleString() || 0}
                 </div>
               </div>
-            )}
 
-            {/* AOV */}
-            {shopifyData.avg_order_value && shopifyData.avg_order_value.current > 0 && (
+              {/* AOV */}
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                  <div style={{ color: "#888", fontSize: "0.9rem" }}>💵 Avg Order Value</div>
-                  {shopifyData.avg_order_value.growth !== 0 && (
-                    <span style={{ 
-                      fontSize: "0.85rem", 
-                      color: shopifyData.avg_order_value.growth > 0 ? "#4ade80" : "#ff6b6b",
-                      background: shopifyData.avg_order_value.growth > 0 ? "#1a2a1a" : "#2a1a1a",
-                      padding: "2px 8px",
-                      borderRadius: "12px"
-                    }}>
-                      {shopifyData.avg_order_value.growth > 0 ? "↑" : "↓"} {Math.abs(shopifyData.avg_order_value.growth)}%
-                    </span>
-                  )}
-                </div>
+                <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "1rem" }}>💵 Avg Order Value</div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>
-                  ${shopifyData.avg_order_value.current.toLocaleString()}
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.5rem" }}>
-                  vs ${shopifyData.avg_order_value.previous.toLocaleString()} prev period
+                  ${shopify.avg_order_value?.toLocaleString() || 0}
                 </div>
               </div>
-            )}
 
-            {/* Sessions */}
-            {shopifyData.sessions && shopifyData.sessions.current > 0 && (
+              {/* Sessions */}
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                  <div style={{ color: "#888", fontSize: "0.9rem" }}>👁️ Sessions</div>
-                  {shopifyData.sessions.growth !== 0 && (
-                    <span style={{ 
-                      fontSize: "0.85rem", 
-                      color: shopifyData.sessions.growth > 0 ? "#4ade80" : "#ff6b6b",
-                      background: shopifyData.sessions.growth > 0 ? "#1a2a1a" : "#2a1a1a",
-                      padding: "2px 8px",
-                      borderRadius: "12px"
-                    }}>
-                      {shopifyData.sessions.growth > 0 ? "↑" : "↓"} {Math.abs(shopifyData.sessions.growth)}%
-                    </span>
-                  )}
-                </div>
+                <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "1rem" }}>👁️ Sessions</div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>
-                  {shopifyData.sessions.current.toLocaleString()}
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.5rem" }}>
-                  vs {shopifyData.sessions.previous.toLocaleString()} prev period
+                  {shopify.total_sessions?.toLocaleString() || 0}
                 </div>
               </div>
-            )}
 
-            {/* Conversion Rate */}
-            {shopifyData.conversion_rate && shopifyData.conversion_rate.current > 0 && (
+              {/* Conversion Rate */}
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                  <div style={{ color: "#888", fontSize: "0.9rem" }}>📈 Conversion Rate</div>
-                  {shopifyData.conversion_rate.growth !== 0 && (
-                    <span style={{ 
-                      fontSize: "0.85rem", 
-                      color: shopifyData.conversion_rate.growth > 0 ? "#4ade80" : "#ff6b6b",
-                      background: shopifyData.conversion_rate.growth > 0 ? "#1a2a1a" : "#2a1a1a",
-                      padding: "2px 8px",
-                      borderRadius: "12px"
-                    }}>
-                      {shopifyData.conversion_rate.growth > 0 ? "↑" : "↓"} {Math.abs(shopifyData.conversion_rate.growth)}%
-                    </span>
-                  )}
-                </div>
+                <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "1rem" }}>📈 Conversion Rate</div>
                 <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>
-                  {shopifyData.conversion_rate.current}%
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.5rem" }}>
-                  vs {shopifyData.conversion_rate.previous}% prev period
+                  {shopify.avg_conversion_rate?.toFixed(2) || 0}%
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          </>
         ) : (
           <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", marginBottom: "2rem", textAlign: "center", border: "1px solid #2a2a2a" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📊</div>
@@ -205,41 +173,236 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Two Column Layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+        {/* Three Column Layout */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
+          {/* Intelligence Module */}
+          <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ color: "#e9edf2", fontSize: "1.1rem" }}>📊 Intelligence</h3>
+              <span style={{ 
+                background: "#2a2a3a", 
+                color: "#6aa6ff", 
+                padding: "4px 12px", 
+                borderRadius: "12px",
+                fontSize: "0.9rem",
+                fontWeight: "600"
+              }}>
+                {summary?.intelligence?.total_entries || 0}
+              </span>
+            </div>
+            
+            {summary?.intelligence?.by_category && Object.keys(summary.intelligence.by_category).length > 0 ? (
+              <div style={{ marginBottom: "1rem" }}>
+                {Object.entries(summary.intelligence.by_category).map(([cat, count]) => (
+                  <div key={cat} style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between",
+                    padding: "0.5rem 0",
+                    borderBottom: "1px solid #2a2a2a"
+                  }}>
+                    <span style={{ color: "#a1a8b3", textTransform: "capitalize" }}>{cat}</span>
+                    <span style={{ color: "#6aa6ff", fontWeight: "600" }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: "#666", fontSize: "0.9rem" }}>No intelligence files yet</p>
+            )}
+            
+            <a href="/intelligence" style={{ 
+              display: "block", 
+              textAlign: "center",
+              padding: "0.75rem", 
+              background: "#2a2a3a", 
+              color: "#6aa6ff",
+              borderRadius: "8px",
+              textDecoration: "none",
+              marginTop: "1rem",
+              fontSize: "0.9rem",
+              fontWeight: "600"
+            }}>
+              View All →
+            </a>
+          </div>
+
+          {/* Competitive Module */}
+          <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ color: "#e9edf2", fontSize: "1.1rem" }}>🎯 Competitive</h3>
+              <span style={{ 
+                background: "#2a2a3a", 
+                color: "#6aa6ff", 
+                padding: "4px 12px", 
+                borderRadius: "12px",
+                fontSize: "0.9rem",
+                fontWeight: "600"
+              }}>
+                {summary?.competitive?.total_competitors || 0}
+              </span>
+            </div>
+            
+            {summary?.competitive?.total_intel_entries > 0 ? (
+              <>
+                <div style={{ marginBottom: "1rem" }}>
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between",
+                    padding: "0.5rem 0",
+                    borderBottom: "1px solid #2a2a2a"
+                  }}>
+                    <span style={{ color: "#a1a8b3" }}>Total Intel</span>
+                    <span style={{ color: "#6aa6ff", fontWeight: "600" }}>
+                      {summary.competitive.total_intel_entries}
+                    </span>
+                  </div>
+                  
+                  {summary?.competitive?.by_category && Object.entries(summary.competitive.by_category).map(([cat, count]) => (
+                    <div key={cat} style={{ 
+                      display: "flex", 
+                      justifyContent: "space-between",
+                      padding: "0.5rem 0",
+                      borderBottom: "1px solid #2a2a2a"
+                    }}>
+                      <span style={{ color: "#a1a8b3", textTransform: "capitalize" }}>{cat}</span>
+                      <span style={{ color: "#6aa6ff", fontWeight: "600" }}>{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p style={{ color: "#666", fontSize: "0.9rem" }}>No competitive intel yet</p>
+            )}
+            
+            <a href="/competitive" style={{ 
+              display: "block", 
+              textAlign: "center",
+              padding: "0.75rem", 
+              background: "#2a2a3a", 
+              color: "#6aa6ff",
+              borderRadius: "8px",
+              textDecoration: "none",
+              marginTop: "1rem",
+              fontSize: "0.9rem",
+              fontWeight: "600"
+            }}>
+              View Intel →
+            </a>
+          </div>
+
+          {/* Agency Deliverables */}
+          <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3 style={{ color: "#e9edf2", fontSize: "1.1rem" }}>📋 Deliverables</h3>
+              {summary?.agency?.overdue > 0 && (
+                <span style={{ 
+                  background: "#2a1a1a", 
+                  color: "#ef4444", 
+                  padding: "4px 12px", 
+                  borderRadius: "12px",
+                  fontSize: "0.9rem",
+                  fontWeight: "600"
+                }}>
+                  {summary.agency.overdue} overdue
+                </span>
+              )}
+            </div>
+            
+            {summary?.agency?.total_deliverables > 0 ? (
+              <div style={{ marginBottom: "1rem" }}>
+                {summary?.agency?.by_status && Object.entries(summary.agency.by_status).map(([status, count]) => (
+                  <div key={status} style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between",
+                    padding: "0.5rem 0",
+                    borderBottom: "1px solid #2a2a2a"
+                  }}>
+                    <span style={{ color: "#a1a8b3", textTransform: "capitalize" }}>
+                      {status.replace('_', ' ')}
+                    </span>
+                    <span style={{ 
+                      color: status === 'completed' ? '#4ade80' : '#6aa6ff', 
+                      fontWeight: "600" 
+                    }}>
+                      {count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: "#666", fontSize: "0.9rem" }}>No deliverables tracked yet</p>
+            )}
+            
+            <a href="/deliverables" style={{ 
+              display: "block", 
+              textAlign: "center",
+              padding: "0.75rem", 
+              background: "#2a2a3a", 
+              color: "#6aa6ff",
+              borderRadius: "8px",
+              textDecoration: "none",
+              marginTop: "1rem",
+              fontSize: "0.9rem",
+              fontWeight: "600"
+            }}>
+              Manage →
+            </a>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
           {/* Recent Intelligence */}
           <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-            <h2 style={{ marginBottom: "1rem", color: "#e9edf2", fontSize: "1.25rem" }}>📊 Recent Intelligence</h2>
-            {overview && overview.recent_files && overview.recent_files.length > 0 ? (
-              overview.recent_files.map(f => (
-                <div key={f.id} style={{ padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem" }}>
-                  <div style={{ fontWeight: "600", color: "#e9edf2" }}>{f.filename}</div>
-                  <div style={{ fontSize: "0.85rem", color: "#888" }}>{f.source}</div>
+            <h3 style={{ marginBottom: "1rem", color: "#e9edf2", fontSize: "1.1rem" }}>
+              📊 Recent Intelligence
+            </h3>
+            {summary?.intelligence?.recent && summary.intelligence.recent.length > 0 ? (
+              summary.intelligence.recent.map(item => (
+                <div key={item.id} style={{ 
+                  padding: "0.75rem", 
+                  background: "#0a0b0d", 
+                  borderRadius: "8px", 
+                  marginBottom: "0.5rem",
+                  border: "1px solid #2a2a2a"
+                }}>
+                  <div style={{ fontWeight: "600", color: "#e9edf2", marginBottom: "0.25rem" }}>
+                    {item.title}
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#888" }}>
+                    {item.category} • {new Date(item.created_at).toLocaleDateString()}
+                  </div>
                 </div>
               ))
             ) : (
-              <p style={{ color: "#888" }}>No intelligence files uploaded yet</p>
+              <p style={{ color: "#666" }}>No recent intelligence</p>
             )}
           </div>
 
-          {/* Quick Actions */}
+          {/* Upcoming Due */}
           <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-            <h2 style={{ marginBottom: "1rem", color: "#e9edf2", fontSize: "1.25rem" }}>⚡ Quick Actions</h2>
-            <a href="/upload" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
-              <div>📤 Upload Intelligence</div>
-            </a>
-            <a href="/intelligence" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
-              <div>📊 View Files</div>
-            </a>
-            <a href="/campaigns" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
-              <div>🎯 Campaigns</div>
-            </a>
-            <a href="/deliverables" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", marginBottom: "0.5rem", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
-              <div>📋 Deliverables</div>
-            </a>
-            <a href="/shopify" style={{ display: "block", padding: "1rem", background: "#0a0b0d", borderRadius: "6px", textDecoration: "none", color: "#e9edf2", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#1a1a2a"} onMouseLeave={e => e.currentTarget.style.background = "#0a0b0d"}>
-              <div>🛍️ Shopify</div>
-            </a>
+            <h3 style={{ marginBottom: "1rem", color: "#e9edf2", fontSize: "1.1rem" }}>
+              ⏰ Upcoming Deliverables
+            </h3>
+            {summary?.agency?.upcoming_due && summary.agency.upcoming_due.length > 0 ? (
+              summary.agency.upcoming_due.map(item => (
+                <div key={item.id} style={{ 
+                  padding: "0.75rem", 
+                  background: "#0a0b0d", 
+                  borderRadius: "8px", 
+                  marginBottom: "0.5rem",
+                  border: "1px solid #2a2a2a"
+                }}>
+                  <div style={{ fontWeight: "600", color: "#e9edf2", marginBottom: "0.25rem" }}>
+                    {item.title}
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#888" }}>
+                    Due: {new Date(item.due_date).toLocaleDateString()}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: "#666" }}>No upcoming deliverables</p>
+            )}
           </div>
         </div>
       </div>
