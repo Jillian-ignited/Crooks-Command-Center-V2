@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
 
-from .routers import intelligence, campaigns, deliverables, executive, shopify, competitive
+from .routers import intelligence, campaigns, deliverables, executive, shopify, competitive, migrations  # ADD migrations
 from .database import engine, get_db
 from .models import Base
 
@@ -16,7 +16,7 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS Configuration - Allow Netlify and other frontends
+# CORS Configuration
 ALLOWED_ORIGINS = [
     "https://crookscommandcenter.netlify.app",
     "http://crookscommandcenter.netlify.app",
@@ -34,7 +34,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=3600,  # Cache preflight requests for 1 hour
+    max_age=3600,
 )
 
 # Include routers
@@ -44,6 +44,7 @@ app.include_router(deliverables.router, prefix="/api/deliverables", tags=["deliv
 app.include_router(executive.router, prefix="/api/executive", tags=["executive"])
 app.include_router(shopify.router, prefix="/api/shopify", tags=["shopify"])
 app.include_router(competitive.router, prefix="/api/competitive", tags=["competitive"])
+app.include_router(migrations.router, prefix="/api", tags=["migrations"])  # ADD THIS
 
 
 @app.on_event("startup")
@@ -90,6 +91,7 @@ def api_root():
             "executive": "/api/executive",
             "shopify": "/api/shopify",
             "competitive": "/api/competitive",
+            "migrations": "/api/migrate-all-tables",
             "docs": "/docs"
         }
     }
