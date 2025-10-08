@@ -300,6 +300,8 @@ def get_intelligence(
         "limit": limit,
         "offset": offset
     }
+
+
 @router.get("/files")
 def get_intelligence_files(
     category: Optional[str] = None,
@@ -308,8 +310,99 @@ def get_intelligence_files(
     offset: int = 0,
     db: Session = Depends(get_db)
 ):
-    """Get all intelligence files - alias for root endpoint"""
-    return get_intelligence(category=category, status=status, limit=limit, offset=offset, db=db)
+    """Get all intelligence files - frontend-compatible format"""
+    
+    query = db.query(Intelligence)
+    
+    if category:
+        query = query.filter(Intelligence.category == category)
+    
+    if status:
+        query = query.filter(Intelligence.status == status)
+    
+    total = query.count()
+    items = query.order_by(desc(Intelligence.created_at)).limit(limit).offset(offset).all()
+    
+    # Map to frontend expected format
+    return {
+        "files": [
+            {
+                "id": i.id,
+                "filename": i.title,  # Map title to filename
+                "source": i.source_type or "upload",  # Map source_type to source
+                "brand": i.category or "general",  # Map category to brand
+                "size_mb": 0.1,  # Placeholder since we don't track file size
+                "uploaded_at": i.created_at.isoformat() if i.created_at else None,
+                "status": "processed",  # Always processed since it's in DB
+                "has_analysis": bool(i.ai_summary),  # True if has AI summary
+                "content": i.content[:200] + "..." if i.content and len(i.content) > 200 else i.content,
+                "tags": i.tags,
+                "sentiment": i.sentiment,
+                "priority": i.priority,
+                "file_url": i.file_url
+            }
+            for i in items
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+@router.get("/files/{file_id}")
+def get_intelligence_file_detail(file_id: int, db: Session = Depends(get_db)):
+    """Get detailed intelligence file - frontend-compatible format"""
+    
+    intel = db.query(Intelligence).filter(Intelligence.id == file_id).first()
+    
+    if not intel:
+        raise HTTPException(404, "Intelligence file not found")
+    
+    # Extract analysis data
+    analysis_data = {}
+    if intel.ai_insights:
+        if isinstance(intel.ai_insights, dict):
+            analysis_obj = intel.ai_insights.get("analysis", {})
+            if isinstance(analysis_obj, dict):
+                analysis_data = {
+                    "analysis": intel.ai_summary or "No analysis available",
+                    "model": analysis_obj.get("model", "unknown"),
+                    "sample_size": 5,  # We analyze first 5 entries
+                    "total_records": 1
+                }
+            else:
+                analysis_data = {
+                    "analysis": intel.ai_summary or "No analysis available",
+                    "model": "unknown",
+                    "sample_size": 1,
+                    "total_records": 1
+                }
+        else:
+            analysis_data = {
+                "analysis": intel.ai_summary or "No analysis available",
+                "model": "unknown"
+            }
+    elif intel.ai_summary:
+        analysis_data = {
+            "analysis": intel.ai_summary,
+            "model": "claude-sonnet-4-20250514"
+        }
+    
+    return {
+        "id": intel.id,
+        "filename": intel.title,
+        "source": intel.source_type or "upload",
+        "brand": intel.category or "general",
+        "size_mb": 0.1,
+        "uploaded_at": intel.created_at.isoformat(),
+        "status": "processed",
+        "has_analysis": bool(intel.ai_summary),
+        "analysis": analysis_data,
+        "content": intel.content,
+        "tags": intel.tags,
+        "file_url": intel.file_url
+    }
+
 
 @router.get("/{intelligence_id}")
 def get_intelligence_detail(intelligence_id: int, db: Session = Depends(get_db)):
