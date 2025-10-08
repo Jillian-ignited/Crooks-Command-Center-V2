@@ -69,9 +69,10 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     ).all()
     
     prev_revenue = sum(m.total_revenue for m in previous_metrics if m.total_revenue)
-    revenue_change = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
-    
     prev_orders = sum(m.total_orders for m in previous_metrics if m.total_orders)
+    
+    # Avoid division by zero - if no previous data, show 0% change
+    revenue_change = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
     orders_change = ((total_orders - prev_orders) / prev_orders * 100) if prev_orders > 0 else 0
     
     # Deliverables Status
@@ -266,6 +267,52 @@ def get_competitive_landscape(db: Session = Depends(get_db)):
     return {
         "total_competitors": len(competitors),
         "landscape": landscape
+    }
+
+@router.get("/debug-shopify-data")
+def debug_shopify_data(db: Session = Depends(get_db)):
+    """Debug: See what Shopify data exists in database"""
+    
+    from datetime import datetime, timedelta, timezone
+    
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=60)
+    
+    # Current period (last 30 days)
+    current_metrics = db.query(ShopifyMetric).filter(
+        ShopifyMetric.period_start >= thirty_days_ago
+    ).order_by(ShopifyMetric.period_start).all()
+    
+    # Previous period (60-30 days ago)
+    previous_metrics = db.query(ShopifyMetric).filter(
+        ShopifyMetric.period_start >= sixty_days_ago,
+        ShopifyMetric.period_start < thirty_days_ago
+    ).order_by(ShopifyMetric.period_start).all()
+    
+    current_revenue = sum(m.total_revenue for m in current_metrics if m.total_revenue)
+    previous_revenue = sum(m.total_revenue for m in previous_metrics if m.total_revenue)
+    
+    return {
+        "current_period": {
+            "start": thirty_days_ago.isoformat(),
+            "end": datetime.now(timezone.utc).isoformat(),
+            "record_count": len(current_metrics),
+            "total_revenue": round(current_revenue, 2),
+            "dates": [m.period_start.strftime('%Y-%m-%d') for m in current_metrics[:5]]
+        },
+        "previous_period": {
+            "start": sixty_days_ago.isoformat(),
+            "end": thirty_days_ago.isoformat(),
+            "record_count": len(previous_metrics),
+            "total_revenue": round(previous_revenue, 2),
+            "dates": [m.period_start.strftime('%Y-%m-%d') for m in previous_metrics[:5]]
+        },
+        "calculation": {
+            "current_revenue": round(current_revenue, 2),
+            "previous_revenue": round(previous_revenue, 2),
+            "difference": round(current_revenue - previous_revenue, 2),
+            "change_percent": round(((current_revenue - previous_revenue) / previous_revenue * 100), 2) if previous_revenue > 0 else "No previous data"
+        }
     }
 
 @router.get("/content-readiness")
