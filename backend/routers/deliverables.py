@@ -831,3 +831,53 @@ def get_overdue_deliverables(db: Session = Depends(get_db)):
         ],
         "total": len(deliverables)
     }
+@router.post("/migrate-table")
+def migrate_deliverables_table(db: Session = Depends(get_db)):
+    """DANGER: Recreate deliverables table - will delete all data!"""
+    
+    from sqlalchemy import text
+    
+    try:
+        # Drop old table
+        db.execute(text("DROP TABLE IF EXISTS deliverables CASCADE"))
+        db.commit()
+        
+        # Create new table with correct schema
+        db.execute(text("""
+            CREATE TABLE deliverables (
+                id SERIAL PRIMARY KEY,
+                campaign_id INTEGER REFERENCES campaigns(id),
+                title VARCHAR NOT NULL,
+                description TEXT,
+                type VARCHAR,
+                deliverable_type VARCHAR DEFAULT 'agency_output',
+                status VARCHAR DEFAULT 'not_started',
+                priority VARCHAR DEFAULT 'medium',
+                assigned_to VARCHAR,
+                due_date TIMESTAMP WITH TIME ZONE,
+                completed_at TIMESTAMP WITH TIME ZONE,
+                phase VARCHAR,
+                dependencies JSONB,
+                blocks JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+        
+        # Create indexes
+        db.execute(text("CREATE INDEX ix_deliverables_id ON deliverables(id)"))
+        db.execute(text("CREATE INDEX ix_deliverables_title ON deliverables(title)"))
+        db.execute(text("CREATE INDEX ix_deliverables_phase ON deliverables(phase)"))
+        db.execute(text("CREATE INDEX ix_deliverables_status ON deliverables(status)"))
+        db.execute(text("CREATE INDEX ix_deliverables_deliverable_type ON deliverables(deliverable_type)"))
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "✅ Deliverables table recreated successfully! Ready to import CSV and generate brand inputs."
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Migration failed: {str(e)}")
