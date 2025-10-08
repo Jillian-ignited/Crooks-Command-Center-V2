@@ -447,3 +447,55 @@ def get_overdue_deliverables(db: Session = Depends(get_db)):
             for d in deliverables
         ]
     }
+@router.post("/import-agency-csv")
+async def import_agency_deliverables_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import agency deliverables from CSV"""
+    
+    try:
+        contents = await file.read()
+        decoded = contents.decode('utf-8')
+        
+        import csv
+        from io import StringIO
+        
+        csv_file = StringIO(decoded)
+        reader = csv.DictReader(csv_file)
+        
+        created = 0
+        for row in reader:
+            # Parse due date
+            due_date = None
+            if row.get('Due Date'):
+                try:
+                    due_date = datetime.strptime(row['Due Date'], '%Y-%m-%d')
+                except:
+                    pass
+            
+            # Create deliverable
+            deliverable = Deliverable(
+                title=row.get('Task', ''),
+                description=f"Phase: {row.get('Phase', '')}\nCategory: {row.get('Category', '')}",
+                type=row.get('Category', 'other').lower().replace(' ', '_').replace('&', 'and'),
+                deliverable_type="agency_output",  # These are what HVA delivers
+                status=row.get('Status', 'Not Started').lower().replace(' ', '_'),
+                phase=row.get('Phase', ''),
+                assigned_to=row.get('Owner', None) if row.get('Owner') else None,
+                due_date=due_date,
+                priority="high" if "BFCM" in row.get('Task', '') or "holiday" in row.get('Task', '') else "medium"
+            )
+            
+            db.add(deliverable)
+            created += 1
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Imported {created} agency deliverables"
+        }
+        
+    except Exception as e:
+        raise HTTPException(500, f"Import failed: {str(e)}")
