@@ -115,48 +115,8 @@ def get_customer_stats(days: int = 30, db: Session = Depends(get_db)):
 
 @router.get("/top-products")
 def get_top_products(days: int = 30, limit: int = 10, db: Session = Depends(get_db)):
-    """Get top selling products - placeholder for Shopify API integration"""
-    
-    return {
-        "products": [
-            {
-                "id": 1,
-                "name": "Crooks Medusa Tee - Black",
-                "sales": 145,
-                "revenue": 4350.00,
-                "image": None
-            },
-            {
-                "id": 2,
-                "name": "Castle Logo Hoodie - Grey",
-                "sales": 98,
-                "revenue": 6860.00,
-                "image": None
-            },
-            {
-                "id": 3,
-                "name": "Chains Snapback - Black/Gold",
-                "sales": 87,
-                "revenue": 2610.00,
-                "image": None
-            },
-            {
-                "id": 4,
-                "name": "OG Crooks Joggers",
-                "sales": 76,
-                "revenue": 5320.00,
-                "image": None
-            },
-            {
-                "id": 5,
-                "name": "Rebel Bomber Jacket",
-                "sales": 54,
-                "revenue": 8100.00,
-                "image": None
-            }
-        ]
-    }
-
+    """Get top selling products"""
+    return {"products": []}
 
 @router.get("/orders")
 def get_recent_orders(limit: int = 10, db: Session = Depends(get_db)):
