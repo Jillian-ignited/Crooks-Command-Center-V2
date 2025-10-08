@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = '/api';
+const API_BASE = 'https://crooks-command-center-v2.onrender.com/api';
 
 export default function ShopifyPage() {
   const [metrics, setMetrics] = useState(null);
