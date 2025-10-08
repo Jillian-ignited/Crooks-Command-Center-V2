@@ -9,69 +9,30 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState([]);
-  const [culturalMoments, setCulturalMoments] = useState([]);
-  const [selectedCampaign, setSelectedCampaign] = useState(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [calendar, setCalendar] = useState(null);
+  const [activeTab, setActiveTab] = useState("calendar"); // calendar, campaigns, create
+  const [timeFilter, setTimeFilter] = useState(90); // 7, 30, 60, 90 days
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("campaigns"); // campaigns, calendar, create
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [timeFilter]);
 
   async function loadData() {
     try {
       setLoading(true);
       const [campaignsRes, calendarRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/campaigns/`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/campaigns/cultural-calendar?days_ahead=90`).then(r => r.json())
+        fetch(`${API_BASE_URL}/campaigns/`).then(r => r.json()).catch(() => ({ campaigns: [] })),
+        fetch(`${API_BASE_URL}/campaigns/cultural-calendar?days_ahead=${timeFilter}`).then(r => r.json()).catch(() => null)
       ]);
       
       setCampaigns(campaignsRes.campaigns || []);
-      setCulturalMoments(calendarRes.by_timeframe?.next_30_days || []);
+      setCalendar(calendarRes);
     } catch (err) {
-      console.error("Failed to load:", err);
+      console.error("Failed to load campaigns:", err);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleCreateCampaign(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          name: formData.get('name'),
-          description: formData.get('description'),
-          theme: formData.get('theme'),
-          launch_date: formData.get('launch_date'),
-          cultural_moment: formData.get('cultural_moment'),
-          target_audience: formData.get('target_audience'),
-          generate_suggestions: 'true'
-        })
-      });
-      
-      if (response.ok) {
-        setShowCreateForm(false);
-        loadData();
-        alert('Campaign created with AI suggestions!');
-      }
-    } catch (err) {
-      alert('Failed to create campaign');
-    }
-  }
-
-  async function viewCampaign(campaignId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`);
-      const data = await response.json();
-      setSelectedCampaign(data);
-    } catch (err) {
-      console.error("Failed to load campaign:", err);
     }
   }
 
@@ -86,14 +47,28 @@ export default function CampaignsPage() {
     );
   }
 
+  // Filter events by category
+  const filteredEvents = calendar?.events?.filter(e => 
+    categoryFilter === "all" || e.category === categoryFilter
+  ) || [];
+
+  // Group events by planning window
+  const groupedEvents = {
+    immediate: filteredEvents.filter(e => e.planning_window === "immediate"),
+    week: filteredEvents.filter(e => e.planning_window === "week"),
+    two_weeks: filteredEvents.filter(e => e.planning_window === "two_weeks"),
+    month: filteredEvents.filter(e => e.planning_window === "month"),
+    future: filteredEvents.filter(e => e.planning_window === "future")
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2" }}>
       {/* Header */}
       <div style={{ background: "#1a1a1a", padding: "1.5rem 2rem", borderBottom: "1px solid #2a2a2a" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>🎯 Campaigns</h1>
-            <p style={{ color: "#888", fontSize: "0.95rem" }}>Plan culturally relevant campaigns with AI-powered content suggestions</p>
+            <h1 style={{ fontSize: "1.75rem", marginBottom: "0.5rem", color: "#e9edf2" }}>🎯 Campaigns & Cultural Calendar</h1>
+            <p style={{ color: "#888", fontSize: "0.95rem" }}>Plan campaigns around authentic street culture moments</p>
           </div>
           <Link href="/" style={{ color: "#6aa6ff", textDecoration: "none" }}>← Back to Dashboard</Link>
         </div>
@@ -102,207 +77,312 @@ export default function CampaignsPage() {
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
         {/* Tabs */}
         <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid #2a2a2a" }}>
-          <button onClick={() => setActiveTab("campaigns")} style={{ padding: "1rem 1.5rem", background: "none", border: "none", color: activeTab === "campaigns" ? "#6aa6ff" : "#888", borderBottom: activeTab === "campaigns" ? "2px solid #6aa6ff" : "none", cursor: "pointer", fontSize: "1rem" }}>
-            📋 My Campaigns ({campaigns.length})
-          </button>
           <button onClick={() => setActiveTab("calendar")} style={{ padding: "1rem 1.5rem", background: "none", border: "none", color: activeTab === "calendar" ? "#6aa6ff" : "#888", borderBottom: activeTab === "calendar" ? "2px solid #6aa6ff" : "none", cursor: "pointer", fontSize: "1rem" }}>
             📅 Cultural Calendar
           </button>
-          <button onClick={() => { setActiveTab("create"); setShowCreateForm(true); }} style={{ padding: "1rem 1.5rem", background: "none", border: "none", color: activeTab === "create" ? "#6aa6ff" : "#888", borderBottom: activeTab === "create" ? "2px solid #6aa6ff" : "none", cursor: "pointer", fontSize: "1rem" }}>
-            ➕ Create Campaign
+          <button onClick={() => setActiveTab("campaigns")} style={{ padding: "1rem 1.5rem", background: "none", border: "none", color: activeTab === "campaigns" ? "#6aa6ff" : "#888", borderBottom: activeTab === "campaigns" ? "2px solid #6aa6ff" : "none", cursor: "pointer", fontSize: "1rem" }}>
+            🎯 Your Campaigns ({campaigns.length})
           </button>
         </div>
 
-        {/* MY CAMPAIGNS TAB */}
-        {activeTab === "campaigns" && !selectedCampaign && (
+        {/* CULTURAL CALENDAR TAB */}
+        {activeTab === "calendar" && (
+          <>
+            {/* Time Filter Buttons */}
+            <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "0.5rem", background: "#1a1a1a", padding: "0.5rem", borderRadius: "8px" }}>
+                <button 
+                  onClick={() => setTimeFilter(7)} 
+                  style={{ 
+                    padding: "0.5rem 1rem", 
+                    background: timeFilter === 7 ? "#6aa6ff" : "transparent", 
+                    color: timeFilter === 7 ? "#fff" : "#888", 
+                    border: "none", 
+                    borderRadius: "6px", 
+                    cursor: "pointer",
+                    fontWeight: timeFilter === 7 ? "600" : "400"
+                  }}
+                >
+                  Next 7 Days
+                </button>
+                <button 
+                  onClick={() => setTimeFilter(30)} 
+                  style={{ 
+                    padding: "0.5rem 1rem", 
+                    background: timeFilter === 30 ? "#6aa6ff" : "transparent", 
+                    color: timeFilter === 30 ? "#fff" : "#888", 
+                    border: "none", 
+                    borderRadius: "6px", 
+                    cursor: "pointer",
+                    fontWeight: timeFilter === 30 ? "600" : "400"
+                  }}
+                >
+                  Next 30 Days
+                </button>
+                <button 
+                  onClick={() => setTimeFilter(60)} 
+                  style={{ 
+                    padding: "0.5rem 1rem", 
+                    background: timeFilter === 60 ? "#6aa6ff" : "transparent", 
+                    color: timeFilter === 60 ? "#fff" : "#888", 
+                    border: "none", 
+                    borderRadius: "6px", 
+                    cursor: "pointer",
+                    fontWeight: timeFilter === 60 ? "600" : "400"
+                  }}
+                >
+                  Next 60 Days
+                </button>
+                <button 
+                  onClick={() => setTimeFilter(90)} 
+                  style={{ 
+                    padding: "0.5rem 1rem", 
+                    background: timeFilter === 90 ? "#6aa6ff" : "transparent", 
+                    color: timeFilter === 90 ? "#fff" : "#888", 
+                    border: "none", 
+                    borderRadius: "6px", 
+                    cursor: "pointer",
+                    fontWeight: timeFilter === 90 ? "600" : "400"
+                  }}
+                >
+                  Next 90 Days
+                </button>
+              </div>
+
+              {/* Category Filter */}
+              <select 
+                value={categoryFilter} 
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                style={{ 
+                  padding: "0.5rem 1rem", 
+                  background: "#1a1a1a", 
+                  color: "#e9edf2", 
+                  border: "1px solid #2a2a2a", 
+                  borderRadius: "8px",
+                  cursor: "pointer"
+                }}
+              >
+                <option value="all">All Categories</option>
+                <option value="hip-hop">🎤 Hip-Hop</option>
+                <option value="streetwear">👟 Streetwear</option>
+                <option value="sports">🏀 Sports</option>
+                <option value="culture">🎨 Culture</option>
+                <option value="latino-culture">🌮 Latino Culture</option>
+                <option value="festival">🎪 Festivals</option>
+                <option value="retail">🛍️ Retail</option>
+              </select>
+            </div>
+
+            {/* Summary Stats */}
+            {calendar && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+                <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+                  <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>📅 Total Events</div>
+                  <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{filteredEvents.length}</div>
+                </div>
+                <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #ff6b6b20", borderLeft: "3px solid #ff6b6b" }}>
+                  <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>🔥 Immediate (0-7d)</div>
+                  <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#ff6b6b" }}>{groupedEvents.immediate.length}</div>
+                </div>
+                <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #f59e0b20", borderLeft: "3px solid #f59e0b" }}>
+                  <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>⚡ This Month (8-30d)</div>
+                  <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#f59e0b" }}>{groupedEvents.week.length + groupedEvents.two_weeks.length + groupedEvents.month.length}</div>
+                </div>
+                <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #4ade8020", borderLeft: "3px solid #4ade80" }}>
+                  <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>📆 Future (30d+)</div>
+                  <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#4ade80" }}>{groupedEvents.future.length}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Events by Planning Window */}
+            {filteredEvents.length === 0 ? (
+              <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📅</div>
+                <h3 style={{ marginBottom: "0.5rem", color: "#e9edf2" }}>No Events in This Timeframe</h3>
+                <p style={{ color: "#888" }}>Try adjusting your filters or extending the date range</p>
+              </div>
+            ) : (
+              <>
+                {/* Immediate Events (0-7 days) */}
+                {groupedEvents.immediate.length > 0 && (
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#ff6b6b" }}>🔥 IMMEDIATE - Act Now (0-7 Days)</h3>
+                    <div style={{ display: "grid", gap: "1rem" }}>
+                      {groupedEvents.immediate.map((event, idx) => (
+                        <div key={idx} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", borderLeft: "3px solid #ff6b6b" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                            <div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#e9edf2", marginBottom: "0.5rem" }}>
+                                {event.name}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888", marginBottom: "0.5rem" }}>
+                                📅 {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
+                                {event.relevance}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.85rem", color: "#ff6b6b", background: "#2a1a1a", padding: "4px 12px", borderRadius: "6px", marginBottom: "0.5rem", fontWeight: "600" }}>
+                                {event.days_until === 0 ? "TODAY" : `${event.days_until} days`}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#666", textTransform: "uppercase" }}>
+                                {event.category}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* This Week (8-14 days) */}
+                {groupedEvents.week.length > 0 && (
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#f59e0b" }}>⚡ THIS WEEK - Start Planning (8-14 Days)</h3>
+                    <div style={{ display: "grid", gap: "1rem" }}>
+                      {groupedEvents.week.map((event, idx) => (
+                        <div key={idx} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", borderLeft: "3px solid #f59e0b" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#e9edf2", marginBottom: "0.5rem" }}>
+                                {event.name}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888", marginBottom: "0.5rem" }}>
+                                📅 {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
+                                {event.relevance}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.85rem", color: "#f59e0b", background: "#2a2310", padding: "4px 12px", borderRadius: "6px", marginBottom: "0.5rem", fontWeight: "600" }}>
+                                {event.days_until} days
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#666", textTransform: "uppercase" }}>
+                                {event.category}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Next Two Weeks + Month (15-60 days) */}
+                {(groupedEvents.two_weeks.length > 0 || groupedEvents.month.length > 0) && (
+                  <div style={{ marginBottom: "2rem" }}>
+                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#6aa6ff" }}>📆 THIS MONTH - Begin Ideation (15-60 Days)</h3>
+                    <div style={{ display: "grid", gap: "1rem" }}>
+                      {[...groupedEvents.two_weeks, ...groupedEvents.month].map((event, idx) => (
+                        <div key={idx} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", borderLeft: "3px solid #6aa6ff" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#e9edf2", marginBottom: "0.5rem" }}>
+                                {event.name}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888", marginBottom: "0.5rem" }}>
+                                📅 {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
+                                {event.relevance}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.85rem", color: "#6aa6ff", background: "#1a1a2a", padding: "4px 12px", borderRadius: "6px", marginBottom: "0.5rem", fontWeight: "600" }}>
+                                {event.days_until} days
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#666", textTransform: "uppercase" }}>
+                                {event.category}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Future Events (60+ days) */}
+                {groupedEvents.future.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#4ade80" }}>🌱 FUTURE - Long-Term Planning (60+ Days)</h3>
+                    <div style={{ display: "grid", gap: "1rem" }}>
+                      {groupedEvents.future.map((event, idx) => (
+                        <div key={idx} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", borderLeft: "3px solid #4ade80" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#e9edf2", marginBottom: "0.5rem" }}>
+                                {event.name}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888", marginBottom: "0.5rem" }}>
+                                📅 {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
+                                {event.relevance}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.85rem", color: "#4ade80", background: "#1a2a1a", padding: "4px 12px", borderRadius: "6px", marginBottom: "0.5rem", fontWeight: "600" }}>
+                                {event.days_until} days
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#666", textTransform: "uppercase" }}>
+                                {event.category}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* YOUR CAMPAIGNS TAB */}
+        {activeTab === "campaigns" && (
           <div>
             {campaigns.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "4rem 2rem", background: "#1a1a1a", borderRadius: "12px" }}>
+              <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
                 <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🎯</div>
-                <h2 style={{ marginBottom: "1rem" }}>No campaigns yet</h2>
-                <p style={{ color: "#888", marginBottom: "2rem" }}>Create your first campaign to get AI-powered content suggestions</p>
-                <button onClick={() => { setActiveTab("create"); setShowCreateForm(true); }} style={{ padding: "12px 24px", background: "#6aa6ff", color: "#fff", border: "none", borderRadius: "6px", fontSize: "1rem", cursor: "pointer" }}>
-                  Create First Campaign
+                <h3 style={{ marginBottom: "1rem", color: "#e9edf2" }}>No Campaigns Yet</h3>
+                <p style={{ color: "#888", marginBottom: "2rem" }}>Create your first campaign based on cultural calendar events</p>
+                <button style={{ padding: "12px 24px", background: "#6aa6ff", color: "#fff", border: "none", borderRadius: "8px", fontSize: "1rem", cursor: "pointer", fontWeight: "600" }}>
+                  Create Campaign
                 </button>
               </div>
             ) : (
               <div style={{ display: "grid", gap: "1rem" }}>
-                {campaigns.map(c => (
-                  <div key={c.id} onClick={() => viewCampaign(c.id)} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.borderColor = "#6aa6ff"} onMouseLeave={e => e.currentTarget.style.borderColor = "#2a2a2a"}>
+                {campaigns.map(campaign => (
+                  <div key={campaign.id} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                       <div>
-                        <h3 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>{c.name}</h3>
-                        <p style={{ color: "#888", fontSize: "0.9rem" }}>{c.description}</p>
-                      </div>
-                      <span style={{ padding: "4px 12px", background: c.status === "active" ? "#1a2a1a" : "#2a2a1a", color: c.status === "active" ? "#4ade80" : "#888", borderRadius: "12px", fontSize: "0.85rem" }}>
-                        {c.status}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", gap: "2rem", fontSize: "0.9rem", color: "#888" }}>
-                      {c.theme && <div>🎨 {c.theme}</div>}
-                      {c.cultural_moment && <div>📅 {c.cultural_moment}</div>}
-                      {c.has_suggestions && <div style={{ color: "#4ade80" }}>✨ AI Suggestions Ready</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* SELECTED CAMPAIGN DETAIL */}
-        {activeTab === "campaigns" && selectedCampaign && (
-          <div>
-            <button onClick={() => setSelectedCampaign(null)} style={{ marginBottom: "1rem", color: "#6aa6ff", background: "none", border: "none", cursor: "pointer", fontSize: "1rem" }}>
-              ← Back to campaigns
-            </button>
-            
-            <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", marginBottom: "2rem" }}>
-              <h2 style={{ fontSize: "1.75rem", marginBottom: "1rem" }}>{selectedCampaign.name}</h2>
-              <p style={{ color: "#888", marginBottom: "2rem" }}>{selectedCampaign.description}</p>
-              
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
-                <div>
-                  <div style={{ color: "#888", fontSize: "0.85rem", marginBottom: "0.25rem" }}>Theme</div>
-                  <div>{selectedCampaign.theme || "—"}</div>
-                </div>
-                <div>
-                  <div style={{ color: "#888", fontSize: "0.85rem", marginBottom: "0.25rem" }}>Launch Date</div>
-                  <div>{selectedCampaign.launch_date ? new Date(selectedCampaign.launch_date).toLocaleDateString() : "—"}</div>
-                </div>
-                <div>
-                  <div style={{ color: "#888", fontSize: "0.85rem", marginBottom: "0.25rem" }}>Cultural Moment</div>
-                  <div>{selectedCampaign.cultural_moment || "—"}</div>
-                </div>
-              </div>
-
-              {selectedCampaign.target_audience && (
-                <div style={{ marginBottom: "2rem" }}>
-                  <div style={{ color: "#888", fontSize: "0.85rem", marginBottom: "0.5rem" }}>Target Audience</div>
-                  <div>{selectedCampaign.target_audience}</div>
-                </div>
-              )}
-            </div>
-
-            {/* AI SUGGESTIONS */}
-            {selectedCampaign.content_suggestions && selectedCampaign.content_suggestions.suggestions && (
-              <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px" }}>
-                <h3 style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}>🤖 AI Content Suggestions</h3>
-                
-                {selectedCampaign.content_suggestions.suggestions.map((s, i) => (
-                  <div key={i} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", marginBottom: "1rem", border: "1px solid #2a2a2a" }}>
-                    <h4 style={{ fontSize: "1.1rem", marginBottom: "0.75rem", color: "#6aa6ff" }}>{i + 1}. {s.title}</h4>
-                    <p style={{ marginBottom: "1rem", lineHeight: "1.6" }}>{s.description}</p>
-                    
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", fontSize: "0.9rem" }}>
-                      <div>
-                        <strong style={{ color: "#888" }}>Platform:</strong> {s.platform}
-                      </div>
-                      <div>
-                        <strong style={{ color: "#888" }}>Timing:</strong> {s.timing}
-                      </div>
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <strong style={{ color: "#888" }}>Why it works:</strong> {s.why_it_works}
-                      </div>
-                      {s.cultural_connection && (
-                        <div style={{ gridColumn: "1 / -1", padding: "0.75rem", background: "#1a2a1a", borderRadius: "6px", borderLeft: "3px solid #4ade80" }}>
-                          <strong style={{ color: "#4ade80" }}>Cultural Connection:</strong> {s.cultural_connection}
+                        <h3 style={{ fontSize: "1.25rem", marginBottom: "0.5rem", color: "#e9edf2" }}>{campaign.name}</h3>
+                        <p style={{ color: "#888", marginBottom: "0.5rem" }}>{campaign.description}</p>
+                        <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                          {campaign.start_date && `Start: ${new Date(campaign.start_date).toLocaleDateString()}`}
                         </div>
-                      )}
+                      </div>
+                      <div style={{ 
+                        padding: "4px 12px", 
+                        borderRadius: "6px", 
+                        fontSize: "0.85rem", 
+                        fontWeight: "600",
+                        background: campaign.status === "active" ? "#1a2a1a" : campaign.status === "planning" ? "#2a2310" : "#2a1a1a",
+                        color: campaign.status === "active" ? "#4ade80" : campaign.status === "planning" ? "#f59e0b" : "#888"
+                      }}>
+                        {campaign.status}
+                      </div>
                     </div>
                   </div>
                 ))}
-
-                {selectedCampaign.content_suggestions.timing_strategy && (
-                  <div style={{ marginTop: "2rem", padding: "1.5rem", background: "#2a1a1a", borderRadius: "8px", borderLeft: "3px solid #6aa6ff" }}>
-                    <strong>⏰ Timing Strategy:</strong>
-                    <p style={{ marginTop: "0.5rem", color: "#ccc" }}>{selectedCampaign.content_suggestions.timing_strategy}</p>
-                  </div>
-                )}
               </div>
             )}
-          </div>
-        )}
-
-        {/* CULTURAL CALENDAR TAB */}
-        {activeTab === "calendar" && (
-          <div>
-            <div style={{ marginBottom: "2rem" }}>
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>📅 Upcoming Cultural Moments</h2>
-              <p style={{ color: "#888" }}>Next 30 days of hip hop, urban, and streetwear opportunities</p>
-            </div>
-            
-            <div style={{ display: "grid", gap: "1rem" }}>
-              {culturalMoments.map((m, i) => (
-                <div key={i} style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                    <div>
-                      <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>{m.name}</h3>
-                      <div style={{ color: "#888", fontSize: "0.9rem" }}>
-                        {m.formatted_date} • {m.days_away} days away
-                      </div>
-                    </div>
-                    <span style={{ padding: "4px 12px", background: "#2a1a2a", color: m.days_away <= 7 ? "#ff6b6b" : "#6aa6ff", borderRadius: "12px", fontSize: "0.85rem" }}>
-                      {m.planning_window}
-                    </span>
-                  </div>
-                  <p style={{ color: "#ccc", lineHeight: "1.6" }}>{m.opportunity}</p>
-                  <div style={{ marginTop: "1rem", display: "inline-block", padding: "4px 12px", background: "#0a0b0d", borderRadius: "6px", fontSize: "0.85rem" }}>
-                    {m.category}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* CREATE CAMPAIGN TAB */}
-        {activeTab === "create" && (
-          <div>
-            <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", maxWidth: "800px" }}>
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}>Create New Campaign</h2>
-              
-              <form onSubmit={handleCreateCampaign}>
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Campaign Name *</label>
-                  <input name="name" required placeholder="e.g., Holiday Drop 2025" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
-                </div>
-
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Description *</label>
-                  <textarea name="description" required rows={3} placeholder="What's this campaign about?" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem", fontFamily: "inherit" }} />
-                </div>
-
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Theme</label>
-                  <input name="theme" placeholder="e.g., Y2K Holiday Nostalgia" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
-                </div>
-
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Launch Date</label>
-                  <input name="launch_date" type="date" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
-                </div>
-
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Cultural Moment</label>
-                  <input name="cultural_moment" placeholder="e.g., Holiday Party Season, NBA All-Star Weekend" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
-                </div>
-
-                <div style={{ marginBottom: "2rem" }}>
-                  <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Target Audience *</label>
-                  <input name="target_audience" required placeholder="e.g., Gen Z streetwear enthusiasts, 18-30" style={{ width: "100%", padding: "12px", background: "#0a0b0d", border: "1px solid #2a2a2a", borderRadius: "6px", color: "#e9edf2", fontSize: "1rem" }} />
-                </div>
-
-                <div style={{ padding: "1rem", background: "#1a2a1a", borderRadius: "6px", marginBottom: "2rem", borderLeft: "3px solid #4ade80" }}>
-                  <div style={{ fontSize: "0.9rem", color: "#4ade80", marginBottom: "0.5rem" }}>✨ AI-Powered Suggestions</div>
-                  <div style={{ fontSize: "0.85rem", color: "#ccc" }}>When you create this campaign, AI will analyze your intelligence data and generate culturally relevant content suggestions for hip hop & streetwear audiences.</div>
-                </div>
-
-                <button type="submit" style={{ width: "100%", padding: "14px", background: "#6aa6ff", color: "#fff", border: "none", borderRadius: "6px", fontSize: "1rem", fontWeight: "600", cursor: "pointer" }}>
-                  🚀 Create Campaign with AI Suggestions
-                </button>
-              </form>
-            </div>
           </div>
         )}
       </div>
