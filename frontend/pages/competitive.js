@@ -11,11 +11,12 @@ export default function CompetitivePage() {
   const [dashboard, setDashboard] = useState(null);
   const [brands, setBrands] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
-  const [selectedThreat, setSelectedThreat] = useState("all"); // all, high_threat, medium_threat, low_threat
+  const [selectedThreat, setSelectedThreat] = useState("all");
   const [competitiveData, setCompetitiveData] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview"); // overview, brands, comparison, upload
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
+  const [manualCompetitorName, setManualCompetitorName] = useState("");
 
   useEffect(() => {
     loadData();
@@ -50,9 +51,14 @@ export default function CompetitivePage() {
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
+    
+    // Add manual competitor name if provided
+    if (manualCompetitorName.trim()) {
+      formData.append('competitor_name', manualCompetitorName.trim());
+    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/competitive/import-json`, {
+      const response = await fetch(`${API_BASE_URL}/competitive/upload`, {
         method: 'POST',
         body: formData
       });
@@ -60,7 +66,8 @@ export default function CompetitivePage() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(`✅ Success!\nImported: ${result.imported} data points`);
+        alert(`✅ Success!\n${result.message}\nAnalyzed: ${result.records_parsed} posts`);
+        setManualCompetitorName(""); // Clear input
         loadData();
         setActiveTab("overview");
       } else {
@@ -70,6 +77,8 @@ export default function CompetitivePage() {
       alert(`❌ Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
+      // Reset file input
+      e.target.value = '';
     }
   }
 
@@ -424,15 +433,41 @@ export default function CompetitivePage() {
                 <ol style={{ color: "#888", lineHeight: "1.8", paddingLeft: "1.5rem" }}>
                   <li>Use <strong style={{ color: "#e9edf2" }}>Apify</strong> to scrape competitor Instagram, TikTok, or other social data</li>
                   <li>Export the scrape results as <strong style={{ color: "#e9edf2" }}>JSON</strong></li>
-                  <li>Upload the JSON file below</li>
+                  <li><strong style={{ color: "#e9edf2" }}>Optional:</strong> Enter the competitor brand name below</li>
+                  <li>Upload the JSON file</li>
                   <li>System will automatically analyze engagement and sentiment</li>
                 </ol>
+              </div>
+
+              {/* Manual Competitor Name Input */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", marginBottom: "0.5rem", color: "#e9edf2", fontWeight: "600" }}>
+                  Competitor Brand Name (Optional)
+                </label>
+                <input 
+                  type="text"
+                  placeholder="e.g., Supreme, Stussy, BAPE..."
+                  value={manualCompetitorName}
+                  onChange={(e) => setManualCompetitorName(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "#0a0b0d",
+                    border: "1px solid #2a2a2a",
+                    borderRadius: "8px",
+                    color: "#e9edf2",
+                    fontSize: "1rem"
+                  }}
+                />
+                <div style={{ marginTop: "0.5rem", fontSize: "0.85rem", color: "#888" }}>
+                  Leave blank to auto-detect from filename or data
+                </div>
               </div>
 
               <div style={{ border: "2px dashed #2a2a2a", borderRadius: "12px", padding: "2rem", textAlign: "center", background: "#0a0b0d" }}>
                 <input 
                   type="file" 
-                  accept=".json" 
+                  accept=".json,.jsonl" 
                   onChange={handleFileUpload}
                   disabled={uploading}
                   style={{ display: "none" }}
@@ -454,7 +489,7 @@ export default function CompetitivePage() {
                   {uploading ? "Uploading..." : "📁 Choose JSON File"}
                 </label>
                 <div style={{ marginTop: "1rem", fontSize: "0.9rem", color: "#888" }}>
-                  Supports Apify export JSON files
+                  Supports .json and .jsonl files from Apify
                 </div>
               </div>
 
