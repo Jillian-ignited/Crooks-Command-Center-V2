@@ -118,7 +118,7 @@ async def upload_competitive_intel(
         data_type=source,
         content=raw_content,
         ai_analysis=summary,
-        tags=insights if isinstance(insights, list) else [],
+        tags=insights,  # PostgreSQL JSONB handles this automatically
         source_url=file_path,
         priority='medium',
         sentiment='neutral'
@@ -158,7 +158,7 @@ def add_competitive_intel(
         data_type=source,
         content=content,
         ai_analysis=summary,
-        tags=insights if isinstance(insights, list) else [],
+        tags=insights,  # PostgreSQL JSONB handles this automatically
         priority='medium',
         sentiment='neutral'
     )
@@ -202,13 +202,36 @@ def get_competitive_intel(
                 "category": i.category,
                 "source": i.data_type,
                 "summary": i.ai_analysis,
-                "key_insights": i.tags if isinstance(i.tags, list) else [],
+                "key_insights": i.tags if isinstance(i.tags, (list, dict)) else (json.loads(i.tags) if i.tags else []),
                 "created_at": i.created_at.isoformat()
             }
             for i in intel
         ],
         "total": len(intel)
     }
+
+# Legacy endpoint for frontend compatibility
+@router.get("/data")
+def get_competitive_data(
+    limit: int = 50,
+    competitor: Optional[str] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get competitive data (legacy endpoint)"""
+    return get_competitive_intel(limit, competitor, category, db)
+
+# Legacy endpoint for frontend compatibility
+@router.get("/brands")
+def get_competitive_brands(db: Session = Depends(get_db)):
+    """Get list of tracked brands (legacy endpoint)"""
+    return get_competitors_list(db)
+
+# Legacy endpoint for frontend compatibility  
+@router.get("/dashboard")
+def get_competitive_dashboard(days: int = 30, db: Session = Depends(get_db)):
+    """Get competitive dashboard (legacy endpoint)"""
+    return get_competitive_summary(db)
 
 @router.get("/intel/{intel_id}")
 def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
@@ -226,7 +249,7 @@ def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
         "source": intel.data_type,
         "content": intel.content,
         "summary": intel.ai_analysis,
-        "key_insights": intel.tags if isinstance(intel.tags, list) else [],
+        "key_insights": intel.tags if isinstance(intel.tags, (list, dict)) else (json.loads(intel.tags) if intel.tags else []),
         "created_at": intel.created_at.isoformat()
     }
 
