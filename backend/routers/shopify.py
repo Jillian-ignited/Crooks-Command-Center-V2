@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_, text
+from sqlalchemy import desc, and_, text, func
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import csv
 from io import StringIO
 
 from ..database import get_db
-from ..models import ShopifyMetric
+from ..models import ShopifyMetric, ShopifyProduct, ShopifyOrder, ShopifyCustomer
 
 router = APIRouter()
 
@@ -19,13 +19,11 @@ def get_shopify_dashboard(
 ):
     """Get Shopify analytics dashboard"""
     
-    # Parse period
     days = int(period.replace('d', ''))
     end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=days)
     
     try:
-        # Get metrics for period
         metrics = db.query(ShopifyMetric).filter(
             and_(
                 ShopifyMetric.period_type == "daily",
@@ -34,7 +32,6 @@ def get_shopify_dashboard(
             )
         ).order_by(ShopifyMetric.period_start).all()
         
-        # Calculate totals
         total_revenue = sum(m.total_revenue for m in metrics)
         total_orders = sum(m.total_orders for m in metrics)
         avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
@@ -63,7 +60,6 @@ def get_shopify_dashboard(
         }
     except Exception as e:
         print(f"[Shopify] Dashboard error: {e}")
-        # Return empty data if no metrics exist yet
         return {
             "period": period,
             "start_date": start_date.isoformat(),
@@ -80,50 +76,117 @@ def get_shopify_dashboard(
 
 @router.get("/customer-stats")
 def get_customer_stats(days: int = 30, db: Session = Depends(get_db)):
-    """Get customer statistics - returns zeros until real data available"""
+    """Get customer statistics from imported data"""
     
-    # TODO: Integrate with Shopify API for real customer data
-    return {
-        "total_customers": 0,
-        "new_customers": 0,
-        "returning_customers": 0,
-        "customer_retention_rate": 0
-    }
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    try:
+        # Get all customers
+        total_customers = db.query(ShopifyCustomer).count()
+        
+        # Get new customers in period
+        new_customers = db.query(ShopifyCustomer).filter(
+            ShopifyCustomer.first_order_date >= start_date
+        ).count()
+        
+        # Get returning customers
+        returning_customers = db.query(ShopifyCustomer).filter(
+            ShopifyCustomer.is_returning == True
+        ).count()
+        
+        # Calculate retention rate
+        retention_rate = (returning_customers / total_customers * 100) if total_customers > 0 else 0
+        
+        return {
+            "total_customers": total_customers,
+            "new_customers": new_customers,
+            "returning_customers": returning_customers,
+            "customer_retention_rate": round(retention_rate, 2)
+        }
+    except Exception as e:
+        print(f"[Shopify] Customer stats error: {e}")
+        return {
+            "total_customers": 0,
+            "new_customers": 0,
+            "returning_customers": 0,
+            "customer_retention_rate": 0
+        }
 
 
 @router.get("/top-products")
 def get_top_products(days: int = 30, limit: int = 10, db: Session = Depends(get_db)):
-    """Get top selling products - returns empty until real data imported"""
-    return {"products": []}
+    """Get top selling products by revenue"""
+    
+    try:
+        products = db.query(ShopifyProduct).filter(
+            ShopifyProduct.total_sales > 0
+        ).order_by(desc(ShopifyProduct.total_sales)).limit(limit).all()
+        
+        return {
+            "products": [
+                {
+                    "title": p.title,
+                    "vendor": p.vendor,
+                    "type": p.product_type,
+                    "total_sales": round(p.total_sales, 2),
+                    "units_sold": p.units_sold,
+                    "avg_price": round(p.total_sales / p.units_sold, 2) if p.units_sold > 0 else 0
+                }
+                for p in products
+            ]
+        }
+    except Exception as e:
+        print(f"[Shopify] Top products error: {e}")
+        return {"products": []}
 
 
 @router.get("/orders")
 def get_recent_orders(limit: int = 10, db: Session = Depends(get_db)):
-    """Get recent orders - returns empty until Shopify API integrated"""
-    return {"orders": []}
+    """Get recent orders from imported data"""
+    
+    try:
+        orders = db.query(ShopifyOrder).order_by(
+            desc(ShopifyOrder.order_date)
+        ).limit(limit).all()
+        
+        return {
+            "orders": [
+                {
+                    "id": o.order_name,
+                    "customer_name": o.customer_name or "Guest",
+                    "email": o.customer_email or "",
+                    "total": round(o.total, 2) if o.total else 0,
+                    "status": o.fulfillment_status or "unknown",
+                    "items_count": o.line_items_count,
+                    "created_at": o.order_date.isoformat() if o.order_date else ""
+                }
+                for o in orders
+            ]
+        }
+    except Exception as e:
+        print(f"[Shopify] Recent orders error: {e}")
+        return {"orders": []}
 
 
-@router.post("/import-csv")
+@router.post("/import-metrics-csv")
 async def import_shopify_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Import Shopify data from CSV - handles Shopify export format"""
+    """Import Shopify metrics from CSV (sales/conversion data)"""
     
     try:
         contents = await file.read()
-        decoded = contents.decode('utf-8-sig')  # Handle BOM
+        decoded = contents.decode('utf-8-sig')
         
         print(f"[Shopify Import] File received: {file.filename}")
         
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
-        
-        # Log the headers
         headers = reader.fieldnames
         print(f"[Shopify Import] CSV Headers: {headers}")
         
-        # Detect which type of Shopify export this is
         is_sales_export = 'Net sales' in headers or 'Total sales' in headers
         is_conversion_export = 'Conversion rate' in headers and 'Sessions' in headers
         is_orders_export = 'Average order value' in headers and 'Orders' in headers
@@ -136,13 +199,11 @@ async def import_shopify_csv(
         
         for idx, row in enumerate(reader, start=2):
             try:
-                # Get date
                 date_str = row.get('Day') or row.get('Date')
                 
                 if not date_str or not date_str.strip() or 'previous_period' in date_str.lower():
-                    continue  # Skip previous period rows
+                    continue
                 
-                # Parse date
                 period_start = None
                 date_formats = ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%b %d, %Y']
                 
@@ -159,7 +220,6 @@ async def import_shopify_csv(
                 
                 period_end = period_start + timedelta(days=1)
                 
-                # Check if metric already exists for this date
                 existing = db.query(ShopifyMetric).filter(
                     ShopifyMetric.period_start == period_start
                 ).first()
@@ -173,12 +233,9 @@ async def import_shopify_csv(
                         period_end=period_end
                     )
                 
-                # Extract data based on export type
                 if is_sales_export:
-                    # Sales over time export
                     orders_str = row.get('Orders', '0')
                     net_sales_str = row.get('Net sales', '0')
-                    total_sales_str = row.get('Total sales', '0')
                     
                     orders = int(float(orders_str.replace(',', '').strip()) if orders_str else 0)
                     revenue = float(net_sales_str.replace('$', '').replace(',', '').strip() if net_sales_str else 0)
@@ -190,10 +247,8 @@ async def import_shopify_csv(
                     print(f"[Shopify] Row {idx}: Orders={orders}, Revenue=${revenue}")
                 
                 if is_conversion_export:
-                    # Conversion rate export
                     sessions_str = row.get('Sessions', '0')
                     conversion_str = row.get('Conversion rate', '0')
-                    completed_str = row.get('Sessions that completed checkout', '0')
                     
                     sessions = int(float(sessions_str.replace(',', '').strip()) if sessions_str else 0)
                     conversion = float(conversion_str.replace('%', '').strip() if conversion_str else 0)
@@ -201,16 +256,9 @@ async def import_shopify_csv(
                     metric.total_sessions = sessions
                     metric.conversion_rate = conversion
                     
-                    # If we have orders from completed checkouts, use that
-                    if completed_str:
-                        completed = int(float(completed_str.replace(',', '').strip()))
-                        if metric.total_orders == 0:
-                            metric.total_orders = completed
-                    
                     print(f"[Shopify] Row {idx}: Sessions={sessions}, Conversion={conversion}%")
                 
                 if is_orders_export:
-                    # Orders export
                     orders_str = row.get('Orders', '0')
                     aov_str = row.get('Average order value', '0')
                     
@@ -220,13 +268,11 @@ async def import_shopify_csv(
                     metric.total_orders = orders
                     metric.avg_order_value = aov
                     
-                    # Calculate revenue from orders * aov if we don't have it
                     if metric.total_revenue == 0:
                         metric.total_revenue = orders * aov
                     
                     print(f"[Shopify] Row {idx}: Orders={orders}, AOV=${aov}")
                 
-                # Recalculate derived metrics
                 if metric.total_orders > 0 and metric.total_revenue > 0:
                     metric.avg_order_value = metric.total_revenue / metric.total_orders
                 
@@ -249,7 +295,7 @@ async def import_shopify_csv(
         
         return {
             "success": True,
-            "message": f"✅ Imported Shopify data - Created {created} new records, Updated {updated} existing records",
+            "message": f"✅ Imported metrics - Created {created}, Updated {updated}",
             "created": created,
             "updated": updated,
             "errors": errors[:5] if errors else [],
@@ -263,97 +309,371 @@ async def import_shopify_csv(
         raise HTTPException(500, error_msg)
 
 
-@router.post("/generate-sample-data")
-def generate_sample_shopify_data(days: int = 30, db: Session = Depends(get_db)):
-    """Generate sample Shopify data for testing"""
+@router.post("/import-products-csv")
+async def import_products_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import Shopify products from CSV export"""
     
     try:
-        import random
+        contents = await file.read()
+        decoded = contents.decode('utf-8-sig')
         
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        print(f"[Products Import] File received: {file.filename}")
+        
+        csv_file = StringIO(decoded)
+        reader = csv.DictReader(csv_file)
+        headers = reader.fieldnames
+        print(f"[Products Import] CSV Headers: {headers}")
+        
         created = 0
+        updated = 0
+        errors = []
         
-        for i in range(days):
-            date = today - timedelta(days=days - i - 1)
-            
-            # Generate realistic-looking data
-            base_orders = random.randint(15, 45)
-            base_revenue = base_orders * random.uniform(60, 120)
-            base_sessions = base_orders * random.randint(25, 50)
-            
-            metric = ShopifyMetric(
-                period_type="daily",
-                period_start=date,
-                period_end=date + timedelta(days=1),
-                total_orders=base_orders,
-                total_revenue=round(base_revenue, 2),
-                avg_order_value=round(base_revenue / base_orders, 2),
-                total_sessions=base_sessions,
-                conversion_rate=round((base_orders / base_sessions * 100), 2)
-            )
-            
-            db.add(metric)
-            created += 1
+        # Track sales by product
+        product_sales = {}
+        
+        for idx, row in enumerate(reader, start=2):
+            try:
+                title = row.get('Title') or row.get('Product')
+                handle = row.get('Handle') or (title.lower().replace(' ', '-') if title else None)
+                
+                if not title or not handle:
+                    continue
+                
+                vendor = row.get('Vendor', '')
+                product_type = row.get('Type') or row.get('Product Type', '')
+                tags = row.get('Tags', '')
+                variant_sku = row.get('Variant SKU', '')
+                variant_price_str = row.get('Variant Price', '0')
+                
+                variant_price = float(variant_price_str.replace('$', '').replace(',', '').strip() if variant_price_str else 0)
+                
+                # For product sales data (if CSV has it)
+                net_quantity = row.get('Net quantity', '0')
+                gross_sales = row.get('Gross sales', '0')
+                
+                units = int(float(net_quantity.replace(',', '').strip()) if net_quantity else 0)
+                sales = float(gross_sales.replace('$', '').replace(',', '').strip() if gross_sales else 0)
+                
+                # Check if product exists
+                existing = db.query(ShopifyProduct).filter(
+                    ShopifyProduct.handle == handle
+                ).first()
+                
+                if existing:
+                    product = existing
+                    product.total_sales += sales
+                    product.units_sold += units
+                    updated += 1
+                else:
+                    product = ShopifyProduct(
+                        title=title,
+                        handle=handle,
+                        vendor=vendor,
+                        product_type=product_type,
+                        tags=tags,
+                        variant_sku=variant_sku,
+                        variant_price=variant_price,
+                        total_sales=sales,
+                        units_sold=units
+                    )
+                    db.add(product)
+                    created += 1
+                
+                print(f"[Products] Row {idx}: {title} - ${sales}, {units} units")
+                
+            except Exception as e:
+                error_msg = f"Row {idx}: {str(e)}"
+                errors.append(error_msg)
+                print(f"[Products Import] ❌ {error_msg}")
         
         db.commit()
+        print(f"[Products Import] ✅ Success - Created: {created}, Updated: {updated}")
         
         return {
             "success": True,
-            "message": f"✅ Generated {created} days of sample data",
-            "created": created
+            "message": f"✅ Imported products - Created {created}, Updated {updated}",
+            "created": created,
+            "updated": updated,
+            "errors": errors[:5] if errors else [],
+            "total_errors": len(errors)
         }
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(500, f"Generation failed: {str(e)}")
+        error_msg = f"Import failed: {str(e)}"
+        print(f"[Products Import] ❌ {error_msg}")
+        raise HTTPException(500, error_msg)
 
 
-@router.post("/metrics")
-def create_shopify_metric(
-    period_type: str,
-    period_start: str,
-    period_end: str,
-    total_orders: int = 0,
-    total_revenue: float = 0.0,
-    avg_order_value: float = 0.0,
-    total_sessions: int = 0,
-    conversion_rate: float = 0.0,
+@router.post("/import-orders-csv")
+async def import_orders_csv(
+    file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Create a new Shopify metric entry"""
-    
-    metric = ShopifyMetric(
-        period_type=period_type,
-        period_start=datetime.fromisoformat(period_start.replace('Z', '+00:00')),
-        period_end=datetime.fromisoformat(period_end.replace('Z', '+00:00')),
-        total_orders=total_orders,
-        total_revenue=total_revenue,
-        avg_order_value=avg_order_value,
-        total_sessions=total_sessions,
-        conversion_rate=conversion_rate
-    )
-    
-    db.add(metric)
-    db.commit()
-    db.refresh(metric)
-    
-    return {
-        "success": True,
-        "metric_id": metric.id,
-        "created_at": metric.created_at.isoformat()
-    }
-
-
-@router.post("/migrate-table")
-def migrate_shopify_table(db: Session = Depends(get_db)):
-    """DANGER: Recreate shopify_metrics table - will delete all data!"""
+    """Import Shopify orders from CSV export"""
     
     try:
-        # Drop old table
+        contents = await file.read()
+        decoded = contents.decode('utf-8-sig')
+        
+        print(f"[Orders Import] File received: {file.filename}")
+        
+        csv_file = StringIO(decoded)
+        reader = csv.DictReader(csv_file)
+        headers = reader.fieldnames
+        print(f"[Orders Import] CSV Headers: {headers}")
+        
+        created = 0
+        updated = 0
+        skipped = 0
+        errors = []
+        
+        current_order = None
+        product_titles = []
+        
+        for idx, row in enumerate(reader, start=2):
+            try:
+                order_name = row.get('Name')
+                
+                if not order_name:
+                    skipped += 1
+                    continue
+                
+                # Check if this is a new order or additional line item
+                if current_order and current_order != order_name:
+                    # Save previous order with all products
+                    pass
+                
+                order_date_str = row.get('Created at')
+                order_date = None
+                
+                if order_date_str:
+                    date_formats = ['%Y-%m-%d %H:%M:%S', '%m/%d/%Y %H:%M', '%Y-%m-%d']
+                    for fmt in date_formats:
+                        try:
+                            order_date = datetime.strptime(order_date_str.strip(), fmt)
+                            break
+                        except:
+                            continue
+                
+                if not order_date:
+                    order_date = datetime.now(timezone.utc)
+                
+                # Get order details
+                customer_name = f"{row.get('Billing Name', '')} {row.get('Shipping Name', '')}".strip()
+                if not customer_name:
+                    customer_name = row.get('Customer', 'Guest')
+                
+                customer_email = row.get('Email', '')
+                financial_status = row.get('Financial Status', 'unknown')
+                fulfillment_status = row.get('Fulfillment Status', 'unfulfilled')
+                
+                total_str = row.get('Total', '0')
+                subtotal_str = row.get('Subtotal', '0')
+                shipping_str = row.get('Shipping', '0')
+                taxes_str = row.get('Taxes', '0')
+                discount_str = row.get('Discount Amount', '0')
+                
+                total = float(total_str.replace('$', '').replace(',', '').strip() if total_str else 0)
+                subtotal = float(subtotal_str.replace('$', '').replace(',', '').strip() if subtotal_str else 0)
+                shipping = float(shipping_str.replace('$', '').replace(',', '').strip() if shipping_str else 0)
+                taxes = float(taxes_str.replace('$', '').replace(',', '').strip() if taxes_str else 0)
+                discount = float(discount_str.replace('$', '').replace(',', '').strip() if discount_str else 0)
+                
+                line_items = int(row.get('Lineitem quantity', 1))
+                product_title = row.get('Lineitem name', '')
+                
+                # Check if order exists
+                existing = db.query(ShopifyOrder).filter(
+                    ShopifyOrder.order_name == order_name
+                ).first()
+                
+                if existing:
+                    # Update with additional product if this is a multi-item order
+                    if product_title and product_title not in existing.product_titles:
+                        existing.product_titles += f", {product_title}"
+                        existing.line_items_count += line_items
+                    skipped += 1
+                else:
+                    order = ShopifyOrder(
+                        order_name=order_name,
+                        order_date=order_date,
+                        customer_name=customer_name,
+                        customer_email=customer_email,
+                        financial_status=financial_status,
+                        fulfillment_status=fulfillment_status,
+                        total=total,
+                        subtotal=subtotal,
+                        shipping=shipping,
+                        taxes=taxes,
+                        discount_amount=discount,
+                        line_items_count=line_items,
+                        product_titles=product_title
+                    )
+                    db.add(order)
+                    created += 1
+                
+                print(f"[Orders] Row {idx}: {order_name} - ${total}")
+                
+            except Exception as e:
+                error_msg = f"Row {idx}: {str(e)}"
+                errors.append(error_msg)
+                print(f"[Orders Import] ❌ {error_msg}")
+        
+        db.commit()
+        print(f"[Orders Import] ✅ Success - Created: {created}, Skipped: {skipped}")
+        
+        return {
+            "success": True,
+            "message": f"✅ Imported orders - Created {created}, Skipped {skipped} duplicates",
+            "created": created,
+            "updated": updated,
+            "errors": errors[:5] if errors else [],
+            "total_errors": len(errors)
+        }
+        
+    except Exception as e:
+        db.rollback()
+        error_msg = f"Import failed: {str(e)}"
+        print(f"[Orders Import] ❌ {error_msg}")
+        raise HTTPException(500, error_msg)
+
+
+@router.post("/import-customers-csv")
+async def import_customers_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import Shopify customers from CSV export"""
+    
+    try:
+        contents = await file.read()
+        decoded = contents.decode('utf-8-sig')
+        
+        print(f"[Customers Import] File received: {file.filename}")
+        
+        csv_file = StringIO(decoded)
+        reader = csv.DictReader(csv_file)
+        headers = reader.fieldnames
+        print(f"[Customers Import] CSV Headers: {headers}")
+        
+        created = 0
+        updated = 0
+        errors = []
+        
+        for idx, row in enumerate(reader, start=2):
+            try:
+                email = row.get('Email')
+                
+                if not email:
+                    continue
+                
+                first_name = row.get('First Name', '')
+                last_name = row.get('Last Name', '')
+                orders_count = int(row.get('Orders Count', 0))
+                total_spent_str = row.get('Total Spent', '0')
+                total_spent = float(total_spent_str.replace('$', '').replace(',', '').strip() if total_spent_str else 0)
+                
+                accepts_marketing = row.get('Accepts Marketing', 'no').lower() == 'yes'
+                
+                # Parse dates
+                first_order_str = row.get('First Order Date')
+                last_order_str = row.get('Last Order Date')
+                
+                first_order_date = None
+                last_order_date = None
+                
+                date_formats = ['%Y-%m-%d', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S']
+                
+                if first_order_str:
+                    for fmt in date_formats:
+                        try:
+                            first_order_date = datetime.strptime(first_order_str.strip(), fmt)
+                            break
+                        except:
+                            continue
+                
+                if last_order_str:
+                    for fmt in date_formats:
+                        try:
+                            last_order_date = datetime.strptime(last_order_str.strip(), fmt)
+                            break
+                        except:
+                            continue
+                
+                is_returning = orders_count > 1
+                
+                # Check if customer exists
+                existing = db.query(ShopifyCustomer).filter(
+                    ShopifyCustomer.email == email
+                ).first()
+                
+                if existing:
+                    existing.orders_count = orders_count
+                    existing.total_spent = total_spent
+                    existing.is_returning = is_returning
+                    if first_order_date:
+                        existing.first_order_date = first_order_date
+                    if last_order_date:
+                        existing.last_order_date = last_order_date
+                    updated += 1
+                else:
+                    customer = ShopifyCustomer(
+                        email=email,
+                        first_name=first_name,
+                        last_name=last_name,
+                        orders_count=orders_count,
+                        total_spent=total_spent,
+                        first_order_date=first_order_date,
+                        last_order_date=last_order_date,
+                        is_returning=is_returning,
+                        accepts_marketing=accepts_marketing
+                    )
+                    db.add(customer)
+                    created += 1
+                
+                print(f"[Customers] Row {idx}: {email} - {orders_count} orders, ${total_spent}")
+                
+            except Exception as e:
+                error_msg = f"Row {idx}: {str(e)}"
+                errors.append(error_msg)
+                print(f"[Customers Import] ❌ {error_msg}")
+        
+        db.commit()
+        print(f"[Customers Import] ✅ Success - Created: {created}, Updated: {updated}")
+        
+        return {
+            "success": True,
+            "message": f"✅ Imported customers - Created {created}, Updated {updated}",
+            "created": created,
+            "updated": updated,
+            "errors": errors[:5] if errors else [],
+            "total_errors": len(errors)
+        }
+        
+    except Exception as e:
+        db.rollback()
+        error_msg = f"Import failed: {str(e)}"
+        print(f"[Customers Import] ❌ {error_msg}")
+        raise HTTPException(500, error_msg)
+
+
+@router.post("/migrate-tables")
+def migrate_shopify_tables(db: Session = Depends(get_db)):
+    """DANGER: Recreate all Shopify tables - will delete all data!"""
+    
+    try:
+        # Drop old tables
+        db.execute(text("DROP TABLE IF EXISTS shopify_customers CASCADE"))
+        db.execute(text("DROP TABLE IF EXISTS shopify_orders CASCADE"))
+        db.execute(text("DROP TABLE IF EXISTS shopify_products CASCADE"))
         db.execute(text("DROP TABLE IF EXISTS shopify_metrics CASCADE"))
         db.commit()
         
-        # Create new table with ALL required columns
+        # Create metrics table
         db.execute(text("""
             CREATE TABLE shopify_metrics (
                 id SERIAL PRIMARY KEY,
@@ -369,17 +689,77 @@ def migrate_shopify_table(db: Session = Depends(get_db)):
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        db.commit()
+        
+        # Create products table
+        db.execute(text("""
+            CREATE TABLE shopify_products (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR NOT NULL,
+                handle VARCHAR UNIQUE NOT NULL,
+                vendor VARCHAR,
+                product_type VARCHAR,
+                tags TEXT,
+                variant_sku VARCHAR,
+                variant_price FLOAT,
+                total_sales FLOAT DEFAULT 0,
+                units_sold INTEGER DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        
+        # Create orders table
+        db.execute(text("""
+            CREATE TABLE shopify_orders (
+                id SERIAL PRIMARY KEY,
+                order_name VARCHAR UNIQUE NOT NULL,
+                order_date TIMESTAMP WITH TIME ZONE NOT NULL,
+                customer_name VARCHAR,
+                customer_email VARCHAR,
+                financial_status VARCHAR,
+                fulfillment_status VARCHAR,
+                total FLOAT,
+                subtotal FLOAT,
+                shipping FLOAT,
+                taxes FLOAT,
+                discount_amount FLOAT,
+                line_items_count INTEGER DEFAULT 1,
+                product_titles TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        
+        # Create customers table
+        db.execute(text("""
+            CREATE TABLE shopify_customers (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR UNIQUE NOT NULL,
+                first_name VARCHAR,
+                last_name VARCHAR,
+                orders_count INTEGER DEFAULT 0,
+                total_spent FLOAT DEFAULT 0,
+                first_order_date TIMESTAMP WITH TIME ZONE,
+                last_order_date TIMESTAMP WITH TIME ZONE,
+                is_returning BOOLEAN DEFAULT FALSE,
+                accepts_marketing BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
         
         # Create indexes
-        db.execute(text("CREATE INDEX ix_shopify_metrics_id ON shopify_metrics(id)"))
         db.execute(text("CREATE INDEX ix_shopify_metrics_period_type ON shopify_metrics(period_type)"))
         db.execute(text("CREATE INDEX ix_shopify_metrics_period_start ON shopify_metrics(period_start)"))
+        db.execute(text("CREATE INDEX ix_shopify_products_handle ON shopify_products(handle)"))
+        db.execute(text("CREATE INDEX ix_shopify_orders_order_name ON shopify_orders(order_name)"))
+        db.execute(text("CREATE INDEX ix_shopify_orders_order_date ON shopify_orders(order_date)"))
+        db.execute(text("CREATE INDEX ix_shopify_customers_email ON shopify_customers(email)"))
         db.commit()
         
         return {
             "success": True,
-            "message": "✅ Shopify metrics table recreated successfully!"
+            "message": "✅ All Shopify tables recreated successfully!"
         }
         
     except Exception as e:
