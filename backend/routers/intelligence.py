@@ -295,3 +295,50 @@ async def reanalyze_intelligence(intelligence_id: int, db: Session = Depends(get
         "analysis": analysis,
         "updated_at": intel.updated_at.isoformat()
     }
+@router.post("/migrate-table")
+def migrate_intelligence_table(db: Session = Depends(get_db)):
+    """DANGER: Recreate intelligence table - will delete all data!"""
+    
+    from sqlalchemy import text
+    
+    try:
+        # Drop old table
+        db.execute(text("DROP TABLE IF EXISTS intelligence CASCADE"))
+        db.commit()
+        
+        # Create new table with correct schema
+        db.execute(text("""
+            CREATE TABLE intelligence (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR NOT NULL,
+                content TEXT NOT NULL,
+                source_type VARCHAR,
+                category VARCHAR,
+                tags JSONB,
+                ai_summary TEXT,
+                ai_insights JSONB,
+                sentiment VARCHAR,
+                priority VARCHAR DEFAULT 'medium',
+                status VARCHAR DEFAULT 'new',
+                file_url VARCHAR,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+        
+        # Create indexes
+        db.execute(text("CREATE INDEX ix_intelligence_id ON intelligence(id)"))
+        db.execute(text("CREATE INDEX ix_intelligence_title ON intelligence(title)"))
+        db.execute(text("CREATE INDEX ix_intelligence_category ON intelligence(category)"))
+        db.execute(text("CREATE INDEX ix_intelligence_created_at ON intelligence(created_at)"))
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "✅ Intelligence table recreated successfully!"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Migration failed: {str(e)}")
