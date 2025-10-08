@@ -10,8 +10,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
 export default function DeliverablesPage() {
   const [deliverables, setDeliverables] = useState([]);
   const [dashboard, setDashboard] = useState(null);
-  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, phase1, phase2, phase3, all
-  const [viewType, setViewType] = useState("both"); // both, brand_input, agency_output
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [viewType, setViewType] = useState("both");
   const [phaseData, setPhaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
@@ -66,11 +66,25 @@ export default function DeliverablesPage() {
           method: 'POST',
           body: formData
         });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Import error response:', errorText);
+          alert(`❌ Import failed: ${res.status} ${res.statusText}`);
+          return;
+        }
+        
         const data = await res.json();
-        alert(data.message);
-        loadData();
+        
+        if (data.success) {
+          alert(`✅ Success! ${data.message || `Imported ${data.created} deliverables`}`);
+          loadData();
+        } else {
+          alert(`❌ Error: ${data.message || 'Import failed'}`);
+        }
       } catch (err) {
-        alert('Import failed: ' + err.message);
+        console.error('Import error:', err);
+        alert(`❌ Import failed: ${err.message || 'Network error - check console'}`);
       }
     };
     input.click();
@@ -83,11 +97,20 @@ export default function DeliverablesPage() {
       const res = await fetch(`${API_BASE_URL}/deliverables/generate-brand-inputs`, {
         method: 'POST'
       });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Generate error response:', errorText);
+        alert(`❌ Generation failed: ${res.status} ${res.statusText}`);
+        return;
+      }
+      
       const data = await res.json();
-      alert(data.message);
+      alert(data.message || 'Brand inputs generated!');
       loadData();
     } catch (err) {
-      alert('Generation failed: ' + err.message);
+      console.error('Generate error:', err);
+      alert(`❌ Generation failed: ${err.message || 'Network error'}`);
     }
   }
 
