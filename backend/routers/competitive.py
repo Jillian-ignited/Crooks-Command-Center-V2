@@ -637,6 +637,10 @@ def cleanup_bad_competitor_entries(db: Session = Depends(get_db)):
                 should_delete = True
             elif name == 'Unknown Competitor':
                 should_delete = True
+            elif 'scraper' in name.lower():  # Tool names like "Tiktok Scraper"
+                should_delete = True
+            elif 'apify' in name.lower():  # Tool names
+                should_delete = True
             
             if should_delete:
                 deleted_entries.append({
