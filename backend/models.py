@@ -91,6 +91,64 @@ class ShopifyMetric(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
+class ShopifyProduct(Base):
+    """Shopify product sales tracking"""
+    __tablename__ = "shopify_products"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    handle = Column(String, unique=True, index=True)
+    vendor = Column(String)
+    product_type = Column(String)
+    tags = Column(Text)
+    variant_sku = Column(String)
+    variant_price = Column(Float)
+    total_sales = Column(Float, default=0.0)
+    units_sold = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class ShopifyOrder(Base):
+    """Shopify order details"""
+    __tablename__ = "shopify_orders"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    order_name = Column(String, unique=True, index=True)  # e.g. "#1001"
+    order_date = Column(DateTime(timezone=True), nullable=False, index=True)
+    customer_name = Column(String)
+    customer_email = Column(String)
+    financial_status = Column(String)  # paid, pending, refunded
+    fulfillment_status = Column(String)  # fulfilled, unfulfilled, partial
+    total = Column(Float)
+    subtotal = Column(Float)
+    shipping = Column(Float)
+    taxes = Column(Float)
+    discount_amount = Column(Float)
+    line_items_count = Column(Integer, default=1)
+    product_titles = Column(Text)  # Comma-separated product names
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class ShopifyCustomer(Base):
+    """Shopify customer tracking"""
+    __tablename__ = "shopify_customers"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    orders_count = Column(Integer, default=0)
+    total_spent = Column(Float, default=0.0)
+    first_order_date = Column(DateTime(timezone=True))
+    last_order_date = Column(DateTime(timezone=True))
+    is_returning = Column(Boolean, default=False)
+    accepts_marketing = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
 class CompetitorIntel(Base):
     """Competitive intelligence tracking"""
     __tablename__ = "competitor_intel"
