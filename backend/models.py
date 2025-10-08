@@ -48,14 +48,16 @@ class Deliverable(Base):
     campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)
     title = Column(String, index=True)
     description = Column(Text, nullable=True)
-    type = Column(String)
+    type = Column(String)  # Keep existing: ad_creative, email, social, etc.
+    deliverable_type = Column(String, default="agency_output")  # NEW: "agency_output" or "brand_input"
     status = Column(String, default="not_started")
     priority = Column(String, default="medium")
     assigned_to = Column(String, nullable=True)
     due_date = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     phase = Column(String, nullable=True)
-    dependencies = Column(JSON, nullable=True)
+    dependencies = Column(JSON, nullable=True)  # IDs of deliverables that must be completed first
+    blocks = Column(JSON, nullable=True)  # IDs of deliverables this one blocks
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
