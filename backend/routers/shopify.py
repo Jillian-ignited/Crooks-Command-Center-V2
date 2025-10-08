@@ -39,20 +39,20 @@ def get_shopify_dashboard(
         prev_start = now - timedelta(days=60)
         prev_end = start_date
     
-    # Try to get data from ShopifyMetrics (analytics imports) FIRST
-    current_metrics = db.query(ShopifyMetrics).filter(
+    # Try to get data from ShopifyMetric (analytics imports) FIRST
+    current_metrics = db.query(ShopifyMetric).filter(
         and_(
-            ShopifyMetrics.period_type == "daily",
-            ShopifyMetrics.period_start >= start_date,
-            ShopifyMetrics.period_start <= now
+            ShopifyMetric.period_type == "daily",
+            ShopifyMetric.period_start >= start_date,
+            ShopifyMetric.period_start <= now
         )
     ).all()
     
-    prev_metrics = db.query(ShopifyMetrics).filter(
+    prev_metrics = db.query(ShopifyMetric).filter(
         and_(
-            ShopifyMetrics.period_type == "daily",
-            ShopifyMetrics.period_start >= prev_start,
-            ShopifyMetrics.period_start < prev_end
+            ShopifyMetric.period_type == "daily",
+            ShopifyMetric.period_start >= prev_start,
+            ShopifyMetric.period_start < prev_end
         )
     ).all()
     
