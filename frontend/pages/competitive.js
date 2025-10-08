@@ -31,7 +31,7 @@ export default function CompetitivePage() {
       const [dashboardRes, brandsRes, dataRes] = await Promise.all([
         fetch(`${API_BASE_URL}/competitive/dashboard?days=30${threatParam}`).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE_URL}/competitive/brands`).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE_URL}/competitive/data?limit=20`).then(r => r.json()).catch(() => ({ data: [] }))
+        fetch(`${API_BASE_URL}/competitive/data?limit=100`).then(r => r.json()).catch(() => ({ data: [] }))
       ]);
       
       setDashboard(dashboardRes);
@@ -52,7 +52,6 @@ export default function CompetitivePage() {
     const formData = new FormData();
     formData.append('file', file);
     
-    // Add manual competitor name if provided
     if (manualCompetitorName.trim()) {
       formData.append('competitor_name', manualCompetitorName.trim());
     }
@@ -67,7 +66,7 @@ export default function CompetitivePage() {
 
       if (response.ok) {
         alert(`✅ Success!\n${result.message}\nAnalyzed: ${result.records_parsed} posts`);
-        setManualCompetitorName(""); // Clear input
+        setManualCompetitorName("");
         loadData();
         setActiveTab("overview");
       } else {
@@ -77,8 +76,28 @@ export default function CompetitivePage() {
       alert(`❌ Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
-      // Reset file input
       e.target.value = '';
+    }
+  }
+
+  async function deleteIntelEntry(id, competitorName) {
+    if (!confirm(`Delete intelligence entry for "${competitorName}"?\n\nThis will permanently remove the entry and associated file.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitive/intel/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert(`✅ Deleted entry for ${competitorName}`);
+        loadData();
+      } else {
+        alert(`❌ Failed to delete: ${response.status} ${response.statusText}`);
+      }
+    } catch (err) {
+      alert(`❌ Delete failed: ${err.message}`);
     }
   }
 
@@ -95,7 +114,6 @@ export default function CompetitivePage() {
 
   const hasData = dashboard && dashboard.total_data_points > 0;
   
-  // Calculate aggregate stats by threat level
   const aggregateByThreat = {};
   if (dashboard && dashboard.competitors && Array.isArray(dashboard.competitors)) {
     dashboard.competitors.forEach(comp => {
@@ -113,7 +131,6 @@ export default function CompetitivePage() {
       aggregateByThreat[threat].brands_count += 1;
     });
     
-    // Calculate averages
     Object.keys(aggregateByThreat).forEach(threat => {
       const data = aggregateByThreat[threat];
       data.avg_engagement = data.total_posts > 0 ? Math.round(data.total_engagement / data.total_posts) : 0;
@@ -122,7 +139,6 @@ export default function CompetitivePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2" }}>
-      {/* Header */}
       <div style={{ background: "#1a1a1a", padding: "1.5rem 2rem", borderBottom: "1px solid #2a2a2a" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -134,7 +150,6 @@ export default function CompetitivePage() {
       </div>
 
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        {/* Tabs */}
         <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid #2a2a2a" }}>
           <button onClick={() => setActiveTab("overview")} style={{ padding: "1rem 1.5rem", background: "none", border: "none", color: activeTab === "overview" ? "#6aa6ff" : "#888", borderBottom: activeTab === "overview" ? "2px solid #6aa6ff" : "none", cursor: "pointer", fontSize: "1rem" }}>
             📊 Overview
@@ -150,7 +165,6 @@ export default function CompetitivePage() {
           </button>
         </div>
 
-        {/* OVERVIEW TAB */}
         {activeTab === "overview" && (
           <>
             {!hasData ? (
@@ -166,7 +180,6 @@ export default function CompetitivePage() {
               </div>
             ) : (
               <>
-                {/* Summary Stats */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
                   <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>📊 Total Data Points</div>
@@ -188,76 +201,68 @@ export default function CompetitivePage() {
                   </div>
                 </div>
 
-                {/* Aggregate by Threat Level */}
-                {Object.keys(aggregateByThreat).length > 0 && (
-                  <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "2rem" }}>
-                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>📊 Aggregate by Threat Level</h3>
-                    <div style={{ display: "grid", gap: "1rem" }}>
-                      {Object.entries(aggregateByThreat).map(([threat, data]) => (
-                        <div key={threat} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: `1px solid ${threat === 'high' ? '#ff6b6b' : threat === 'medium' ? '#f59e0b' : '#4ade80'}` }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                            <div>
-                              <div style={{ fontSize: "1.1rem", fontWeight: "600", color: threat === 'high' ? '#ff6b6b' : threat === 'medium' ? '#f59e0b' : '#4ade80', marginBottom: "0.5rem" }}>
-                                {threat === 'high' ? '⚠️ High Threat' : threat === 'medium' ? '⚡ Medium Threat' : threat === 'low' ? '✅ Low Threat' : '❓ Unknown'}
-                              </div>
-                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
-                                {data.brands_count} brands tracked
-                              </div>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
-                                {data.total_posts} posts
-                              </div>
-                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
-                                {data.avg_engagement} avg engagement
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Competitors */}
                 {dashboard?.competitors && Array.isArray(dashboard.competitors) && dashboard.competitors.length > 0 && (
                   <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <h3 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>🏆 Most Active Competitors</h3>
                     <div style={{ display: "grid", gap: "1rem" }}>
-                      {dashboard.competitors.slice(0, 10).map((comp, index) => (
-                        <div key={comp.competitor} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: "1px solid #2a2a2a" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6aa6ff", background: "#0a0b0d", width: "40px", height: "40px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #2a2a2a" }}>
-                                #{index + 1}
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: "600", fontSize: "1.1rem", marginBottom: "0.25rem", color: "#e9edf2" }}>
-                                  {comp.competitor}
+                      {dashboard.competitors.slice(0, 10).map((comp, index) => {
+                        const intelEntry = competitiveData.find(d => d.competitor === comp.competitor);
+                        
+                        return (
+                          <div key={comp.competitor} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: "1px solid #2a2a2a" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1 }}>
+                                <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6aa6ff", background: "#0a0b0d", width: "40px", height: "40px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #2a2a2a" }}>
+                                  #{index + 1}
                                 </div>
-                                <div style={{ fontSize: "0.85rem", color: "#888" }}>
-                                  <span style={{ 
-                                    padding: "2px 8px", 
-                                    borderRadius: "6px", 
-                                    background: comp.threat_level === 'high' ? '#2a1a1a' : comp.threat_level === 'medium' ? '#2a2310' : '#1a2a1a',
-                                    color: comp.threat_level === 'high' ? '#ff6b6b' : comp.threat_level === 'medium' ? '#f59e0b' : '#4ade80'
-                                  }}>
-                                    {comp.threat_level === 'high' ? 'High Threat' : comp.threat_level === 'medium' ? 'Medium Threat' : 'Low Threat'}
-                                  </span>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: "600", fontSize: "1.1rem", marginBottom: "0.25rem", color: "#e9edf2" }}>
+                                    {comp.competitor}
+                                  </div>
+                                  <div style={{ fontSize: "0.85rem", color: "#888" }}>
+                                    <span style={{ 
+                                      padding: "2px 8px", 
+                                      borderRadius: "6px", 
+                                      background: comp.threat_level === 'high' ? '#2a1a1a' : comp.threat_level === 'medium' ? '#2a2310' : '#1a2a1a',
+                                      color: comp.threat_level === 'high' ? '#ff6b6b' : comp.threat_level === 'medium' ? '#f59e0b' : '#4ade80'
+                                    }}>
+                                      {comp.threat_level === 'high' ? 'High Threat' : comp.threat_level === 'medium' ? 'Medium Threat' : 'Low Threat'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
-                                {comp.total_posts || 0}
-                              </div>
-                              <div style={{ fontSize: "0.85rem", color: "#888" }}>
-                                {comp.avg_engagement || 0} avg engagement
+                              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                <div style={{ textAlign: "right" }}>
+                                  <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
+                                    {comp.total_posts || 0}
+                                  </div>
+                                  <div style={{ fontSize: "0.85rem", color: "#888" }}>
+                                    {comp.avg_engagement || 0} avg engagement
+                                  </div>
+                                </div>
+                                {intelEntry && (
+                                  <button
+                                    onClick={() => deleteIntelEntry(intelEntry.id, comp.competitor)}
+                                    style={{
+                                      padding: "8px 12px",
+                                      background: "#2a1a1a",
+                                      color: "#ff6b6b",
+                                      border: "1px solid #3a2a2a",
+                                      borderRadius: "6px",
+                                      cursor: "pointer",
+                                      fontSize: "0.85rem",
+                                      fontWeight: "600"
+                                    }}
+                                    title="Delete this competitor entry"
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -266,7 +271,6 @@ export default function CompetitivePage() {
           </>
         )}
 
-        {/* BRANDS TAB */}
         {activeTab === "brands" && brands && (
           <div>
             <div style={{ marginBottom: "2rem" }}>
@@ -276,49 +280,81 @@ export default function CompetitivePage() {
               </p>
             </div>
 
-            {/* High Threat */}
             {brands?.brands?.high_threat && Array.isArray(brands.brands.high_threat) && brands.brands.high_threat.length > 0 && (
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "1.5rem" }}>
                 <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#ff6b6b" }}>⚠️ High Threat ({brands.brands.high_threat.length})</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-                  {brands.brands.high_threat.map(brand => (
-                    <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a1a1a", borderRadius: "6px", color: "#ff6b6b", border: "1px solid #3a2a2a" }}>
-                      {brand}
-                    </div>
-                  ))}
+                  {brands.brands.high_threat.map(brand => {
+                    const intelEntry = competitiveData.find(d => d.competitor === brand);
+                    return (
+                      <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a1a1a", borderRadius: "6px", color: "#ff6b6b", border: "1px solid #3a2a2a", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>{brand}</span>
+                        {intelEntry && (
+                          <button
+                            onClick={() => deleteIntelEntry(intelEntry.id, brand)}
+                            style={{ background: "none", border: "none", color: "#ff6b6b", cursor: "pointer", fontSize: "1rem", padding: "0 4px" }}
+                            title="Delete"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Medium Threat */}
             {brands?.brands?.medium_threat && Array.isArray(brands.brands.medium_threat) && brands.brands.medium_threat.length > 0 && (
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "1.5rem" }}>
                 <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#f59e0b" }}>⚡ Medium Threat ({brands.brands.medium_threat.length})</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-                  {brands.brands.medium_threat.map(brand => (
-                    <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a2310", borderRadius: "6px", color: "#f59e0b", border: "1px solid #3a3320" }}>
-                      {brand}
-                    </div>
-                  ))}
+                  {brands.brands.medium_threat.map(brand => {
+                    const intelEntry = competitiveData.find(d => d.competitor === brand);
+                    return (
+                      <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a2310", borderRadius: "6px", color: "#f59e0b", border: "1px solid #3a3320", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>{brand}</span>
+                        {intelEntry && (
+                          <button
+                            onClick={() => deleteIntelEntry(intelEntry.id, brand)}
+                            style={{ background: "none", border: "none", color: "#f59e0b", cursor: "pointer", fontSize: "1rem", padding: "0 4px" }}
+                            title="Delete"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Low Threat */}
             {brands?.brands?.low_threat && Array.isArray(brands.brands.low_threat) && brands.brands.low_threat.length > 0 && (
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                 <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#4ade80" }}>✅ Low Threat ({brands.brands.low_threat.length})</h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-                  {brands.brands.low_threat.map(brand => (
-                    <div key={brand} style={{ padding: "0.75rem 1rem", background: "#1a2a1a", borderRadius: "6px", color: "#4ade80", border: "1px solid #2a3a2a" }}>
-                      {brand}
-                    </div>
-                  ))}
+                  {brands.brands.low_threat.map(brand => {
+                    const intelEntry = competitiveData.find(d => d.competitor === brand);
+                    return (
+                      <div key={brand} style={{ padding: "0.75rem 1rem", background: "#1a2a1a", borderRadius: "6px", color: "#4ade80", border: "1px solid #2a3a2a", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>{brand}</span>
+                        {intelEntry && (
+                          <button
+                            onClick={() => deleteIntelEntry(intelEntry.id, brand)}
+                            style={{ background: "none", border: "none", color: "#4ade80", cursor: "pointer", fontSize: "1rem", padding: "0 4px" }}
+                            title="Delete"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* No brands message */}
             {(!brands?.brands?.high_threat?.length && !brands?.brands?.medium_threat?.length && !brands?.brands?.low_threat?.length) && (
               <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
                 <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📊</div>
@@ -329,7 +365,6 @@ export default function CompetitivePage() {
           </div>
         )}
 
-        {/* COMPARISON TAB */}
         {activeTab === "comparison" && (
           <div>
             {!hasData ? (
@@ -347,7 +382,6 @@ export default function CompetitivePage() {
                   </p>
                 </div>
 
-                {/* Crooks vs All Competitors */}
                 <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "2rem" }}>
                   <h4 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>
                     🏰 Crooks & Castles vs All Competitors
@@ -376,7 +410,6 @@ export default function CompetitivePage() {
                   </div>
                 </div>
 
-                {/* Crooks vs Individual Brands */}
                 {dashboard?.competitors && Array.isArray(dashboard.competitors) && dashboard.competitors.length > 0 && (
                   <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <h4 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>
@@ -422,7 +455,6 @@ export default function CompetitivePage() {
           </div>
         )}
 
-        {/* UPLOAD TAB */}
         {activeTab === "upload" && (
           <div>
             <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", maxWidth: "700px", margin: "0 auto" }}>
@@ -439,7 +471,6 @@ export default function CompetitivePage() {
                 </ol>
               </div>
 
-              {/* Manual Competitor Name Input */}
               <div style={{ marginBottom: "1.5rem" }}>
                 <label style={{ display: "block", marginBottom: "0.5rem", color: "#e9edf2", fontWeight: "600" }}>
                   Competitor Brand Name (Optional)
