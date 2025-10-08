@@ -88,9 +88,9 @@ export default function CompetitivePage() {
   
   // Calculate aggregate stats by threat level
   const aggregateByThreat = {};
-  if (dashboard && dashboard.competitors) {
+  if (dashboard && dashboard.competitors && Array.isArray(dashboard.competitors)) {
     dashboard.competitors.forEach(comp => {
-      const threat = comp.threat_level;
+      const threat = comp.threat_level || 'unknown';
       if (!aggregateByThreat[threat]) {
         aggregateByThreat[threat] = {
           total_posts: 0,
@@ -99,8 +99,8 @@ export default function CompetitivePage() {
           avg_engagement: 0
         };
       }
-      aggregateByThreat[threat].total_posts += comp.total_posts;
-      aggregateByThreat[threat].total_engagement += comp.avg_engagement * comp.total_posts;
+      aggregateByThreat[threat].total_posts += comp.total_posts || 0;
+      aggregateByThreat[threat].total_engagement += (comp.avg_engagement || 0) * (comp.total_posts || 0);
       aggregateByThreat[threat].brands_count += 1;
     });
     
@@ -161,11 +161,11 @@ export default function CompetitivePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
                   <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>📊 Total Data Points</div>
-                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{dashboard.total_data_points}</div>
+                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{dashboard?.total_data_points || 0}</div>
                   </div>
                   <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>🏢 Competitors Tracked</div>
-                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{dashboard.competitors_tracked}</div>
+                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{dashboard?.competitors_tracked || 0}</div>
                   </div>
                   <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                     <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>⚠️ High Threat Brands</div>
@@ -180,74 +180,78 @@ export default function CompetitivePage() {
                 </div>
 
                 {/* Aggregate by Threat Level */}
-                <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "2rem" }}>
-                  <h3 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>📊 Aggregate by Threat Level</h3>
-                  <div style={{ display: "grid", gap: "1rem" }}>
-                    {Object.entries(aggregateByThreat).map(([threat, data]) => (
-                      <div key={threat} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: `1px solid ${threat === 'high' ? '#ff6b6b' : threat === 'medium' ? '#f59e0b' : '#4ade80'}` }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                          <div>
-                            <div style={{ fontSize: "1.1rem", fontWeight: "600", color: threat === 'high' ? '#ff6b6b' : threat === 'medium' ? '#f59e0b' : '#4ade80', marginBottom: "0.5rem" }}>
-                              {threat === 'high' ? '⚠️ High Threat' : threat === 'medium' ? '⚡ Medium Threat' : threat === 'low' ? '✅ Low Threat' : '❓ Unknown'}
+                {Object.keys(aggregateByThreat).length > 0 && (
+                  <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "2rem" }}>
+                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>📊 Aggregate by Threat Level</h3>
+                    <div style={{ display: "grid", gap: "1rem" }}>
+                      {Object.entries(aggregateByThreat).map(([threat, data]) => (
+                        <div key={threat} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: `1px solid ${threat === 'high' ? '#ff6b6b' : threat === 'medium' ? '#f59e0b' : '#4ade80'}` }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                            <div>
+                              <div style={{ fontSize: "1.1rem", fontWeight: "600", color: threat === 'high' ? '#ff6b6b' : threat === 'medium' ? '#f59e0b' : '#4ade80', marginBottom: "0.5rem" }}>
+                                {threat === 'high' ? '⚠️ High Threat' : threat === 'medium' ? '⚡ Medium Threat' : threat === 'low' ? '✅ Low Threat' : '❓ Unknown'}
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
+                                {data.brands_count} brands tracked
+                              </div>
                             </div>
-                            <div style={{ fontSize: "0.9rem", color: "#888" }}>
-                              {data.brands_count} brands tracked
-                            </div>
-                          </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
-                              {data.total_posts} posts
-                            </div>
-                            <div style={{ fontSize: "0.9rem", color: "#888" }}>
-                              {data.avg_engagement} avg engagement
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
+                                {data.total_posts} posts
+                              </div>
+                              <div style={{ fontSize: "0.9rem", color: "#888" }}>
+                                {data.avg_engagement} avg engagement
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Top Competitors */}
-                <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-                  <h3 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>🏆 Most Active Competitors</h3>
-                  <div style={{ display: "grid", gap: "1rem" }}>
-                    {dashboard.competitors.slice(0, 10).map((comp, index) => (
-                      <div key={comp.competitor} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: "1px solid #2a2a2a" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6aa6ff", background: "#0a0b0d", width: "40px", height: "40px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #2a2a2a" }}>
-                              #{index + 1}
+                {dashboard?.competitors && Array.isArray(dashboard.competitors) && dashboard.competitors.length > 0 && (
+                  <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+                    <h3 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>🏆 Most Active Competitors</h3>
+                    <div style={{ display: "grid", gap: "1rem" }}>
+                      {dashboard.competitors.slice(0, 10).map((comp, index) => (
+                        <div key={comp.competitor} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", border: "1px solid #2a2a2a" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6aa6ff", background: "#0a0b0d", width: "40px", height: "40px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #2a2a2a" }}>
+                                #{index + 1}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: "600", fontSize: "1.1rem", marginBottom: "0.25rem", color: "#e9edf2" }}>
+                                  {comp.competitor}
+                                </div>
+                                <div style={{ fontSize: "0.85rem", color: "#888" }}>
+                                  <span style={{ 
+                                    padding: "2px 8px", 
+                                    borderRadius: "6px", 
+                                    background: comp.threat_level === 'high' ? '#2a1a1a' : comp.threat_level === 'medium' ? '#2a2310' : '#1a2a1a',
+                                    color: comp.threat_level === 'high' ? '#ff6b6b' : comp.threat_level === 'medium' ? '#f59e0b' : '#4ade80'
+                                  }}>
+                                    {comp.threat_level === 'high' ? 'High Threat' : comp.threat_level === 'medium' ? 'Medium Threat' : 'Low Threat'}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <div style={{ fontWeight: "600", fontSize: "1.1rem", marginBottom: "0.25rem", color: "#e9edf2" }}>
-                                {comp.competitor}
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
+                                {comp.total_posts || 0}
                               </div>
                               <div style={{ fontSize: "0.85rem", color: "#888" }}>
-                                <span style={{ 
-                                  padding: "2px 8px", 
-                                  borderRadius: "6px", 
-                                  background: comp.threat_level === 'high' ? '#2a1a1a' : comp.threat_level === 'medium' ? '#2a2310' : '#1a2a1a',
-                                  color: comp.threat_level === 'high' ? '#ff6b6b' : comp.threat_level === 'medium' ? '#f59e0b' : '#4ade80'
-                                }}>
-                                  {comp.threat_level === 'high' ? 'High Threat' : comp.threat_level === 'medium' ? 'Medium Threat' : 'Low Threat'}
-                                </span>
+                                {comp.avg_engagement || 0} avg engagement
                               </div>
-                            </div>
-                          </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
-                              {comp.total_posts}
-                            </div>
-                            <div style={{ fontSize: "0.85rem", color: "#888" }}>
-                              {comp.avg_engagement} avg engagement
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </>
@@ -259,45 +263,60 @@ export default function CompetitivePage() {
             <div style={{ marginBottom: "2rem" }}>
               <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#e9edf2" }}>Competitor Brands by Threat Level</h3>
               <p style={{ color: "#888", fontSize: "0.9rem" }}>
-                Total: {brands.total} brands • {brands.threat_levels.high} high threat • {brands.threat_levels.medium} medium • {brands.threat_levels.low} low
+                Total: {brands?.total || 0} brands • {brands?.threat_levels?.high || 0} high threat • {brands?.threat_levels?.medium || 0} medium • {brands?.threat_levels?.low || 0} low
               </p>
             </div>
 
             {/* High Threat */}
-            <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "1.5rem" }}>
-              <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#ff6b6b" }}>⚠️ High Threat ({brands.brands.high_threat.length})</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-                {brands.brands.high_threat.map(brand => (
-                  <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a1a1a", borderRadius: "6px", color: "#ff6b6b", border: "1px solid #3a2a2a" }}>
-                    {brand}
-                  </div>
-                ))}
+            {brands?.brands?.high_threat && Array.isArray(brands.brands.high_threat) && brands.brands.high_threat.length > 0 && (
+              <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "1.5rem" }}>
+                <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#ff6b6b" }}>⚠️ High Threat ({brands.brands.high_threat.length})</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+                  {brands.brands.high_threat.map(brand => (
+                    <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a1a1a", borderRadius: "6px", color: "#ff6b6b", border: "1px solid #3a2a2a" }}>
+                      {brand}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Medium Threat */}
-            <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "1.5rem" }}>
-              <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#f59e0b" }}>⚡ Medium Threat ({brands.brands.medium_threat.length})</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-                {brands.brands.medium_threat.map(brand => (
-                  <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a2310", borderRadius: "6px", color: "#f59e0b", border: "1px solid #3a3320" }}>
-                    {brand}
-                  </div>
-                ))}
+            {brands?.brands?.medium_threat && Array.isArray(brands.brands.medium_threat) && brands.brands.medium_threat.length > 0 && (
+              <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a", marginBottom: "1.5rem" }}>
+                <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#f59e0b" }}>⚡ Medium Threat ({brands.brands.medium_threat.length})</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+                  {brands.brands.medium_threat.map(brand => (
+                    <div key={brand} style={{ padding: "0.75rem 1rem", background: "#2a2310", borderRadius: "6px", color: "#f59e0b", border: "1px solid #3a3320" }}>
+                      {brand}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Low Threat */}
-            <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-              <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#4ade80" }}>✅ Low Threat ({brands.brands.low_threat.length})</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-                {brands.brands.low_threat.map(brand => (
-                  <div key={brand} style={{ padding: "0.75rem 1rem", background: "#1a2a1a", borderRadius: "6px", color: "#4ade80", border: "1px solid #2a3a2a" }}>
-                    {brand}
-                  </div>
-                ))}
+            {brands?.brands?.low_threat && Array.isArray(brands.brands.low_threat) && brands.brands.low_threat.length > 0 && (
+              <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+                <h4 style={{ fontSize: "1.1rem", marginBottom: "1rem", color: "#4ade80" }}>✅ Low Threat ({brands.brands.low_threat.length})</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+                  {brands.brands.low_threat.map(brand => (
+                    <div key={brand} style={{ padding: "0.75rem 1rem", background: "#1a2a1a", borderRadius: "6px", color: "#4ade80", border: "1px solid #2a3a2a" }}>
+                      {brand}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* No brands message */}
+            {(!brands?.brands?.high_threat?.length && !brands?.brands?.medium_threat?.length && !brands?.brands?.low_threat?.length) && (
+              <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📊</div>
+                <h3 style={{ marginBottom: "1rem", color: "#e9edf2" }}>No Brand Data Available</h3>
+                <p style={{ color: "#888" }}>Upload competitive intelligence to see brand categorization</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -339,54 +358,56 @@ export default function CompetitivePage() {
                         All Competitors Combined
                       </div>
                       <div style={{ fontSize: "2.5rem", fontWeight: "bold", color: "#ff6b6b", marginBottom: "1rem" }}>
-                        {dashboard.total_data_points}
+                        {dashboard?.total_data_points || 0}
                       </div>
                       <div style={{ fontSize: "0.85rem", color: "#888" }}>
-                        {dashboard.competitors_tracked} brands • Last 30 days
+                        {dashboard?.competitors_tracked || 0} brands • Last 30 days
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Crooks vs Individual Brands */}
-                <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
-                  <h4 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>
-                    🏰 Crooks vs Individual Brands
-                  </h4>
-                  
-                  {dashboard.competitors.map(comp => (
-                    <div key={comp.competitor} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", marginBottom: "1rem", border: "1px solid #2a2a2a" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.5rem" }}>🏰 Crooks & Castles</div>
-                          <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6aa6ff" }}>—</div>
-                          <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.5rem" }}>Add data to compare</div>
-                        </div>
-                        <div style={{ borderLeft: "1px solid #2a2a2a", paddingLeft: "2rem" }}>
-                          <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.5rem" }}>
-                            {comp.competitor}
-                            <span style={{ 
-                              marginLeft: "0.5rem",
-                              padding: "2px 8px", 
-                              borderRadius: "6px", 
-                              fontSize: "0.75rem",
-                              background: comp.threat_level === 'high' ? '#2a1a1a' : comp.threat_level === 'medium' ? '#2a2310' : '#1a2a1a',
-                              color: comp.threat_level === 'high' ? '#ff6b6b' : comp.threat_level === 'medium' ? '#f59e0b' : '#4ade80'
-                            }}>
-                              {comp.threat_level}
-                            </span>
+                {dashboard?.competitors && Array.isArray(dashboard.competitors) && dashboard.competitors.length > 0 && (
+                  <div style={{ background: "#1a1a1a", padding: "2rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
+                    <h4 style={{ fontSize: "1.25rem", marginBottom: "1.5rem", color: "#e9edf2" }}>
+                      🏰 Crooks vs Individual Brands
+                    </h4>
+                    
+                    {dashboard.competitors.map(comp => (
+                      <div key={comp.competitor} style={{ background: "#0a0b0d", padding: "1.5rem", borderRadius: "8px", marginBottom: "1rem", border: "1px solid #2a2a2a" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.5rem" }}>🏰 Crooks & Castles</div>
+                            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6aa6ff" }}>—</div>
+                            <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.5rem" }}>Add data to compare</div>
                           </div>
-                          <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
-                            {comp.total_posts} posts
-                          </div>
-                          <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.5rem" }}>
-                            {comp.avg_engagement} avg engagement
+                          <div style={{ borderLeft: "1px solid #2a2a2a", paddingLeft: "2rem" }}>
+                            <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.5rem" }}>
+                              {comp.competitor}
+                              <span style={{ 
+                                marginLeft: "0.5rem",
+                                padding: "2px 8px", 
+                                borderRadius: "6px", 
+                                fontSize: "0.75rem",
+                                background: comp.threat_level === 'high' ? '#2a1a1a' : comp.threat_level === 'medium' ? '#2a2310' : '#1a2a1a',
+                                color: comp.threat_level === 'high' ? '#ff6b6b' : comp.threat_level === 'medium' ? '#f59e0b' : '#4ade80'
+                              }}>
+                                {comp.threat_level}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#e9edf2" }}>
+                              {comp.total_posts || 0} posts
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#666", marginTop: "0.5rem" }}>
+                              {comp.avg_engagement || 0} avg engagement
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -441,7 +462,7 @@ export default function CompetitivePage() {
                 <div style={{ marginTop: "2rem", padding: "1rem", background: "#1a2a1a", borderRadius: "8px", borderLeft: "3px solid #4ade80" }}>
                   <div style={{ color: "#4ade80", fontWeight: "600", marginBottom: "0.5rem" }}>✅ Data Already Imported</div>
                   <div style={{ fontSize: "0.9rem", color: "#888" }}>
-                    You have {dashboard.total_data_points} data points from {dashboard.competitors_tracked} competitors. Upload more to expand your intelligence.
+                    You have {dashboard?.total_data_points || 0} data points from {dashboard?.competitors_tracked || 0} competitors. Upload more to expand your intelligence.
                   </div>
                 </div>
               )}
