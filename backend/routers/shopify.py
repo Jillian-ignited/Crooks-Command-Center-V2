@@ -185,32 +185,43 @@ async def import_shopify_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Import Shopify data from CSV"""
+    """Import Shopify data from CSV - handles Shopify export format"""
     
     try:
         contents = await file.read()
         decoded = contents.decode('utf-8-sig')  # Handle BOM
         
+        print(f"[Shopify Import] File received: {file.filename}")
+        
         csv_file = StringIO(decoded)
         reader = csv.DictReader(csv_file)
         
+        # Log the headers
+        headers = reader.fieldnames
+        print(f"[Shopify Import] CSV Headers: {headers}")
+        
+        # Detect which type of Shopify export this is
+        is_sales_export = 'Net sales' in headers or 'Total sales' in headers
+        is_conversion_export = 'Conversion rate' in headers and 'Sessions' in headers
+        is_orders_export = 'Average order value' in headers and 'Orders' in headers
+        
+        print(f"[Shopify Import] Detected - Sales: {is_sales_export}, Conversion: {is_conversion_export}, Orders: {is_orders_export}")
+        
         created = 0
+        updated = 0
         errors = []
         
         for idx, row in enumerate(reader, start=2):
             try:
-                # Expected columns: Date, Orders, Revenue, Sessions
-                # Flexible column name matching
-                date_str = (row.get('Date') or row.get('date') or row.get('Day') or 
-                           row.get('day') or row.get('DATE'))
+                # Get date
+                date_str = row.get('Day') or row.get('Date')
                 
-                if not date_str or not date_str.strip():
-                    errors.append(f"Row {idx}: Missing date")
-                    continue
+                if not date_str or not date_str.strip() or 'previous_period' in date_str.lower():
+                    continue  # Skip previous period rows
                 
-                # Parse date - try multiple formats
+                # Parse date
                 period_start = None
-                date_formats = ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']
+                date_formats = ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%b %d, %Y']
                 
                 for fmt in date_formats:
                     try:
@@ -220,61 +231,113 @@ async def import_shopify_csv(
                         continue
                 
                 if not period_start:
-                    errors.append(f"Row {idx}: Invalid date format: {date_str}")
+                    errors.append(f"Row {idx}: Could not parse date '{date_str}'")
                     continue
                 
                 period_end = period_start + timedelta(days=1)
                 
-                # Extract metrics - flexible column names
-                orders_str = (row.get('Orders') or row.get('orders') or 
-                             row.get('Total Orders') or row.get('ORDER_COUNT') or '0')
-                revenue_str = (row.get('Revenue') or row.get('revenue') or 
-                              row.get('Total Sales') or row.get('Sales') or 
-                              row.get('REVENUE') or '0')
-                sessions_str = (row.get('Sessions') or row.get('sessions') or 
-                               row.get('Visits') or row.get('visits') or 
-                               row.get('SESSIONS') or '0')
+                # Check if metric already exists for this date
+                existing = db.query(ShopifyMetric).filter(
+                    ShopifyMetric.period_start == period_start
+                ).first()
                 
-                # Clean and convert
-                orders = int(float(orders_str.replace('$', '').replace(',', '') if orders_str else 0))
-                revenue = float(revenue_str.replace('$', '').replace(',', '') if revenue_str else 0)
-                sessions = int(float(sessions_str.replace(',', '') if sessions_str else 0))
+                if existing:
+                    metric = existing
+                else:
+                    metric = ShopifyMetric(
+                        period_type="daily",
+                        period_start=period_start,
+                        period_end=period_end
+                    )
                 
-                # Calculate AOV
-                aov = revenue / orders if orders > 0 else 0
+                # Extract data based on export type
+                if is_sales_export:
+                    # Sales over time export
+                    orders_str = row.get('Orders', '0')
+                    net_sales_str = row.get('Net sales', '0')
+                    total_sales_str = row.get('Total sales', '0')
+                    
+                    orders = int(float(orders_str.replace(',', '').strip()) if orders_str else 0)
+                    revenue = float(net_sales_str.replace('$', '').replace(',', '').strip() if net_sales_str else 0)
+                    
+                    metric.total_orders = orders
+                    metric.total_revenue = revenue
+                    metric.avg_order_value = revenue / orders if orders > 0 else 0
+                    
+                    print(f"[Shopify] Row {idx}: Orders={orders}, Revenue=${revenue}")
                 
-                # Calculate conversion rate
-                conversion = (orders / sessions * 100) if sessions > 0 else 0
+                if is_conversion_export:
+                    # Conversion rate export
+                    sessions_str = row.get('Sessions', '0')
+                    conversion_str = row.get('Conversion rate', '0')
+                    completed_str = row.get('Sessions that completed checkout', '0')
+                    
+                    sessions = int(float(sessions_str.replace(',', '').strip()) if sessions_str else 0)
+                    conversion = float(conversion_str.replace('%', '').strip() if conversion_str else 0)
+                    
+                    metric.total_sessions = sessions
+                    metric.conversion_rate = conversion
+                    
+                    # If we have orders from completed checkouts, use that
+                    if completed_str:
+                        completed = int(float(completed_str.replace(',', '').strip()))
+                        if metric.total_orders == 0:
+                            metric.total_orders = completed
+                    
+                    print(f"[Shopify] Row {idx}: Sessions={sessions}, Conversion={conversion}%")
                 
-                metric = ShopifyMetric(
-                    period_type="daily",
-                    period_start=period_start,
-                    period_end=period_end,
-                    total_orders=orders,
-                    total_revenue=revenue,
-                    avg_order_value=aov,
-                    total_sessions=sessions,
-                    conversion_rate=conversion
-                )
+                if is_orders_export:
+                    # Orders export
+                    orders_str = row.get('Orders', '0')
+                    aov_str = row.get('Average order value', '0')
+                    
+                    orders = int(float(orders_str.replace(',', '').strip()) if orders_str else 0)
+                    aov = float(aov_str.replace('$', '').replace(',', '').strip() if aov_str else 0)
+                    
+                    metric.total_orders = orders
+                    metric.avg_order_value = aov
+                    
+                    # Calculate revenue from orders * aov if we don't have it
+                    if metric.total_revenue == 0:
+                        metric.total_revenue = orders * aov
+                    
+                    print(f"[Shopify] Row {idx}: Orders={orders}, AOV=${aov}")
                 
-                db.add(metric)
-                created += 1
+                # Recalculate derived metrics
+                if metric.total_orders > 0 and metric.total_revenue > 0:
+                    metric.avg_order_value = metric.total_revenue / metric.total_orders
+                
+                if metric.total_orders > 0 and metric.total_sessions > 0:
+                    metric.conversion_rate = (metric.total_orders / metric.total_sessions) * 100
+                
+                if existing:
+                    updated += 1
+                else:
+                    db.add(metric)
+                    created += 1
                 
             except Exception as e:
-                errors.append(f"Row {idx}: {str(e)}")
+                error_msg = f"Row {idx}: {str(e)}"
+                errors.append(error_msg)
+                print(f"[Shopify Import] ❌ {error_msg}")
         
         db.commit()
+        print(f"[Shopify Import] ✅ Success - Created: {created}, Updated: {updated}")
         
         return {
             "success": True,
-            "message": f"✅ Imported {created} Shopify metrics",
+            "message": f"✅ Imported Shopify data - Created {created} new records, Updated {updated} existing records",
             "created": created,
-            "errors": errors[:10] if errors else []
+            "updated": updated,
+            "errors": errors[:5] if errors else [],
+            "total_errors": len(errors)
         }
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(500, f"Import failed: {str(e)}")
+        error_msg = f"Import failed: {str(e)}"
+        print(f"[Shopify Import] ❌ {error_msg}")
+        raise HTTPException(500, error_msg)
 
 
 @router.post("/generate-sample-data")
