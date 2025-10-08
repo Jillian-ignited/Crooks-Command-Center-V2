@@ -24,8 +24,8 @@ export default function DeliverablesPage() {
     try {
       setLoading(true);
       const [dashboardRes, allRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/deliverables/dashboard`).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE_URL}/deliverables/`).then(r => r.json()).catch(() => ({ deliverables: [] }))
+        fetch(`${API_BASE_URL}/deliverables/dashboard`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`${API_BASE_URL}/deliverables/`).then(r => r.ok ? r.json() : { deliverables: [] }).catch(() => ({ deliverables: [] }))
       ]);
       
       setDashboard(dashboardRes);
@@ -43,8 +43,10 @@ export default function DeliverablesPage() {
     try {
       const phaseNum = phase.replace('phase', '');
       const res = await fetch(`${API_BASE_URL}/deliverables/by-phase/Phase ${phaseNum}`);
-      const data = await res.json();
-      setPhaseData(data);
+      if (res.ok) {
+        const data = await res.json();
+        setPhaseData(data);
+      }
     } catch (err) {
       console.error("Failed to load phase data:", err);
     }
@@ -149,6 +151,8 @@ export default function DeliverablesPage() {
   }
 
   const StatusBadge = ({ status }) => {
+    if (!status) return <span style={{ color: "#888", fontSize: "0.75rem" }}>—</span>;
+    
     const colors = {
       not_started: { bg: "#2a1a1a", color: "#ff6b6b" },
       in_progress: { bg: "#2a2310", color: "#f59e0b" },
@@ -167,12 +171,14 @@ export default function DeliverablesPage() {
         color: style.color,
         textTransform: "uppercase"
       }}>
-        {status.replace('_', ' ')}
+        {(status || '').replace(/_/g, ' ')}
       </span>
     );
   };
 
   const PriorityBadge = ({ priority }) => {
+    if (!priority) return null;
+    
     const colors = {
       high: "#ff6b6b",
       medium: "#f59e0b",
@@ -180,84 +186,88 @@ export default function DeliverablesPage() {
     };
     return (
       <span style={{ color: colors[priority] || colors.medium, fontSize: "0.85rem", fontWeight: "600" }}>
-        {priority === 'high' ? '🔥' : priority === 'medium' ? '⚡' : '📌'} {priority.toUpperCase()}
+        {priority === 'high' ? '🔥' : priority === 'medium' ? '⚡' : '📌'} {(priority || '').toUpperCase()}
       </span>
     );
   };
 
-  const DeliverableCard = ({ d, showType = true }) => (
-    <div style={{ 
-      background: "#1a1a1a", 
-      padding: "1.5rem", 
-      borderRadius: "12px", 
-      border: "1px solid #2a2a2a",
-      borderLeft: `3px solid ${d.deliverable_type === 'brand_input' ? '#6aa6ff' : '#4ade80'}`
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-        <div style={{ flex: 1 }}>
-          {showType && (
-            <div style={{ 
-              fontSize: "0.75rem", 
-              color: d.deliverable_type === 'brand_input' ? '#6aa6ff' : '#4ade80',
-              fontWeight: "600",
-              marginBottom: "0.5rem",
-              textTransform: "uppercase"
-            }}>
-              {d.deliverable_type === 'brand_input' ? '📤 You Deliver' : '📥 HVA Delivers'}
-            </div>
-          )}
-          <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#e9edf2", marginBottom: "0.5rem" }}>
-            {d.title}
-          </div>
-          {d.description && (
-            <div style={{ fontSize: "0.9rem", color: "#888", marginBottom: "0.5rem" }}>
-              {d.description}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
-            {d.due_date && (
-              <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                📅 Due: {new Date(d.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+  const DeliverableCard = ({ d, showType = true }) => {
+    if (!d || !d.title) return null;
+    
+    return (
+      <div style={{ 
+        background: "#1a1a1a", 
+        padding: "1.5rem", 
+        borderRadius: "12px", 
+        border: "1px solid #2a2a2a",
+        borderLeft: `3px solid ${d.deliverable_type === 'brand_input' ? '#6aa6ff' : '#4ade80'}`
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+          <div style={{ flex: 1 }}>
+            {showType && d.deliverable_type && (
+              <div style={{ 
+                fontSize: "0.75rem", 
+                color: d.deliverable_type === 'brand_input' ? '#6aa6ff' : '#4ade80',
+                fontWeight: "600",
+                marginBottom: "0.5rem",
+                textTransform: "uppercase"
+              }}>
+                {d.deliverable_type === 'brand_input' ? '📤 You Deliver' : '📥 HVA Delivers'}
               </div>
             )}
-            <PriorityBadge priority={d.priority} />
+            <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#e9edf2", marginBottom: "0.5rem" }}>
+              {d.title}
+            </div>
+            {d.description && (
+              <div style={{ fontSize: "0.9rem", color: "#888", marginBottom: "0.5rem" }}>
+                {d.description}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+              {d.due_date && (
+                <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                  📅 Due: {new Date(d.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+              )}
+              {d.priority && <PriorityBadge priority={d.priority} />}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
+            <StatusBadge status={d.status} />
+            <select 
+              value={d.status || 'not_started'} 
+              onChange={(e) => updateStatus(d.id, e.target.value)}
+              style={{ 
+                padding: "4px 8px", 
+                background: "#0a0b0d", 
+                color: "#e9edf2", 
+                border: "1px solid #2a2a2a", 
+                borderRadius: "6px",
+                fontSize: "0.75rem",
+                cursor: "pointer"
+              }}
+            >
+              <option value="not_started">Not Started</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="blocked">Blocked</option>
+              <option value="ready">Ready</option>
+            </select>
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
-          <StatusBadge status={d.status} />
-          <select 
-            value={d.status} 
-            onChange={(e) => updateStatus(d.id, e.target.value)}
-            style={{ 
-              padding: "4px 8px", 
-              background: "#0a0b0d", 
-              color: "#e9edf2", 
-              border: "1px solid #2a2a2a", 
-              borderRadius: "6px",
-              fontSize: "0.75rem",
-              cursor: "pointer"
-            }}
-          >
-            <option value="not_started">Not Started</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="blocked">Blocked</option>
-            <option value="ready">Ready</option>
-          </select>
-        </div>
+        {d.blocks && Array.isArray(d.blocks) && d.blocks.length > 0 && (
+          <div style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px solid #2a2a2a" }}>
+            <strong style={{ color: "#6aa6ff" }}>🔓 Unlocks:</strong> {d.blocks.join(', ')}
+          </div>
+        )}
+        {d.assigned_to && (
+          <div style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.5rem" }}>
+            <strong>Assigned:</strong> {d.assigned_to}
+          </div>
+        )}
       </div>
-      {d.blocks && d.blocks.length > 0 && (
-        <div style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px solid #2a2a2a" }}>
-          <strong style={{ color: "#6aa6ff" }}>🔓 Unlocks:</strong> {d.blocks.join(', ')}
-        </div>
-      )}
-      {d.assigned_to && (
-        <div style={{ fontSize: "0.85rem", color: "#888", marginTop: "0.5rem" }}>
-          <strong>Assigned:</strong> {d.assigned_to}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0b0d", color: "#e9edf2" }}>
@@ -331,33 +341,33 @@ export default function DeliverablesPage() {
         </div>
 
         {/* DASHBOARD TAB */}
-        {activeTab === "dashboard" && dashboard && (
+        {activeTab === "dashboard" && dashboard && dashboard.stats && (
           <>
             {/* Stats Grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #2a2a2a" }}>
                 <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>Total Deliverables</div>
-                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{dashboard.stats.total}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#e9edf2" }}>{dashboard.stats.total || 0}</div>
               </div>
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #6aa6ff20", borderLeft: "3px solid #6aa6ff" }}>
                 <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>📤 You Deliver</div>
-                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#6aa6ff" }}>{dashboard.stats.brand_inputs}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#6aa6ff" }}>{dashboard.stats.brand_inputs || 0}</div>
               </div>
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #4ade8020", borderLeft: "3px solid #4ade80" }}>
                 <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>📥 HVA Delivers</div>
-                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#4ade80" }}>{dashboard.stats.agency_outputs}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#4ade80" }}>{dashboard.stats.agency_outputs || 0}</div>
               </div>
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #f59e0b20", borderLeft: "3px solid #f59e0b" }}>
                 <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>In Progress</div>
-                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#f59e0b" }}>{dashboard.stats.in_progress}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#f59e0b" }}>{dashboard.stats.in_progress || 0}</div>
               </div>
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #4ade8020", borderLeft: "3px solid #4ade80" }}>
                 <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>✅ Completed</div>
-                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#4ade80" }}>{dashboard.stats.completed}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#4ade80" }}>{dashboard.stats.completed || 0}</div>
               </div>
               <div style={{ background: "#1a1a1a", padding: "1.5rem", borderRadius: "12px", border: "1px solid #ff6b6b20", borderLeft: "3px solid #ff6b6b" }}>
                 <div style={{ color: "#888", fontSize: "0.9rem", marginBottom: "0.5rem" }}>🔥 Overdue</div>
-                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#ff6b6b" }}>{dashboard.stats.overdue_count}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#ff6b6b" }}>{dashboard.stats.overdue_count || 0}</div>
               </div>
             </div>
 
@@ -410,12 +420,21 @@ export default function DeliverablesPage() {
           </>
         )}
 
+        {/* Empty Dashboard */}
+        {activeTab === "dashboard" && (!dashboard || !dashboard.stats) && (
+          <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📋</div>
+            <h3 style={{ marginBottom: "0.5rem", color: "#e9edf2" }}>No Deliverables Yet</h3>
+            <p style={{ color: "#888" }}>Import your CSV or generate brand inputs to get started</p>
+          </div>
+        )}
+
         {/* PHASE TABS */}
         {activeTab.startsWith("phase") && phaseData && (
           <>
             <div style={{ marginBottom: "2rem" }}>
               <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{phaseData.phase}</h2>
-              <p style={{ color: "#888" }}>Total: {phaseData.total} deliverables ({phaseData.brand_inputs.length} brand inputs, {phaseData.agency_outputs.length} agency outputs)</p>
+              <p style={{ color: "#888" }}>Total: {phaseData.total || 0} deliverables ({(phaseData.brand_inputs || []).length} brand inputs, {(phaseData.agency_outputs || []).length} agency outputs)</p>
             </div>
 
             {/* View Type Filter */}
@@ -432,7 +451,7 @@ export default function DeliverablesPage() {
             </div>
 
             {/* Brand Inputs Section */}
-            {(viewType === "both" || viewType === "brand_input") && phaseData.brand_inputs.length > 0 && (
+            {(viewType === "both" || viewType === "brand_input") && phaseData.brand_inputs && phaseData.brand_inputs.length > 0 && (
               <div style={{ marginBottom: "2rem" }}>
                 <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#6aa6ff" }}>📤 What You Need to Deliver to HVA</h3>
                 <div style={{ display: "grid", gap: "1rem" }}>
@@ -444,7 +463,7 @@ export default function DeliverablesPage() {
             )}
 
             {/* Agency Outputs Section */}
-            {(viewType === "both" || viewType === "agency_output") && phaseData.agency_outputs.length > 0 && (
+            {(viewType === "both" || viewType === "agency_output") && phaseData.agency_outputs && phaseData.agency_outputs.length > 0 && (
               <div>
                 <h3 style={{ fontSize: "1.25rem", marginBottom: "1rem", color: "#4ade80" }}>📥 What HVA Delivers to You</h3>
                 <div style={{ display: "grid", gap: "1rem" }}>
@@ -465,11 +484,19 @@ export default function DeliverablesPage() {
               <p style={{ color: "#888" }}>Complete list of all deliverables across all phases</p>
             </div>
 
-            <div style={{ display: "grid", gap: "1rem" }}>
-              {deliverables.map(d => (
-                <DeliverableCard key={d.id} d={d} />
-              ))}
-            </div>
+            {deliverables.length > 0 ? (
+              <div style={{ display: "grid", gap: "1rem" }}>
+                {deliverables.map(d => (
+                  <DeliverableCard key={d.id} d={d} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ background: "#1a1a1a", padding: "3rem 2rem", borderRadius: "12px", textAlign: "center", border: "1px solid #2a2a2a" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📋</div>
+                <h3 style={{ marginBottom: "0.5rem", color: "#e9edf2" }}>No Deliverables Yet</h3>
+                <p style={{ color: "#888" }}>Import your CSV or generate brand inputs to get started</p>
+              </div>
+            )}
           </div>
         )}
       </div>
