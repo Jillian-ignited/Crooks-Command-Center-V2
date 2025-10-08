@@ -4,7 +4,7 @@ from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 
 from ..database import get_db
-from ..models import IntelligenceFile
+from ..models import Intelligence
 
 router = APIRouter()
 
