@@ -169,7 +169,49 @@ def get_shopify_dashboard(
             "growth": round(calc_growth(current_sessions, prev_sessions), 1)
         }
     }
-
+@router.post("/migrate-table")
+def migrate_shopify_table(db: Session = Depends(get_db)):
+    """DANGER: Recreate shopify_metrics table - will delete all data!"""
+    
+    from sqlalchemy import text
+    
+    try:
+        # Drop old table
+        db.execute(text("DROP TABLE IF EXISTS shopify_metrics CASCADE"))
+        db.commit()
+        
+        # Create new table with ALL required columns
+        db.execute(text("""
+            CREATE TABLE shopify_metrics (
+                id SERIAL PRIMARY KEY,
+                period_type VARCHAR NOT NULL,
+                period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+                period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+                total_orders INTEGER DEFAULT 0,
+                total_revenue FLOAT DEFAULT 0,
+                avg_order_value FLOAT DEFAULT 0,
+                total_sessions INTEGER DEFAULT 0,
+                conversion_rate FLOAT DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+        
+        # Create indexes
+        db.execute(text("CREATE INDEX ix_shopify_metrics_id ON shopify_metrics(id)"))
+        db.execute(text("CREATE INDEX ix_shopify_metrics_period_type ON shopify_metrics(period_type)"))
+        db.execute(text("CREATE INDEX ix_shopify_metrics_period_start ON shopify_metrics(period_start)"))
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "✅ Shopify metrics table recreated successfully!"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Migration failed: {str(e)}")
 
 @router.get("/orders")
 def get_orders(
