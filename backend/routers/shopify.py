@@ -80,64 +80,27 @@ def get_shopify_dashboard(
 
 @router.get("/customer-stats")
 def get_customer_stats(days: int = 30, db: Session = Depends(get_db)):
-    """Get customer statistics"""
+    """Get customer statistics - returns zeros until real data available"""
     
-    end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=days)
-    
-    try:
-        metrics = db.query(ShopifyMetric).filter(
-            and_(
-                ShopifyMetric.period_type == "daily",
-                ShopifyMetric.period_start >= start_date,
-                ShopifyMetric.period_start <= end_date
-            )
-        ).all()
-        
-        # Placeholder calculations
-        total_customers = len(metrics) * 10 if metrics else 0
-        returning_customers = int(total_customers * 0.3)
-        
-        return {
-            "total_customers": total_customers,
-            "new_customers": total_customers - returning_customers,
-            "returning_customers": returning_customers,
-            "customer_retention_rate": 30.0
-        }
-    except:
-        return {
-            "total_customers": 0,
-            "new_customers": 0,
-            "returning_customers": 0,
-            "customer_retention_rate": 0
-        }
+    # TODO: Integrate with Shopify API for real customer data
+    return {
+        "total_customers": 0,
+        "new_customers": 0,
+        "returning_customers": 0,
+        "customer_retention_rate": 0
+    }
 
 
 @router.get("/top-products")
 def get_top_products(days: int = 30, limit: int = 10, db: Session = Depends(get_db)):
-    """Get top selling products"""
+    """Get top selling products - returns empty until real data imported"""
     return {"products": []}
+
 
 @router.get("/orders")
 def get_recent_orders(limit: int = 10, db: Session = Depends(get_db)):
-    """Get recent orders - placeholder for Shopify API integration"""
-    
-    now = datetime.now(timezone.utc)
-    
-    return {
-        "orders": [
-            {
-                "id": f"CC{1000 + i}",
-                "customer_name": "Customer",
-                "email": "customer@example.com",
-                "total": round(75 + (i * 15.50), 2),
-                "status": "fulfilled" if i % 2 == 0 else "pending",
-                "items_count": 1 + (i % 3),
-                "created_at": (now - timedelta(hours=i*2)).isoformat()
-            }
-            for i in range(limit)
-        ]
-    }
+    """Get recent orders - returns empty until Shopify API integrated"""
+    return {"orders": []}
 
 
 @router.post("/import-csv")
