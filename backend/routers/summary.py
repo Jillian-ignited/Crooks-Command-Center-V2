@@ -4,12 +4,12 @@ from sqlalchemy import func, desc
 from datetime import datetime, timedelta, timezone
 from backend.database import get_db
 from backend.models import (
-    IntelligenceEntry, 
+    Intelligence, 
     CompetitorIntel, 
-    ShopifyMetric, 
-    AgencyDeliverable,
-    AssetLibrary,
-    CalendarEvent
+    ShopifyMetric,
+    ShopifyOrder,
+    Deliverable,
+    Campaign
 )
 import json
 
@@ -20,15 +20,15 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     """Get executive dashboard summary with real data from all modules"""
     
     # Intelligence Stats
-    total_intelligence = db.query(func.count(IntelligenceEntry.id)).scalar() or 0
+    total_intelligence = db.query(func.count(Intelligence.id)).scalar() or 0
     
     intelligence_by_category = db.query(
-        IntelligenceEntry.category,
-        func.count(IntelligenceEntry.id).label('count')
-    ).group_by(IntelligenceEntry.category).all()
+        Intelligence.category,
+        func.count(Intelligence.id).label('count')
+    ).group_by(Intelligence.category).all()
     
-    recent_intelligence = db.query(IntelligenceEntry).order_by(
-        desc(IntelligenceEntry.created_at)
+    recent_intelligence = db.query(Intelligence).order_by(
+        desc(Intelligence.created_at)
     ).limit(5).all()
     
     # Competitive Intel Stats
@@ -47,16 +47,16 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         desc(CompetitorIntel.created_at)
     ).limit(5).all()
     
-    # Shopify Performance (Last 30 days)
+    # Shopify Performance (Last 30 days) - Using ShopifyMetric
     thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     
     shopify_metrics = db.query(ShopifyMetric).filter(
-        ShopifyMetric.date >= thirty_days_ago
+        ShopifyMetric.period_start >= thirty_days_ago
     ).all()
     
-    total_orders = sum(m.orders for m in shopify_metrics if m.orders)
-    total_revenue = sum(m.net_sales for m in shopify_metrics if m.net_sales)
-    total_sessions = sum(m.sessions for m in shopify_metrics if m.sessions)
+    total_orders = sum(m.total_orders for m in shopify_metrics if m.total_orders)
+    total_revenue = sum(m.total_revenue for m in shopify_metrics if m.total_revenue)
+    total_sessions = sum(m.total_sessions for m in shopify_metrics if m.total_sessions)
     
     avg_conversion = (sum(m.conversion_rate for m in shopify_metrics if m.conversion_rate) / len(shopify_metrics)) if shopify_metrics else 0
     avg_aov = total_revenue / total_orders if total_orders > 0 else 0
@@ -64,50 +64,38 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     # Get trend (compare to previous 30 days)
     sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=60)
     previous_metrics = db.query(ShopifyMetric).filter(
-        ShopifyMetric.date >= sixty_days_ago,
-        ShopifyMetric.date < thirty_days_ago
+        ShopifyMetric.period_start >= sixty_days_ago,
+        ShopifyMetric.period_start < thirty_days_ago
     ).all()
     
-    prev_revenue = sum(m.net_sales for m in previous_metrics if m.net_sales)
+    prev_revenue = sum(m.total_revenue for m in previous_metrics if m.total_revenue)
     revenue_change = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
     
-    prev_orders = sum(m.orders for m in previous_metrics if m.orders)
+    prev_orders = sum(m.total_orders for m in previous_metrics if m.total_orders)
     orders_change = ((total_orders - prev_orders) / prev_orders * 100) if prev_orders > 0 else 0
     
-    # Agency Deliverables Status
-    total_deliverables = db.query(func.count(AgencyDeliverable.id)).scalar() or 0
+    # Deliverables Status
+    total_deliverables = db.query(func.count(Deliverable.id)).scalar() or 0
     
     deliverables_by_status = db.query(
-        AgencyDeliverable.status,
-        func.count(AgencyDeliverable.id).label('count')
-    ).group_by(AgencyDeliverable.status).all()
+        Deliverable.status,
+        func.count(Deliverable.id).label('count')
+    ).group_by(Deliverable.status).all()
     
-    overdue_deliverables = db.query(AgencyDeliverable).filter(
-        AgencyDeliverable.status != 'completed',
-        AgencyDeliverable.due_date < datetime.now(timezone.utc)
+    overdue_deliverables = db.query(Deliverable).filter(
+        Deliverable.status != 'completed',
+        Deliverable.due_date < datetime.now(timezone.utc)
     ).count()
     
-    upcoming_deliverables = db.query(AgencyDeliverable).filter(
-        AgencyDeliverable.status == 'in_progress',
-        AgencyDeliverable.due_date >= datetime.now(timezone.utc),
-        AgencyDeliverable.due_date <= datetime.now(timezone.utc) + timedelta(days=7)
+    upcoming_deliverables = db.query(Deliverable).filter(
+        Deliverable.status.in_(['in_progress', 'not_started']),
+        Deliverable.due_date >= datetime.now(timezone.utc),
+        Deliverable.due_date <= datetime.now(timezone.utc) + timedelta(days=7)
     ).all()
     
-    # Asset Library Stats
-    total_assets = db.query(func.count(AssetLibrary.id)).scalar() or 0
-    
-    assets_by_type = db.query(
-        AssetLibrary.asset_type,
-        func.count(AssetLibrary.id).label('count')
-    ).group_by(AssetLibrary.asset_type).all()
-    
-    # Calendar/Campaign Stats
-    total_events = db.query(func.count(CalendarEvent.id)).scalar() or 0
-    
-    upcoming_events = db.query(CalendarEvent).filter(
-        CalendarEvent.date >= datetime.now(timezone.utc),
-        CalendarEvent.date <= datetime.now(timezone.utc) + timedelta(days=30)
-    ).order_by(CalendarEvent.date).all()
+    # Campaign Stats
+    total_campaigns = db.query(func.count(Campaign.id)).scalar() or 0
+    active_campaigns = db.query(Campaign).filter(Campaign.status == 'active').count()
     
     # Generate AI Insights from actual data
     insights = []
@@ -144,6 +132,13 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
             "type": "opportunity",
             "title": "Conversion Rate Below Industry Average",
             "description": f"Current CR {avg_conversion:.2f}% vs. streetwear industry avg ~2-3%"
+        })
+    
+    if active_campaigns == 0 and total_campaigns > 0:
+        insights.append({
+            "type": "opportunity",
+            "title": "No Active Campaigns",
+            "description": "Consider activating one of your planned campaigns"
         })
     
     return {
@@ -198,21 +193,9 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
                 for d in upcoming_deliverables
             ]
         },
-        "assets": {
-            "total": total_assets,
-            "by_type": {asset_type: count for asset_type, count in assets_by_type}
-        },
-        "calendar": {
-            "total_events": total_events,
-            "upcoming": [
-                {
-                    "id": e.id,
-                    "title": e.title,
-                    "date": e.date.isoformat(),
-                    "event_type": e.event_type
-                }
-                for e in upcoming_events[:10]
-            ]
+        "campaigns": {
+            "total": total_campaigns,
+            "active": active_campaigns
         },
         "insights": insights,
         "last_updated": datetime.now(timezone.utc).isoformat()
@@ -225,18 +208,18 @@ def get_performance_trends(days: int = 90, db: Session = Depends(get_db)):
     start_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     metrics = db.query(ShopifyMetric).filter(
-        ShopifyMetric.date >= start_date
-    ).order_by(ShopifyMetric.date).all()
+        ShopifyMetric.period_start >= start_date
+    ).order_by(ShopifyMetric.period_start).all()
     
     trends = []
     for metric in metrics:
         trends.append({
-            "date": metric.date.isoformat(),
-            "orders": metric.orders or 0,
-            "revenue": round(metric.net_sales, 2) if metric.net_sales else 0,
-            "sessions": metric.sessions or 0,
+            "date": metric.period_start.isoformat(),
+            "orders": metric.total_orders or 0,
+            "revenue": round(metric.total_revenue, 2) if metric.total_revenue else 0,
+            "sessions": metric.total_sessions or 0,
             "conversion_rate": round(metric.conversion_rate, 2) if metric.conversion_rate else 0,
-            "aov": round(metric.average_order_value, 2) if metric.average_order_value else 0
+            "aov": round(metric.avg_order_value, 2) if metric.avg_order_value else 0
         })
     
     return {
@@ -276,7 +259,7 @@ def get_competitive_landscape(db: Session = Depends(get_db)):
             "competitor": comp.competitor_name,
             "intel_entries": comp.intel_count,
             "last_updated": comp.last_update.isoformat(),
-            "latest_summary": latest.summary if latest else None,
+            "latest_summary": latest.ai_analysis if latest else None,
             "coverage": {cat: count for cat, count in by_category}
         })
     
@@ -287,36 +270,30 @@ def get_competitive_landscape(db: Session = Depends(get_db)):
 
 @router.get("/content-readiness")
 def get_content_readiness(db: Session = Depends(get_db)):
-    """Assess content and asset readiness for campaigns"""
+    """Assess content and deliverable readiness for campaigns"""
     
     # Get upcoming campaigns
     thirty_days = datetime.now(timezone.utc) + timedelta(days=30)
-    upcoming_campaigns = db.query(CalendarEvent).filter(
-        CalendarEvent.date >= datetime.now(timezone.utc),
-        CalendarEvent.date <= thirty_days,
-        CalendarEvent.event_type.in_(['campaign', 'product_launch', 'promotion'])
+    upcoming_campaigns = db.query(Campaign).filter(
+        Campaign.start_date >= datetime.now(timezone.utc),
+        Campaign.start_date <= thirty_days,
+        Campaign.status.in_(['planning', 'active'])
     ).all()
     
     readiness = []
     for campaign in upcoming_campaigns:
-        # Check if assets exist
-        campaign_assets = db.query(AssetLibrary).filter(
-            AssetLibrary.campaign == campaign.title
-        ).all()
-        
-        # Check if deliverables are on track
-        related_deliverables = db.query(AgencyDeliverable).filter(
-            AgencyDeliverable.campaign == campaign.title
+        # Check if deliverables exist for this campaign
+        related_deliverables = db.query(Deliverable).filter(
+            Deliverable.campaign_id == campaign.id
         ).all()
         
         completed = sum(1 for d in related_deliverables if d.status == 'completed')
         total_tasks = len(related_deliverables)
         
         readiness.append({
-            "campaign": campaign.title,
-            "date": campaign.date.isoformat(),
-            "days_until": (campaign.date - datetime.now(timezone.utc)).days,
-            "assets_count": len(campaign_assets),
+            "campaign": campaign.name,
+            "date": campaign.start_date.isoformat() if campaign.start_date else None,
+            "days_until": (campaign.start_date - datetime.now(timezone.utc)).days if campaign.start_date else None,
             "tasks_completed": completed,
             "tasks_total": total_tasks,
             "readiness_score": (completed / total_tasks * 100) if total_tasks > 0 else 0,
