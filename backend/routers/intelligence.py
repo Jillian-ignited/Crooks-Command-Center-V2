@@ -9,7 +9,7 @@ import PyPDF2
 from anthropic import Anthropic
 
 from ..database import get_db
-from ..models import IntelligenceFile
+from ..models import Intelligence  # CHANGED FROM IntelligenceFile
 
 router = APIRouter()
 
@@ -18,11 +18,23 @@ UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Initialize Anthropic client
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+try:
+    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    print("[Intelligence] ✅ Claude AI available for intelligence analysis")
+except Exception as e:
+    client = None
+    print(f"[Intelligence] ⚠️ Claude AI not available: {e}")
 
 
 async def analyze_intelligence(text_content: str, filename: str):
     """Analyze intelligence content using Claude AI"""
+    
+    if not client:
+        return {
+            "summary": "AI analysis not available - Claude API key not configured",
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "model": "none"
+        }
     
     try:
         prompt = f"""Analyze this intelligence file for Crooks & Castles streetwear brand.
@@ -56,170 +68,118 @@ Focus on insights relevant to hip-hop culture, streetwear, and urban fashion."""
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
             "model": "claude-sonnet-4-20250514"
         }
-        
+    
     except Exception as e:
+        print(f"[Intelligence] Claude analysis error: {e}")
         return {
             "summary": f"Analysis failed: {str(e)}",
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
-            "error": True
+            "model": "error"
         }
 
 
 @router.post("/upload")
-async def upload_file(
+async def upload_intelligence(
     file: UploadFile = File(...),
-    source: str = Form("manual_upload"),
-    description: Optional[str] = Form(None),
+    category: str = Form(None),
+    tags: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Upload intelligence file with AI analysis"""
+    """Upload intelligence file and analyze with Claude"""
     
     try:
-        # Validate file type
-        allowed_extensions = ['.pdf', '.txt', '.csv', '.json', '.jsonl', '.md', '.doc', '.docx']
-        file_ext = os.path.splitext(file.filename)[1].lower()
-        
-        if file_ext not in allowed_extensions:
-            raise HTTPException(
-                400, 
-                f"File type {file_ext} not supported. Allowed types: {', '.join(allowed_extensions)}"
-            )
-        
-        # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_filename = f"{timestamp}_{file.filename}"
-        file_path = os.path.join(UPLOAD_DIR, safe_filename)
-        
-        # Save file
-        contents = await file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-        
-        file_size = len(contents)
+        # Read file content
+        content = await file.read()
+        file_extension = file.filename.split('.')[-1].lower()
         
         # Extract text based on file type
-        text_content = ""
-        
-        if file_ext == '.pdf':
-            # PDF extraction
-            try:
-                pdf_file = open(file_path, 'rb')
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
-                for page in pdf_reader.pages:
-                    text_content += page.extract_text()
-                pdf_file.close()
-            except Exception as e:
-                text_content = f"Error extracting PDF: {str(e)}"
-        
-        elif file_ext == '.json':
-            # JSON extraction
-            try:
-                json_data = json.loads(contents.decode('utf-8'))
-                text_content = json.dumps(json_data, indent=2)
-            except Exception as e:
-                text_content = f"Error parsing JSON: {str(e)}"
-        
-        elif file_ext == '.jsonl':
-            # JSONL extraction (JSON Lines)
-            try:
-                lines = contents.decode('utf-8').split('\n')
-                json_objects = []
-                for line in lines:
-                    line = line.strip()
-                    if line:
-                        try:
-                            json_objects.append(json.loads(line))
-                        except:
-                            continue
-                text_content = json.dumps(json_objects, indent=2)
-            except Exception as e:
-                text_content = f"Error parsing JSONL: {str(e)}"
-        
-        elif file_ext in ['.txt', '.md', '.csv']:
-            # Plain text extraction
-            try:
-                text_content = contents.decode('utf-8')
-            except:
-                text_content = contents.decode('latin-1')
-        
-        elif file_ext in ['.doc', '.docx']:
-            # Word document extraction (basic)
-            try:
-                text_content = contents.decode('utf-8', errors='ignore')
-            except:
-                text_content = "Word document uploaded (full text extraction not available)"
-        
+        if file_extension == 'pdf':
+            import io
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+            text_content = ""
+            for page in pdf_reader.pages:
+                text_content += page.extract_text()
+        elif file_extension in ['txt', 'md']:
+            text_content = content.decode('utf-8')
         else:
-            text_content = "File uploaded (text extraction not available for this type)"
+            text_content = content.decode('utf-8', errors='ignore')
         
-        # Perform AI analysis
-        analysis_results = await analyze_intelligence(text_content, file.filename)
+        # Analyze with Claude
+        analysis = await analyze_intelligence(text_content, file.filename)
         
-        # Create database record
-        intelligence_file = IntelligenceFile(
-            filename=safe_filename,
-            original_filename=file.filename,
-            source=source,
-            file_path=file_path,
-            file_size=file_size,
-            file_type=file_ext,
-            description=description,
-            analysis_results=analysis_results,
-            status="processed",
-            processed_at=datetime.now(timezone.utc)
+        # Parse tags
+        tag_list = []
+        if tags:
+            tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+        
+        # Create intelligence entry
+        intelligence = Intelligence(
+            title=file.filename,
+            content=text_content[:10000],  # Store first 10k chars
+            source_type=file_extension,
+            category=category or "uploaded_file",
+            tags=tag_list,
+            ai_summary=analysis.get("summary"),
+            ai_insights={"analysis": analysis},
+            sentiment="neutral",
+            priority="medium",
+            status="new",
+            file_url=f"/uploads/{file.filename}"
         )
         
-        db.add(intelligence_file)
+        db.add(intelligence)
         db.commit()
-        db.refresh(intelligence_file)
+        db.refresh(intelligence)
         
         return {
             "success": True,
-            "file_id": intelligence_file.id,
-            "filename": file.filename,
-            "analysis": analysis_results,
-            "message": "File uploaded and analyzed successfully"
+            "id": intelligence.id,
+            "title": intelligence.title,
+            "analysis": analysis,
+            "created_at": intelligence.created_at.isoformat()
         }
         
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(500, f"Upload failed: {str(e)}")
 
 
-@router.get("/files")
-def get_intelligence_files(
+@router.get("/")
+def get_intelligence(
+    category: Optional[str] = None,
+    status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    source: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Get list of intelligence files"""
+    """Get all intelligence entries"""
     
-    query = db.query(IntelligenceFile)
+    query = db.query(Intelligence)
     
-    if source:
-        query = query.filter(IntelligenceFile.source == source)
+    if category:
+        query = query.filter(Intelligence.category == category)
+    
+    if status:
+        query = query.filter(Intelligence.status == status)
     
     total = query.count()
-    
-    files = query.order_by(desc(IntelligenceFile.uploaded_at)).limit(limit).offset(offset).all()
+    items = query.order_by(desc(Intelligence.created_at)).limit(limit).offset(offset).all()
     
     return {
-        "files": [
+        "intelligence": [
             {
-                "id": f.id,
-                "filename": f.original_filename,
-                "source": f.source,
-                "file_type": f.file_type,
-                "file_size": f.file_size,
-                "description": f.description,
-                "status": f.status,
-                "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
-                "processed_at": f.processed_at.isoformat() if f.processed_at else None,
-                "has_analysis": bool(f.analysis_results)
+                "id": i.id,
+                "title": i.title,
+                "content": i.content[:200] + "..." if i.content and len(i.content) > 200 else i.content,
+                "source_type": i.source_type,
+                "category": i.category,
+                "tags": i.tags,
+                "ai_summary": i.ai_summary[:300] + "..." if i.ai_summary and len(i.ai_summary) > 300 else i.ai_summary,
+                "sentiment": i.sentiment,
+                "priority": i.priority,
+                "status": i.status,
+                "created_at": i.created_at.isoformat() if i.created_at else None
             }
-            for f in files
+            for i in items
         ],
         "total": total,
         "limit": limit,
@@ -227,69 +187,111 @@ def get_intelligence_files(
     }
 
 
-@router.get("/files/{file_id}")
-def get_file_detail(file_id: int, db: Session = Depends(get_db)):
-    """Get detailed information about a specific file"""
+@router.get("/{intelligence_id}")
+def get_intelligence_detail(intelligence_id: int, db: Session = Depends(get_db)):
+    """Get detailed intelligence entry"""
     
-    file = db.query(IntelligenceFile).filter(IntelligenceFile.id == file_id).first()
+    intel = db.query(Intelligence).filter(Intelligence.id == intelligence_id).first()
     
-    if not file:
-        raise HTTPException(404, "File not found")
+    if not intel:
+        raise HTTPException(404, "Intelligence entry not found")
     
     return {
-        "id": file.id,
-        "filename": file.original_filename,
-        "source": file.source,
-        "brand": file.brand,
-        "file_type": file.file_type,
-        "file_size": file.file_size,
-        "description": file.description,
-        "analysis_results": file.analysis_results,
-        "status": file.status,
-        "uploaded_at": file.uploaded_at.isoformat() if file.uploaded_at else None,
-        "processed_at": file.processed_at.isoformat() if file.processed_at else None,
-        "created_by": file.created_by
+        "id": intel.id,
+        "title": intel.title,
+        "content": intel.content,
+        "source_type": intel.source_type,
+        "category": intel.category,
+        "tags": intel.tags,
+        "ai_summary": intel.ai_summary,
+        "ai_insights": intel.ai_insights,
+        "sentiment": intel.sentiment,
+        "priority": intel.priority,
+        "status": intel.status,
+        "file_url": intel.file_url,
+        "created_at": intel.created_at.isoformat(),
+        "updated_at": intel.updated_at.isoformat()
     }
 
 
-@router.delete("/files/{file_id}")
-def delete_file(file_id: int, db: Session = Depends(get_db)):
-    """Delete an intelligence file"""
+@router.put("/{intelligence_id}")
+def update_intelligence(
+    intelligence_id: int,
+    title: Optional[str] = None,
+    category: Optional[str] = None,
+    tags: Optional[list] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    sentiment: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Update intelligence entry"""
     
-    file = db.query(IntelligenceFile).filter(IntelligenceFile.id == file_id).first()
+    intel = db.query(Intelligence).filter(Intelligence.id == intelligence_id).first()
     
-    if not file:
-        raise HTTPException(404, "File not found")
+    if not intel:
+        raise HTTPException(404, "Intelligence entry not found")
     
-    # Delete physical file
-    try:
-        if os.path.exists(file.file_path):
-            os.remove(file.file_path)
-    except Exception as e:
-        print(f"Error deleting physical file: {e}")
+    if title:
+        intel.title = title
+    if category:
+        intel.category = category
+    if tags is not None:
+        intel.tags = tags
+    if status:
+        intel.status = status
+    if priority:
+        intel.priority = priority
+    if sentiment:
+        intel.sentiment = sentiment
     
-    # Delete database record
-    db.delete(file)
+    intel.updated_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    db.refresh(intel)
+    
+    return {"success": True, "intelligence_id": intel.id}
+
+
+@router.delete("/{intelligence_id}")
+def delete_intelligence(intelligence_id: int, db: Session = Depends(get_db)):
+    """Delete intelligence entry"""
+    
+    intel = db.query(Intelligence).filter(Intelligence.id == intelligence_id).first()
+    
+    if not intel:
+        raise HTTPException(404, "Intelligence entry not found")
+    
+    db.delete(intel)
     db.commit()
     
-    return {"success": True, "message": "File deleted"}
+    return {"success": True, "message": "Intelligence entry deleted"}
 
 
-@router.get("/sources")
-def get_sources(db: Session = Depends(get_db)):
-    """Get list of intelligence sources"""
+@router.post("/analyze/{intelligence_id}")
+async def reanalyze_intelligence(intelligence_id: int, db: Session = Depends(get_db)):
+    """Re-analyze an existing intelligence entry with Claude"""
     
-    sources = db.query(
-        IntelligenceFile.source,
-        func.count(IntelligenceFile.id).label('count')
-    ).group_by(IntelligenceFile.source).all()
+    intel = db.query(Intelligence).filter(Intelligence.id == intelligence_id).first()
+    
+    if not intel:
+        raise HTTPException(404, "Intelligence entry not found")
+    
+    if not intel.content:
+        raise HTTPException(400, "No content to analyze")
+    
+    # Re-analyze with Claude
+    analysis = await analyze_intelligence(intel.content, intel.title)
+    
+    intel.ai_summary = analysis.get("summary")
+    intel.ai_insights = {"analysis": analysis}
+    intel.updated_at = datetime.now(timezone.utc)
+    
+    db.commit()
+    db.refresh(intel)
     
     return {
-        "sources": [
-            {
-                "name": source,
-                "count": count
-            }
-            for source, count in sources
-        ]
+        "success": True,
+        "analysis": analysis,
+        "updated_at": intel.updated_at.isoformat()
     }
