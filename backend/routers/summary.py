@@ -1,353 +1,329 @@
-# backend/routers/summary.py
-""" Summary Overview Router - Now using REAL data from content and media uploads
-
-Replaces all mock data with actual database records
-"""
-
-from fastapi import APIRouter
-from typing import Dict, Any, List
-import datetime
-import sys
-import os
-
-# Add the services directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'services'))
-
-try:
-    from data_service import DataService
-except ImportError:
-    # Fallback if data_service isn't available
-    class DataService:
-        @staticmethod
-        def get_content_metrics():
-            return {"total_briefs": 0, "completed_briefs": 0, "total_media": 0, "engagement_rate": 0, "reach": 0}
-        
-        @staticmethod
-        def get_shopify_metrics():
-            return {"total_sales": 0, "total_orders": 0}
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import func, desc
+from datetime import datetime, timedelta, timezone
+from backend.database import get_db
+from backend.models import (
+    IntelligenceEntry, 
+    CompetitorIntel, 
+    ShopifyMetric, 
+    AgencyDeliverable,
+    AssetLibrary,
+    CalendarEvent
+)
+import json
 
 router = APIRouter()
 
-@router.get("/overview")
-async def get_summary_overview(period: str = "30d") -> Dict[str, Any]:
-    """Get summary overview from real content and media data"""
+@router.get("/dashboard")
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    """Get executive dashboard summary with real data from all modules"""
     
-    # Get real content metrics
-    content_metrics = DataService.get_content_metrics()
+    # Intelligence Stats
+    total_intelligence = db.query(func.count(IntelligenceEntry.id)).scalar() or 0
     
-    # Get Shopify metrics for conversion data
-    shopify_metrics = DataService.get_shopify_metrics()
+    intelligence_by_category = db.query(
+        IntelligenceEntry.category,
+        func.count(IntelligenceEntry.id).label('count')
+    ).group_by(IntelligenceEntry.category).all()
     
-    # Calculate period in days
-    period_days = _parse_period(period)
+    recent_intelligence = db.query(IntelligenceEntry).order_by(
+        desc(IntelligenceEntry.created_at)
+    ).limit(5).all()
     
-    # Generate real highlights based on actual data
-    highlights = _generate_highlights(content_metrics, shopify_metrics, period_days)
+    # Competitive Intel Stats
+    total_competitors = db.query(
+        func.count(func.distinct(CompetitorIntel.competitor_name))
+    ).scalar() or 0
     
-    # Build metrics from real data
-    metrics = {
-        "engagement_rate": content_metrics.get("engagement_rate", 0),
-        "reach": content_metrics.get("reach", 0),
-        "conversions": shopify_metrics.get("total_orders", 0),
-        "content_pieces": content_metrics.get("total_briefs", 0),
-        "completed_content": content_metrics.get("completed_briefs", 0),
-        "media_assets": content_metrics.get("total_media", 0)
-    }
+    total_competitive_intel = db.query(func.count(CompetitorIntel.id)).scalar() or 0
     
-    # Calculate performance indicators
-    performance = _calculate_performance(content_metrics, shopify_metrics, period_days)
+    competitive_by_category = db.query(
+        CompetitorIntel.category,
+        func.count(CompetitorIntel.id).label('count')
+    ).group_by(CompetitorIntel.category).all()
     
-    return {
-        "period": period,
-        "highlights": highlights,
-        "metrics": metrics,
-        "performance": performance,
-        "content_breakdown": _get_content_breakdown(content_metrics),
-        "top_performing_content": _get_top_performing_content(),
-        "recommendations": _generate_summary_recommendations(content_metrics, shopify_metrics),
-        "data_freshness": {
-            "content_last_update": content_metrics.get("last_created"),
-            "shopify_last_sync": shopify_metrics.get("last_updated")
-        },
-        "generated_at": datetime.datetime.now().isoformat(),
-        "data_source": "real_data"
-    }
-
-@router.get("/executive")
-async def get_executive_summary() -> Dict[str, Any]:
-    """Get executive summary with key metrics and insights"""
+    recent_competitive = db.query(CompetitorIntel).order_by(
+        desc(CompetitorIntel.created_at)
+    ).limit(5).all()
     
-    content_metrics = DataService.get_content_metrics()
-    shopify_metrics = DataService.get_shopify_metrics()
+    # Shopify Performance (Last 30 days)
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     
-    # Calculate key performance indicators
-    total_content = content_metrics.get("total_briefs", 0)
-    completed_content = content_metrics.get("completed_briefs", 0)
-    completion_rate = (completed_content / total_content * 100) if total_content > 0 else 0
+    shopify_metrics = db.query(ShopifyMetric).filter(
+        ShopifyMetric.date >= thirty_days_ago
+    ).all()
     
-    # Revenue per content piece (if we have both content and sales data)
-    revenue_per_content = 0
-    if total_content > 0 and shopify_metrics.get("total_sales", 0) > 0:
-        revenue_per_content = shopify_metrics["total_sales"] / total_content
+    total_orders = sum(m.orders for m in shopify_metrics if m.orders)
+    total_revenue = sum(m.net_sales for m in shopify_metrics if m.net_sales)
+    total_sessions = sum(m.sessions for m in shopify_metrics if m.sessions)
     
-    return {
-        "executive_summary": {
-            "total_content_pieces": total_content,
-            "content_completion_rate": round(completion_rate, 1),
-            "total_media_assets": content_metrics.get("total_media", 0),
-            "estimated_reach": content_metrics.get("reach", 0),
-            "revenue_attribution": shopify_metrics.get("total_sales", 0),
-            "revenue_per_content": round(revenue_per_content, 2)
-        },
-        "key_insights": _generate_executive_insights(content_metrics, shopify_metrics),
-        "action_items": _generate_action_items(content_metrics, shopify_metrics),
-        "period_analyzed": "last_30_days",
-        "generated_at": datetime.datetime.now().isoformat()
-    }
-
-@router.post("/generate")
-async def generate_summary(content_type: str = "overview", period: str = "30d") -> Dict[str, Any]:
-    """Generate a new summary report"""
+    avg_conversion = (sum(m.conversion_rate for m in shopify_metrics if m.conversion_rate) / len(shopify_metrics)) if shopify_metrics else 0
+    avg_aov = total_revenue / total_orders if total_orders > 0 else 0
     
-    if content_type == "executive":
-        return await get_executive_summary()
-    else:
-        return await get_summary_overview(period)
-
-def _parse_period(period: str) -> int:
-    """Parse period string to days"""
-    if period.endswith('d'):
-        return int(period[:-1])
-    elif period.endswith('w'):
-        return int(period[:-1]) * 7
-    elif period.endswith('m'):
-        return int(period[:-1]) * 30
-    else:
-        return 30  # default
-
-def _generate_highlights(content_metrics: Dict, shopify_metrics: Dict, period_days: int) -> List[str]:
-    """Generate highlights based on real data"""
+    # Get trend (compare to previous 30 days)
+    sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=60)
+    previous_metrics = db.query(ShopifyMetric).filter(
+        ShopifyMetric.date >= sixty_days_ago,
+        ShopifyMetric.date < thirty_days_ago
+    ).all()
     
-    highlights = []
+    prev_revenue = sum(m.net_sales for m in previous_metrics if m.net_sales)
+    revenue_change = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
     
-    # Content highlights
-    total_content = content_metrics.get("total_briefs", 0)
-    completed_content = content_metrics.get("completed_briefs", 0)
+    prev_orders = sum(m.orders for m in previous_metrics if m.orders)
+    orders_change = ((total_orders - prev_orders) / prev_orders * 100) if prev_orders > 0 else 0
     
-    if total_content > 0:
-        highlights.append(f"{total_content} content pieces created")
-        
-        if completed_content > 0:
-            completion_rate = (completed_content / total_content * 100)
-            highlights.append(f"{completion_rate:.1f}% content completion rate")
-    else:
-        highlights.append("No content created yet - opportunity for growth")
+    # Agency Deliverables Status
+    total_deliverables = db.query(func.count(AgencyDeliverable.id)).scalar() or 0
     
-    # Media highlights
-    total_media = content_metrics.get("total_media", 0)
-    if total_media > 0:
-        highlights.append(f"{total_media} media assets created")
+    deliverables_by_status = db.query(
+        AgencyDeliverable.status,
+        func.count(AgencyDeliverable.id).label('count')
+    ).group_by(AgencyDeliverable.status).all()
     
-    # Sales highlights
-    total_sales = shopify_metrics.get("total_sales", 0)
-    total_orders = shopify_metrics.get("total_orders", 0)
+    overdue_deliverables = db.query(AgencyDeliverable).filter(
+        AgencyDeliverable.status != 'completed',
+        AgencyDeliverable.due_date < datetime.now(timezone.utc)
+    ).count()
     
-    if total_sales > 0:
-        highlights.append(f"${total_sales:,.0f} in total sales")
+    upcoming_deliverables = db.query(AgencyDeliverable).filter(
+        AgencyDeliverable.status == 'in_progress',
+        AgencyDeliverable.due_date >= datetime.now(timezone.utc),
+        AgencyDeliverable.due_date <= datetime.now(timezone.utc) + timedelta(days=7)
+    ).all()
     
-    if total_orders > 0:
-        highlights.append(f"{total_orders} orders processed")
+    # Asset Library Stats
+    total_assets = db.query(func.count(AssetLibrary.id)).scalar() or 0
     
-    # Engagement highlights
-    engagement_rate = content_metrics.get("engagement_rate", 0)
-    if engagement_rate > 0:
-        highlights.append(f"{engagement_rate:.1f}% engagement rate")
+    assets_by_type = db.query(
+        AssetLibrary.asset_type,
+        func.count(AssetLibrary.id).label('count')
+    ).group_by(AssetLibrary.asset_type).all()
     
-    # Default highlight if no data
-    if not highlights:
-        highlights.append("Upload data to see performance highlights")
+    # Calendar/Campaign Stats
+    total_events = db.query(func.count(CalendarEvent.id)).scalar() or 0
     
-    return highlights
-
-def _calculate_performance(content_metrics: Dict, shopify_metrics: Dict, period_days: int) -> Dict[str, Any]:
-    """Calculate performance indicators"""
+    upcoming_events = db.query(CalendarEvent).filter(
+        CalendarEvent.date >= datetime.now(timezone.utc),
+        CalendarEvent.date <= datetime.now(timezone.utc) + timedelta(days=30)
+    ).order_by(CalendarEvent.date).all()
     
-    # Content performance
-    total_content = content_metrics.get("total_briefs", 0)
-    completed_content = content_metrics.get("completed_briefs", 0)
-    
-    content_velocity = total_content / period_days if period_days > 0 else 0
-    completion_rate = (completed_content / total_content * 100) if total_content > 0 else 0
-    
-    # Sales performance
-    total_sales = shopify_metrics.get("total_sales", 0)
-    total_orders = shopify_metrics.get("total_orders", 0)
-    
-    daily_sales = total_sales / period_days if period_days > 0 else 0
-    daily_orders = total_orders / period_days if period_days > 0 else 0
-    
-    return {
-        "content_velocity": round(content_velocity, 2),
-        "completion_rate": round(completion_rate, 1),
-        "daily_sales": round(daily_sales, 2),
-        "daily_orders": round(daily_orders, 1),
-        "revenue_per_order": round(total_sales / total_orders, 2) if total_orders > 0 else 0
-    }
-
-def _get_content_breakdown(content_metrics: Dict) -> Dict[str, Any]:
-    """Get breakdown of content types"""
-    
-    return {
-        "social_media": content_metrics.get("social_media", 0),
-        "email_campaigns": content_metrics.get("email_campaigns", 0),
-        "total_briefs": content_metrics.get("total_briefs", 0),
-        "completed_briefs": content_metrics.get("completed_briefs", 0),
-        "media_assets": content_metrics.get("total_media", 0)
-    }
-
-def _get_top_performing_content() -> List[Dict[str, Any]]:
-    """Get top performing content (placeholder for now)"""
-    
-    # This would query actual performance data from database
-    # For now, return empty list since we need engagement/performance tracking
-    return []
-
-def _generate_summary_recommendations(content_metrics: Dict, shopify_metrics: Dict) -> List[Dict[str, Any]]:
-    """Generate recommendations based on summary data"""
-    
-    recommendations = []
-    
-    # Content recommendations
-    total_content = content_metrics.get("total_briefs", 0)
-    completed_content = content_metrics.get("completed_briefs", 0)
-    
-    if total_content == 0:
-        recommendations.append({
-            "type": "content",
-            "priority": "high",
-            "title": "Start Content Creation",
-            "description": "No content found. Begin creating content briefs to establish your brand presence.",
-            "action": "Create your first content brief in the Content Creation module"
-        })
-    elif completed_content < total_content:
-        incomplete = total_content - completed_content
-        recommendations.append({
-            "type": "content",
-            "priority": "medium", 
-            "title": "Complete Pending Content",
-            "description": f"{incomplete} content pieces are incomplete. Finish them to maximize your content impact.",
-            "action": "Review and complete pending content briefs"
-        })
-    
-    # Sales recommendations
-    total_sales = shopify_metrics.get("total_sales", 0)
-    if total_sales == 0:
-        recommendations.append({
-            "type": "data",
-            "priority": "high",
-            "title": "Upload Sales Data",
-            "description": "No sales data found. Upload Shopify reports to track revenue performance.",
-            "action": "Upload Shopify CSV files through the Intelligence module"
-        })
-    
-    # Media recommendations
-    total_media = content_metrics.get("total_media", 0)
-    if total_media == 0 and total_content > 0:
-        recommendations.append({
-            "type": "media",
-            "priority": "medium",
-            "title": "Add Media Assets",
-            "description": "Content exists but no media assets found. Add visuals to enhance content performance.",
-            "action": "Upload images and videos through the Media module"
-        })
-    
-    return recommendations
-
-def _generate_executive_insights(content_metrics: Dict, shopify_metrics: Dict) -> List[str]:
-    """Generate executive insights from data"""
-    
+    # Generate AI Insights from actual data
     insights = []
     
-    # Content insights
-    total_content = content_metrics.get("total_briefs", 0)
-    completed_content = content_metrics.get("completed_briefs", 0)
+    if revenue_change > 10:
+        insights.append({
+            "type": "positive",
+            "title": "Strong Revenue Growth",
+            "description": f"Revenue increased {revenue_change:.1f}% vs. previous period"
+        })
+    elif revenue_change < -10:
+        insights.append({
+            "type": "alert",
+            "title": "Revenue Decline",
+            "description": f"Revenue decreased {abs(revenue_change):.1f}% vs. previous period"
+        })
     
-    if total_content > 0:
-        completion_rate = (completed_content / total_content * 100)
-        if completion_rate >= 80:
-            insights.append(f"Strong content execution with {completion_rate:.1f}% completion rate")
-        elif completion_rate >= 50:
-            insights.append(f"Moderate content completion at {completion_rate:.1f}% - room for improvement")
-        else:
-            insights.append(f"Low content completion at {completion_rate:.1f}% - needs attention")
+    if overdue_deliverables > 0:
+        insights.append({
+            "type": "alert",
+            "title": "Overdue Deliverables",
+            "description": f"{overdue_deliverables} deliverable(s) are past due"
+        })
     
-    # Sales insights
-    total_sales = shopify_metrics.get("total_sales", 0)
-    total_orders = shopify_metrics.get("total_orders", 0)
+    if total_competitive_intel > 0:
+        insights.append({
+            "type": "info",
+            "title": "Competitive Intelligence Active",
+            "description": f"Tracking {total_competitors} competitors with {total_competitive_intel} intel entries"
+        })
     
-    if total_sales > 0 and total_orders > 0:
-        aov = total_sales / total_orders
-        insights.append(f"Average order value is ${aov:.2f}")
+    if avg_conversion > 0 and avg_conversion < 1.5:
+        insights.append({
+            "type": "opportunity",
+            "title": "Conversion Rate Below Industry Average",
+            "description": f"Current CR {avg_conversion:.2f}% vs. streetwear industry avg ~2-3%"
+        })
+    
+    return {
+        "intelligence": {
+            "total_entries": total_intelligence,
+            "by_category": {cat: count for cat, count in intelligence_by_category},
+            "recent": [
+                {
+                    "id": e.id,
+                    "title": e.title,
+                    "category": e.category,
+                    "created_at": e.created_at.isoformat()
+                }
+                for e in recent_intelligence
+            ]
+        },
+        "competitive": {
+            "total_competitors": total_competitors,
+            "total_intel_entries": total_competitive_intel,
+            "by_category": {cat: count for cat, count in competitive_by_category},
+            "recent": [
+                {
+                    "id": c.id,
+                    "competitor_name": c.competitor_name,
+                    "category": c.category,
+                    "created_at": c.created_at.isoformat()
+                }
+                for c in recent_competitive
+            ]
+        },
+        "shopify": {
+            "period": "Last 30 Days",
+            "total_orders": int(total_orders),
+            "total_revenue": round(total_revenue, 2),
+            "total_sessions": int(total_sessions),
+            "avg_conversion_rate": round(avg_conversion, 2),
+            "avg_order_value": round(avg_aov, 2),
+            "revenue_change_percent": round(revenue_change, 1),
+            "orders_change_percent": round(orders_change, 1)
+        },
+        "agency": {
+            "total_deliverables": total_deliverables,
+            "by_status": {status: count for status, count in deliverables_by_status},
+            "overdue": overdue_deliverables,
+            "upcoming_due": [
+                {
+                    "id": d.id,
+                    "title": d.title,
+                    "due_date": d.due_date.isoformat(),
+                    "status": d.status
+                }
+                for d in upcoming_deliverables
+            ]
+        },
+        "assets": {
+            "total": total_assets,
+            "by_type": {asset_type: count for asset_type, count in assets_by_type}
+        },
+        "calendar": {
+            "total_events": total_events,
+            "upcoming": [
+                {
+                    "id": e.id,
+                    "title": e.title,
+                    "date": e.date.isoformat(),
+                    "event_type": e.event_type
+                }
+                for e in upcoming_events[:10]
+            ]
+        },
+        "insights": insights,
+        "last_updated": datetime.now(timezone.utc).isoformat()
+    }
+
+@router.get("/performance-trends")
+def get_performance_trends(days: int = 90, db: Session = Depends(get_db)):
+    """Get performance trends over time"""
+    
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    
+    metrics = db.query(ShopifyMetric).filter(
+        ShopifyMetric.date >= start_date
+    ).order_by(ShopifyMetric.date).all()
+    
+    trends = []
+    for metric in metrics:
+        trends.append({
+            "date": metric.date.isoformat(),
+            "orders": metric.orders or 0,
+            "revenue": round(metric.net_sales, 2) if metric.net_sales else 0,
+            "sessions": metric.sessions or 0,
+            "conversion_rate": round(metric.conversion_rate, 2) if metric.conversion_rate else 0,
+            "aov": round(metric.average_order_value, 2) if metric.average_order_value else 0
+        })
+    
+    return {
+        "period_days": days,
+        "start_date": start_date.isoformat(),
+        "end_date": datetime.now(timezone.utc).isoformat(),
+        "data_points": len(trends),
+        "trends": trends
+    }
+
+@router.get("/competitive-landscape")
+def get_competitive_landscape(db: Session = Depends(get_db)):
+    """Get competitive landscape analysis"""
+    
+    competitors = db.query(
+        CompetitorIntel.competitor_name,
+        func.count(CompetitorIntel.id).label('intel_count'),
+        func.max(CompetitorIntel.created_at).label('last_update')
+    ).group_by(CompetitorIntel.competitor_name).all()
+    
+    landscape = []
+    for comp in competitors:
+        # Get latest intel for this competitor
+        latest = db.query(CompetitorIntel).filter(
+            CompetitorIntel.competitor_name == comp.competitor_name
+        ).order_by(desc(CompetitorIntel.created_at)).first()
         
-        if aov > 100:
-            insights.append("High-value customer base with strong AOV")
-        elif aov > 50:
-            insights.append("Moderate AOV with potential for upselling")
-        else:
-            insights.append("Low AOV suggests need for product bundling or premium offerings")
+        # Get intel by category
+        by_category = db.query(
+            CompetitorIntel.category,
+            func.count(CompetitorIntel.id).label('count')
+        ).filter(
+            CompetitorIntel.competitor_name == comp.competitor_name
+        ).group_by(CompetitorIntel.category).all()
+        
+        landscape.append({
+            "competitor": comp.competitor_name,
+            "intel_entries": comp.intel_count,
+            "last_updated": comp.last_update.isoformat(),
+            "latest_summary": latest.summary if latest else None,
+            "coverage": {cat: count for cat, count in by_category}
+        })
     
-    # Cross-channel insights
-    if total_content > 0 and total_sales > 0:
-        revenue_per_content = total_sales / total_content
-        insights.append(f"Each content piece generates approximately ${revenue_per_content:.2f} in revenue")
-    
-    # Default insight if no data
-    if not insights:
-        insights.append("Upload data to generate actionable insights")
-    
-    return insights
+    return {
+        "total_competitors": len(competitors),
+        "landscape": landscape
+    }
 
-def _generate_action_items(content_metrics: Dict, shopify_metrics: Dict) -> List[Dict[str, Any]]:
-    """Generate action items for executives"""
+@router.get("/content-readiness")
+def get_content_readiness(db: Session = Depends(get_db)):
+    """Assess content and asset readiness for campaigns"""
     
-    action_items = []
+    # Get upcoming campaigns
+    thirty_days = datetime.now(timezone.utc) + timedelta(days=30)
+    upcoming_campaigns = db.query(CalendarEvent).filter(
+        CalendarEvent.date >= datetime.now(timezone.utc),
+        CalendarEvent.date <= thirty_days,
+        CalendarEvent.event_type.in_(['campaign', 'product_launch', 'promotion'])
+    ).all()
     
-    # Content action items
-    total_content = content_metrics.get("total_briefs", 0)
-    completed_content = content_metrics.get("completed_briefs", 0)
-    
-    if total_content == 0:
-        action_items.append({
-            "priority": "high",
-            "item": "Develop content strategy and create first content briefs",
-            "owner": "Marketing Team",
-            "timeline": "1 week"
-        })
-    elif completed_content < total_content:
-        action_items.append({
-            "priority": "medium",
-            "item": f"Complete {total_content - completed_content} pending content pieces",
-            "owner": "Content Team", 
-            "timeline": "2 weeks"
-        })
-    
-    # Data action items
-    if shopify_metrics.get("total_sales", 0) == 0:
-        action_items.append({
-            "priority": "high",
-            "item": "Upload Shopify sales data for performance tracking",
-            "owner": "Operations Team",
-            "timeline": "3 days"
-        })
-    
-    # Media action items
-    if content_metrics.get("total_media", 0) == 0 and total_content > 0:
-        action_items.append({
-            "priority": "medium",
-            "item": "Create visual assets to support content marketing",
-            "owner": "Creative Team",
-            "timeline": "1 week"
+    readiness = []
+    for campaign in upcoming_campaigns:
+        # Check if assets exist
+        campaign_assets = db.query(AssetLibrary).filter(
+            AssetLibrary.campaign == campaign.title
+        ).all()
+        
+        # Check if deliverables are on track
+        related_deliverables = db.query(AgencyDeliverable).filter(
+            AgencyDeliverable.campaign == campaign.title
+        ).all()
+        
+        completed = sum(1 for d in related_deliverables if d.status == 'completed')
+        total_tasks = len(related_deliverables)
+        
+        readiness.append({
+            "campaign": campaign.title,
+            "date": campaign.date.isoformat(),
+            "days_until": (campaign.date - datetime.now(timezone.utc)).days,
+            "assets_count": len(campaign_assets),
+            "tasks_completed": completed,
+            "tasks_total": total_tasks,
+            "readiness_score": (completed / total_tasks * 100) if total_tasks > 0 else 0,
+            "status": "ready" if completed == total_tasks else "in_progress" if completed > 0 else "not_started"
         })
     
-    return action_items
-
+    return {
+        "upcoming_campaigns": len(upcoming_campaigns),
+        "readiness": readiness
+    }
