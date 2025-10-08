@@ -9,7 +9,7 @@ import PyPDF2
 from anthropic import Anthropic
 
 from ..database import get_db
-from ..models import Intelligence  # CHANGED FROM IntelligenceFile
+from ..models import Intelligence
 
 router = APIRouter()
 
@@ -37,25 +37,24 @@ async def analyze_intelligence(text_content: str, filename: str):
         }
     
     try:
-        prompt = f"""Analyze this intelligence file for Crooks & Castles streetwear brand.
+        prompt = f"""Analyze this intelligence for Crooks & Castles streetwear brand.
 
-Filename: {filename}
+Source: {filename}
 
 Content:
 {text_content[:8000]}
 
-Provide a structured analysis covering:
+Provide a brief analysis covering:
 1. Key insights and trends
 2. Competitive intelligence (if any)
 3. Market opportunities
-4. Customer/audience insights
-5. Actionable recommendations
+4. Actionable recommendations
 
-Focus on insights relevant to hip-hop culture, streetwear, and urban fashion."""
+Keep it concise (2-3 paragraphs)."""
 
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2000,
+            max_tokens=1000,
             messages=[
                 {"role": "user", "content": prompt}
             ]
@@ -83,63 +82,179 @@ async def upload_intelligence(
     file: UploadFile = File(...),
     category: str = Form(None),
     tags: str = Form(None),
+    analyze_with_ai: bool = Form(True),
     db: Session = Depends(get_db)
 ):
     """Upload intelligence file and analyze with Claude"""
     
     try:
-        # Read file content
         content = await file.read()
         file_extension = file.filename.split('.')[-1].lower()
         
-        # Extract text based on file type
-        if file_extension == 'pdf':
-            import io
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
-            text_content = ""
-            for page in pdf_reader.pages:
-                text_content += page.extract_text()
-        elif file_extension in ['txt', 'md']:
-            text_content = content.decode('utf-8')
-        else:
-            text_content = content.decode('utf-8', errors='ignore')
-        
-        # Analyze with Claude
-        analysis = await analyze_intelligence(text_content, file.filename)
+        print(f"[Intelligence] Received file: {file.filename} ({file_extension})")
         
         # Parse tags
         tag_list = []
         if tags:
             tag_list = [t.strip() for t in tags.split(',') if t.strip()]
         
-        # Create intelligence entry
-        intelligence = Intelligence(
-            title=file.filename,
-            content=text_content[:10000],  # Store first 10k chars
-            source_type=file_extension,
-            category=category or "uploaded_file",
-            tags=tag_list,
-            ai_summary=analysis.get("summary"),
-            ai_insights={"analysis": analysis},
-            sentiment="neutral",
-            priority="medium",
-            status="new",
-            file_url=f"/uploads/{file.filename}"
-        )
+        created_count = 0
         
-        db.add(intelligence)
-        db.commit()
-        db.refresh(intelligence)
+        # Handle JSONL files (Apify scrapes)
+        if file_extension in ['jsonl', 'json']:
+            print(f"[Intelligence] Processing JSONL/JSON file")
+            
+            text_content = content.decode('utf-8')
+            entries = []
+            
+            # Try parsing as JSONL (one JSON object per line)
+            try:
+                for line_num, line in enumerate(text_content.strip().split('\n'), 1):
+                    if line.strip():
+                        try:
+                            entry = json.loads(line.strip())
+                            entries.append(entry)
+                        except json.JSONDecodeError:
+                            print(f"[Intelligence] Line {line_num}: Invalid JSON, skipping")
+                            continue
+                
+                if not entries:
+                    # Try parsing as single JSON array
+                    try:
+                        entries = json.loads(text_content)
+                        if not isinstance(entries, list):
+                            entries = [entries]
+                    except:
+                        raise HTTPException(400, "Could not parse JSON/JSONL file")
+                
+                print(f"[Intelligence] Found {len(entries)} entries to process")
+                
+                # Process each entry
+                for idx, entry in enumerate(entries, 1):
+                    try:
+                        # Extract title and content from Apify scrape format
+                        title = entry.get('title') or entry.get('name') or entry.get('url') or f"Entry {idx}"
+                        
+                        # Build content from various fields
+                        content_parts = []
+                        
+                        if entry.get('url'):
+                            content_parts.append(f"URL: {entry['url']}")
+                        
+                        if entry.get('text'):
+                            content_parts.append(entry['text'])
+                        elif entry.get('content'):
+                            content_parts.append(entry['content'])
+                        elif entry.get('description'):
+                            content_parts.append(entry['description'])
+                        
+                        # Add any other text fields
+                        for key in ['caption', 'snippet', 'summary', 'body']:
+                            if entry.get(key):
+                                content_parts.append(f"{key.title()}: {entry[key]}")
+                        
+                        entry_content = "\n\n".join(content_parts)
+                        
+                        if not entry_content.strip():
+                            print(f"[Intelligence] Entry {idx}: No content, skipping")
+                            continue
+                        
+                        # Optional AI analysis (can be slow for many entries)
+                        ai_summary = None
+                        ai_insights = {"raw_data": entry}
+                        
+                        if analyze_with_ai and idx <= 5:  # Only analyze first 5 to save time/cost
+                            print(f"[Intelligence] Analyzing entry {idx} with AI...")
+                            analysis = await analyze_intelligence(entry_content, f"{file.filename} - {title}")
+                            ai_summary = analysis.get("summary")
+                            ai_insights = {"analysis": analysis, "raw_data": entry}
+                        
+                        # Create intelligence entry
+                        intelligence = Intelligence(
+                            title=title[:255],  # Limit title length
+                            content=entry_content[:50000],  # Store up to 50k chars
+                            source_type="apify_scrape" if 'url' in entry else "json",
+                            category=category or "scrape_data",
+                            tags=tag_list,
+                            ai_summary=ai_summary,
+                            ai_insights=ai_insights,
+                            sentiment="neutral",
+                            priority="medium",
+                            status="new",
+                            file_url=entry.get('url')
+                        )
+                        
+                        db.add(intelligence)
+                        created_count += 1
+                        
+                        print(f"[Intelligence] Entry {idx}: Created - {title[:50]}")
+                        
+                    except Exception as e:
+                        print(f"[Intelligence] Entry {idx} error: {e}")
+                        continue
+                
+                db.commit()
+                
+                return {
+                    "success": True,
+                    "message": f"✅ Processed {created_count} entries from {file.filename}",
+                    "entries_processed": created_count,
+                    "ai_analyzed": min(created_count, 5) if analyze_with_ai else 0
+                }
+            
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(400, f"JSONL processing failed: {str(e)}")
         
-        return {
-            "success": True,
-            "id": intelligence.id,
-            "title": intelligence.title,
-            "analysis": analysis,
-            "created_at": intelligence.created_at.isoformat()
-        }
+        # Handle other file types (PDF, TXT, etc.)
+        else:
+            if file_extension == 'pdf':
+                import io
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                text_content = ""
+                for page in pdf_reader.pages:
+                    text_content += page.extract_text()
+            elif file_extension in ['txt', 'md']:
+                text_content = content.decode('utf-8')
+            else:
+                text_content = content.decode('utf-8', errors='ignore')
+            
+            # Analyze with Claude
+            analysis = None
+            if analyze_with_ai:
+                analysis = await analyze_intelligence(text_content, file.filename)
+            
+            # Create single intelligence entry
+            intelligence = Intelligence(
+                title=file.filename,
+                content=text_content[:50000],
+                source_type=file_extension,
+                category=category or "uploaded_file",
+                tags=tag_list,
+                ai_summary=analysis.get("summary") if analysis else None,
+                ai_insights={"analysis": analysis} if analysis else {},
+                sentiment="neutral",
+                priority="medium",
+                status="new",
+                file_url=f"/uploads/{file.filename}"
+            )
+            
+            db.add(intelligence)
+            db.commit()
+            db.refresh(intelligence)
+            
+            return {
+                "success": True,
+                "id": intelligence.id,
+                "title": intelligence.title,
+                "analysis": analysis,
+                "created_at": intelligence.created_at.isoformat()
+            }
         
+    except HTTPException:
+        raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(500, f"Upload failed: {str(e)}")
 
 
@@ -295,6 +410,8 @@ async def reanalyze_intelligence(intelligence_id: int, db: Session = Depends(get
         "analysis": analysis,
         "updated_at": intel.updated_at.isoformat()
     }
+
+
 @router.post("/migrate-table")
 def migrate_intelligence_table(db: Session = Depends(get_db)):
     """DANGER: Recreate intelligence table - will delete all data!"""
