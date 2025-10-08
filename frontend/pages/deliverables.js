@@ -15,6 +15,7 @@ export default function DeliverablesPage() {
   const [phaseData, setPhaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -117,19 +118,75 @@ export default function DeliverablesPage() {
   }
 
   async function updateStatus(id, newStatus) {
+    if (updating) return; // Prevent multiple simultaneous updates
+    
     try {
-      await fetch(`${API_BASE_URL}/deliverables/${id}`, {
+      setUpdating(true);
+      
+      // Optimistically update the UI
+      const updateDeliverableStatus = (deliverable) => {
+        if (deliverable.id === id) {
+          return { ...deliverable, status: newStatus };
+        }
+        return deliverable;
+      };
+      
+      setDeliverables(prev => prev.map(updateDeliverableStatus));
+      if (phaseData) {
+        setPhaseData(prev => ({
+          ...prev,
+          brand_inputs: (prev.brand_inputs || []).map(updateDeliverableStatus),
+          agency_outputs: (prev.agency_outputs || []).map(updateDeliverableStatus)
+        }));
+      }
+      
+      // Make the API call
+      const response = await fetch(`${API_BASE_URL}/deliverables/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
-      loadData();
-      if (phaseData) {
-        const phase = activeTab.replace('phase', '');
-        loadPhaseData(`phase${phase}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Update failed:', errorText);
+        alert(`❌ Failed to update status: ${response.status} ${response.statusText}`);
+        // Reload to get correct state
+        loadData();
+        if (phaseData && activeTab.startsWith('phase')) {
+          loadPhaseData(activeTab);
+        }
+        return;
       }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        alert('❌ Failed to update status');
+        // Reload to get correct state
+        loadData();
+        if (phaseData && activeTab.startsWith('phase')) {
+          loadPhaseData(activeTab);
+        }
+        return;
+      }
+      
+      // Reload data to ensure everything is in sync
+      await loadData();
+      if (phaseData && activeTab.startsWith('phase')) {
+        await loadPhaseData(activeTab);
+      }
+      
     } catch (err) {
       console.error('Failed to update status:', err);
+      alert(`❌ Error: ${err.message}`);
+      // Reload to get correct state
+      loadData();
+      if (phaseData && activeTab.startsWith('phase')) {
+        loadPhaseData(activeTab);
+      }
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -200,7 +257,9 @@ export default function DeliverablesPage() {
         padding: "1.5rem", 
         borderRadius: "12px", 
         border: "1px solid #2a2a2a",
-        borderLeft: `3px solid ${d.deliverable_type === 'brand_input' ? '#6aa6ff' : '#4ade80'}`
+        borderLeft: `3px solid ${d.deliverable_type === 'brand_input' ? '#6aa6ff' : '#4ade80'}`,
+        opacity: updating ? 0.6 : 1,
+        transition: "opacity 0.2s"
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
           <div style={{ flex: 1 }}>
@@ -237,6 +296,7 @@ export default function DeliverablesPage() {
             <select 
               value={d.status || 'not_started'} 
               onChange={(e) => updateStatus(d.id, e.target.value)}
+              disabled={updating}
               style={{ 
                 padding: "4px 8px", 
                 background: "#0a0b0d", 
@@ -244,7 +304,8 @@ export default function DeliverablesPage() {
                 border: "1px solid #2a2a2a", 
                 borderRadius: "6px",
                 fontSize: "0.75rem",
-                cursor: "pointer"
+                cursor: updating ? "wait" : "pointer",
+                opacity: updating ? 0.5 : 1
               }}
             >
               <option value="not_started">Not Started</option>
