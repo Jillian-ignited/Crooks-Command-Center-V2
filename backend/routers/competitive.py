@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import json
 import csv
@@ -49,6 +49,15 @@ def extract_competitor_name_from_data(data: dict, filename: str) -> str:
         name = name.replace(prefix, '').strip()
     
     return name.title() if name else 'Unknown Competitor'
+
+def determine_threat_level(intel_count: int) -> str:
+    """Determine threat level based on intel count"""
+    if intel_count >= 10:
+        return 'high'
+    elif intel_count >= 5:
+        return 'medium'
+    else:
+        return 'low'
 
 @router.post("/upload")
 async def upload_competitive_intel(
@@ -118,7 +127,7 @@ async def upload_competitive_intel(
         data_type=source,
         content=raw_content,
         ai_analysis=summary,
-        tags=insights,  # PostgreSQL JSONB handles this automatically
+        tags=insights,
         source_url=file_path,
         priority='medium',
         sentiment='neutral'
@@ -137,6 +146,21 @@ async def upload_competitive_intel(
         "insights": insights,
         "records_parsed": len(parsed_data) if parsed_data else 0
     }
+
+@router.post("/import-json")
+async def import_json_competitive(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Import competitive intelligence from JSON/JSONL (alias for /upload)"""
+    return await upload_competitive_intel(
+        file=file,
+        competitor_name=None,
+        category='social_media',
+        source=None,
+        notes=None,
+        db=db
+    )
 
 @router.post("/manual")
 def add_competitive_intel(
@@ -158,7 +182,7 @@ def add_competitive_intel(
         data_type=source,
         content=content,
         ai_analysis=summary,
-        tags=insights,  # PostgreSQL JSONB handles this automatically
+        tags=insights,
         priority='medium',
         sentiment='neutral'
     )
@@ -210,7 +234,6 @@ def get_competitive_intel(
         "total": len(intel)
     }
 
-# Legacy endpoint for frontend compatibility
 @router.get("/data")
 def get_competitive_data(
     limit: int = 50,
@@ -218,20 +241,128 @@ def get_competitive_data(
     category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Get competitive data (legacy endpoint)"""
-    return get_competitive_intel(limit, competitor, category, db)
+    """Get competitive data - returns in format expected by frontend"""
+    
+    query = db.query(CompetitorIntel)
+    
+    if competitor:
+        query = query.filter(CompetitorIntel.competitor_name == competitor)
+    
+    if category:
+        query = query.filter(CompetitorIntel.category == category)
+    
+    intel = query.order_by(desc(CompetitorIntel.created_at)).limit(limit).all()
+    
+    return {
+        "data": [
+            {
+                "id": i.id,
+                "competitor": i.competitor_name,
+                "category": i.category,
+                "source": i.data_type,
+                "content": i.content[:500] if i.content else "",  # Truncate for list view
+                "summary": i.ai_analysis,
+                "insights": i.tags if isinstance(i.tags, (list, dict)) else (json.loads(i.tags) if i.tags else []),
+                "created_at": i.created_at.isoformat(),
+                "priority": i.priority,
+                "sentiment": i.sentiment
+            }
+            for i in intel
+        ],
+        "total": len(intel)
+    }
 
-# Legacy endpoint for frontend compatibility
 @router.get("/brands")
 def get_competitive_brands(db: Session = Depends(get_db)):
-    """Get list of tracked brands (legacy endpoint)"""
-    return get_competitors_list(db)
+    """Get list of tracked brands categorized by threat level"""
+    
+    # Get all competitors with their intel counts
+    competitors = db.query(
+        CompetitorIntel.competitor_name,
+        func.count(CompetitorIntel.id).label('intel_count')
+    ).group_by(CompetitorIntel.competitor_name).all()
+    
+    # Categorize by threat level
+    high_threat = []
+    medium_threat = []
+    low_threat = []
+    
+    for comp in competitors:
+        threat_level = determine_threat_level(comp.intel_count)
+        if threat_level == 'high':
+            high_threat.append(comp.competitor_name)
+        elif threat_level == 'medium':
+            medium_threat.append(comp.competitor_name)
+        else:
+            low_threat.append(comp.competitor_name)
+    
+    return {
+        "total": len(competitors),
+        "threat_levels": {
+            "high": len(high_threat),
+            "medium": len(medium_threat),
+            "low": len(low_threat)
+        },
+        "brands": {
+            "high_threat": high_threat,
+            "medium_threat": medium_threat,
+            "low_threat": low_threat
+        }
+    }
 
-# Legacy endpoint for frontend compatibility  
 @router.get("/dashboard")
-def get_competitive_dashboard(days: int = 30, db: Session = Depends(get_db)):
-    """Get competitive dashboard (legacy endpoint)"""
-    return get_competitive_summary(db)
+def get_competitive_dashboard(
+    days: int = 30, 
+    threat_level: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get competitive dashboard summary in format expected by frontend"""
+    
+    # Calculate date range
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    # Get competitor summary with intel counts
+    competitors_query = db.query(
+        CompetitorIntel.competitor_name,
+        func.count(CompetitorIntel.id).label('intel_count')
+    ).filter(
+        CompetitorIntel.created_at >= start_date
+    ).group_by(CompetitorIntel.competitor_name)
+    
+    competitors_data = competitors_query.all()
+    
+    # Build competitor list with threat levels
+    competitors_list = []
+    for comp in competitors_data:
+        threat = determine_threat_level(comp.intel_count)
+        
+        # Filter by threat level if specified
+        if threat_level and threat != threat_level:
+            continue
+        
+        competitors_list.append({
+            "competitor": comp.competitor_name,
+            "total_posts": comp.intel_count,
+            "avg_engagement": comp.intel_count * 100,  # Placeholder calculation
+            "threat_level": threat
+        })
+    
+    # Sort by total_posts descending
+    competitors_list.sort(key=lambda x: x['total_posts'], reverse=True)
+    
+    # Calculate totals
+    total_data_points = sum(c['total_posts'] for c in competitors_list)
+    competitors_tracked = len(competitors_list)
+    
+    return {
+        "total_data_points": total_data_points,
+        "competitors_tracked": competitors_tracked,
+        "competitors": competitors_list,
+        "period_days": days,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat()
+    }
 
 @router.get("/intel/{intel_id}")
 def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
@@ -250,6 +381,8 @@ def get_intel_detail(intel_id: int, db: Session = Depends(get_db)):
         "content": intel.content,
         "summary": intel.ai_analysis,
         "key_insights": intel.tags if isinstance(intel.tags, (list, dict)) else (json.loads(intel.tags) if intel.tags else []),
+        "priority": intel.priority,
+        "sentiment": intel.sentiment,
         "created_at": intel.created_at.isoformat()
     }
 
@@ -280,14 +413,17 @@ def get_competitors_list(db: Session = Depends(get_db)):
         func.count(CompetitorIntel.id).label('intel_count')
     ).group_by(CompetitorIntel.competitor_name).all()
     
+    competitors_with_threat = []
+    for comp in competitors:
+        threat_level = determine_threat_level(comp.intel_count)
+        competitors_with_threat.append({
+            "name": comp.competitor_name,
+            "intel_count": comp.intel_count,
+            "threat_level": threat_level
+        })
+    
     return {
-        "competitors": [
-            {
-                "name": c.competitor_name,
-                "intel_count": c.intel_count
-            }
-            for c in competitors
-        ],
+        "competitors": competitors_with_threat,
         "total_competitors": len(competitors)
     }
 
